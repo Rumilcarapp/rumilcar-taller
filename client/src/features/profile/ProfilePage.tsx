@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, Button, Input, Badge, Modal } from '../../components/ui';
 import { useThemeStore } from '../../store/themeStore';
+import { useAuthStore } from '../../stores/authStore';
 import {
   Sun, Moon, Palette, Building2, User, Globe, Phone, Mail, MapPin, FileText,
   Upload, Wifi, WifiOff, Plus, Edit, UserCheck, UserX,
   RefreshCw, DollarSign, Percent, CreditCard, Calendar,
-  LogIn, Wrench, Clock
+  LogIn, Wrench, Clock, LogOut
 } from 'lucide-react';
 import './ProfilePage.css';
 
@@ -55,6 +57,13 @@ export const ProfilePage: React.FC = () => {
   const completeness = Math.round((filled / fields.length) * 100);
 
   const { isLight, toggleTheme } = useThemeStore();
+  const navigate = useNavigate();
+  const { logout } = useAuthStore();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login', { replace: true });
+  };
 
   const toggleMethod = (key: string) => {
     setMethods(methods.map(m => m.key === key ? { ...m, enabled: !m.enabled } : m));
@@ -73,14 +82,25 @@ export const ProfilePage: React.FC = () => {
             <p className="profile-tax-id">RIF: {workshop.taxId}</p>
           </div>
         </div>
-        <div className="profile-completeness">
-          <div className="completeness-info">
-            <span className="completeness-label">Perfil completo</span>
-            <span className="completeness-value">{completeness}%</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
+          <div className="profile-completeness">
+            <div className="completeness-info">
+              <span className="completeness-label">Perfil completo</span>
+              <span className="completeness-value">{completeness}%</span>
+            </div>
+            <div className="completeness-bar">
+              <div className="completeness-fill" style={{ width: `${completeness}%` }} />
+            </div>
           </div>
-          <div className="completeness-bar">
-            <div className="completeness-fill" style={{ width: `${completeness}%` }} />
-          </div>
+          <Button
+            variant="danger"
+            size="sm"
+            onClick={handleLogout}
+            icon={<LogOut size={16} />}
+            title="Cerrar Sesión de Rumilcarapp"
+          >
+            Cerrar Sesión
+          </Button>
         </div>
       </div>
 

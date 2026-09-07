@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Bell, Menu, Sun, Moon, ShieldAlert, AlertTriangle, ArrowRight, X, Rocket } from 'lucide-react';
+import { Search, Bell, Menu, Sun, Moon, ShieldAlert, AlertTriangle, ArrowRight, X, Rocket, UserCircle, LogOut } from 'lucide-react';
 import { useThemeStore } from '../../store/themeStore';
 import { useAntiInflationStore } from '../../store/useAntiInflationStore';
 import { useOnboardingStore } from '../../store/useOnboardingStore';
+import { useAuthStore } from '../../stores/authStore';
 import './TopBar.css';
 
 interface TopBarProps {
@@ -16,9 +17,12 @@ export const TopBar: React.FC<TopBarProps> = ({ title, onMenuClick }) => {
   const { isLight, toggleTheme } = useThemeStore();
   const { saldoVES, obtenerCalculoPerdida, alertaConfig } = useAntiInflationStore();
   const { openWelcomeModal } = useOnboardingStore();
+  const { user, logout } = useAuthStore();
 
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
   const calc = obtenerCalculoPerdida();
   const hasInflationAlert = alertaConfig.activa && saldoVES.monto_ves > 0 && (
@@ -31,10 +35,19 @@ export const TopBar: React.FC<TopBarProps> = ({ title, onMenuClick }) => {
       if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
         setShowNotifications(false);
       }
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setShowUserMenu(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const handleLogout = () => {
+    setShowUserMenu(false);
+    logout();
+    navigate('/login', { replace: true });
+  };
 
   const handleGoToProtection = () => {
     setShowNotifications(false);
@@ -159,8 +172,97 @@ export const TopBar: React.FC<TopBarProps> = ({ title, onMenuClick }) => {
           )}
         </div>
 
-        <div className="topbar-avatar" onClick={() => navigate('/perfil')}>
-          <div className="avatar-circle">R</div>
+        {/* User Menu Avatar */}
+        <div style={{ position: 'relative' }} ref={userMenuRef}>
+          <div
+            className="topbar-avatar"
+            onClick={() => setShowUserMenu(!showUserMenu)}
+            style={{ cursor: 'pointer' }}
+            title={user?.name ? `${user.name} (${user.role})` : 'Mi Perfil'}
+          >
+            <div className="avatar-circle">
+              {user?.name ? user.name.charAt(0).toUpperCase() : 'R'}
+            </div>
+          </div>
+
+          {showUserMenu && (
+            <div
+              style={{
+                position: 'absolute',
+                top: '46px',
+                right: '0',
+                width: '220px',
+                background: 'var(--color-bg-surface, #1e1e1e)',
+                border: '1px solid var(--color-border, #3f3f46)',
+                borderRadius: '12px',
+                boxShadow: '0 12px 30px rgba(0,0,0,0.4)',
+                zIndex: 1000,
+                padding: '10px',
+                animation: 'fadeIn 0.15s ease-in-out',
+              }}
+            >
+              <div style={{ padding: '6px 8px 10px', borderBottom: '1px solid var(--color-border)' }}>
+                <div style={{ fontWeight: 700, fontSize: '13px', color: 'var(--color-text-primary)' }}>
+                  {user?.name || 'Usuario Taller'}
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', wordBreak: 'break-all' }}>
+                  {user?.email || 'admin@taller.com'}
+                </div>
+                <div style={{ fontSize: '10px', color: 'var(--color-primary)', fontWeight: 700, marginTop: '4px' }}>
+                  ROL: {user?.role || 'OWNER'}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '6px' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowUserMenu(false);
+                    navigate('/perfil');
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 10px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: 'transparent',
+                    color: 'var(--color-text-primary)',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    width: '100%',
+                    textAlign: 'left',
+                  }}
+                >
+                  <UserCircle size={16} /> Mi Perfil
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 10px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: 'rgba(239, 68, 68, 0.08)',
+                    color: '#ef4444',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    width: '100%',
+                    textAlign: 'left',
+                  }}
+                >
+                  <LogOut size={16} /> Cerrar Sesión
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </header>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Wrench, Calendar, FileText, Stethoscope,
   ClipboardCheck, Car, Users, Package, ShoppingCart,
@@ -63,10 +63,17 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
+  const navigate = useNavigate();
   const { user, logout } = useAuthStore();
   const { hasPermission } = useUserManagementStore();
 
   const userRole = user?.role || 'RECEPTIONIST';
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login', { replace: true });
+  };
+
 
   return (
     <aside className={`sidebar ${collapsed ? 'sidebar-collapsed' : ''}`}>
@@ -140,9 +147,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
 
           <button
             type="button"
-            onClick={logout}
+            onClick={handleLogout}
             className="nav-item"
-            style={{ width: collapsed ? '100%' : 'auto', padding: '8px', justifyContent: 'center', color: '#ef4444' }}
+            style={{ width: collapsed ? '100%' : 'auto', padding: '8px 12px', justifyContent: 'center', color: '#ef4444', cursor: 'pointer', border: 'none', background: 'transparent' }}
             title="Cerrar Sesión"
           >
             <LogOut size={18} />

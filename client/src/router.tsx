@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { AppLayout } from './components/layout';
 import { LoginPage } from './features/auth/LoginPage';
@@ -25,11 +25,13 @@ import { BudgetsPage } from './features/budgets/BudgetsPage';
 import { UsersPage } from './features/users/UsersPage';
 import { TrackingPage } from './features/tracking/TrackingPage';
 import { PermissionGuard } from './components/shared/PermissionGuard';
+import { useAuthStore } from './stores/authStore';
 
 // Auth guard
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const token = localStorage.getItem('rumilcar_token');
-  if (!token) return <Navigate to="/login" replace />;
+  if (!isAuthenticated || !token) return <Navigate to="/login" replace />;
   return <>{children}</>;
 };
 
