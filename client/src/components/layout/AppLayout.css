@@ -27,11 +27,11 @@
   animation: fadeIn 300ms ease;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .app-main {
-    margin-left: 0;
+    margin-left: 0 !important;
   }
   .app-content {
-    padding: var(--space-4);
+    padding: var(--space-4) var(--space-3);
   }
 }

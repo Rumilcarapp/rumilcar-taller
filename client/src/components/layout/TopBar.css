@@ -35,7 +35,7 @@
   display: flex;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .topbar-menu-btn { display: flex; }
 }
 
@@ -126,6 +126,13 @@
 }
 .avatar-circle:hover { transform: scale(1.05); }
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
+  .topbar { padding: 0 var(--space-4); }
   .topbar-search { display: none; }
+}
+
+@media (max-width: 480px) {
+  .topbar { padding: 0 var(--space-3); }
+  .topbar-right { gap: 6px; }
+  .topbar-title { font-size: var(--font-size-md); }
 }

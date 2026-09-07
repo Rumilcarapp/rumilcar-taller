@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Wrench, Calendar, FileText, Stethoscope,
   ClipboardCheck, Car, Users, Package, ShoppingCart,
   Wallet, CarFront, Truck, CreditCard, HeartHandshake,
-  BarChart3, UserCircle, ChevronLeft, ChevronRight, ShieldCheck, LogOut
+  BarChart3, UserCircle, ChevronLeft, ChevronRight, ShieldCheck, LogOut, X
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { useUserManagementStore, AppModuleKey } from '../../store/useUserManagementStore';
@@ -60,9 +60,11 @@ const navSections: { label: string; items: NavItemConfig[] }[] = [
 interface SidebarProps {
   collapsed: boolean;
   onToggle: () => void;
+  mobileOpen?: boolean;
+  onCloseMobile?: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, mobileOpen = false, onCloseMobile }) => {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
   const { hasPermission } = useUserManagementStore();
@@ -70,22 +72,37 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
   const userRole = user?.role || 'RECEPTIONIST';
 
   const handleLogout = () => {
+    onCloseMobile?.();
     logout();
     navigate('/login', { replace: true });
   };
 
+  const handleItemClick = () => {
+    if (mobileOpen && onCloseMobile) {
+      onCloseMobile();
+    }
+  };
+
+  const isFullView = !collapsed || mobileOpen;
 
   return (
-    <aside className={`sidebar ${collapsed ? 'sidebar-collapsed' : ''}`}>
-      {/* Logo */}
+    <aside className={`sidebar ${collapsed ? 'sidebar-collapsed' : ''} ${mobileOpen ? 'sidebar-open' : ''}`}>
+      {/* Logo & Header */}
       <div className="sidebar-brand">
         <div className="sidebar-logo">
           <img src="/logo-tight.png" alt="Rumilcarapp" className="sidebar-brand-img" />
-          {!collapsed && <span className="logo-text">Rumilcar<span className="logo-accent">app</span></span>}
+          {isFullView && <span className="logo-text">Rumilcar<span className="logo-accent">app</span></span>}
         </div>
-        <button className="sidebar-toggle" onClick={onToggle} aria-label="Toggle sidebar">
-          {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-        </button>
+        
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <button className="sidebar-toggle" onClick={onToggle} aria-label="Colapsar menú lateral" title={collapsed ? "Expandir menú" : "Colapsar menú"}>
+            {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+          </button>
+          
+          <button className="sidebar-mobile-close" onClick={onCloseMobile} aria-label="Cerrar menú móvil" title="Cerrar menú">
+            <X size={20} />
+          </button>
+        </div>
       </div>
 
       {/* Navigation filtered by user role permissions */}
@@ -99,19 +116,20 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
 
           return (
             <div className="nav-section" key={section.label}>
-              {!collapsed && <span className="nav-section-label">{section.label}</span>}
+              {isFullView && <span className="nav-section-label">{section.label}</span>}
               {visibleItems.map((item) => (
                 <NavLink
                   key={item.path}
                   to={item.path}
                   end={item.path === '/'}
+                  onClick={handleItemClick}
                   className={({ isActive }) =>
                     `nav-item ${isActive ? 'nav-item-active' : ''}`
                   }
-                  title={collapsed ? item.label : undefined}
+                  title={!isFullView ? item.label : undefined}
                 >
                   <item.icon size={20} className="nav-item-icon" />
-                  {!collapsed && <span className="nav-item-label">{item.label}</span>}
+                  {isFullView && <span className="nav-item-label">{item.label}</span>}
                 </NavLink>
               ))}
             </div>
@@ -120,8 +138,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
       </nav>
 
       {/* Profile & User Role badge in Footer */}
-      <div className="sidebar-footer" style={{ borderTop: '1px solid var(--color-border)', padding: collapsed ? '8px' : '12px' }}>
-        {!collapsed && user && (
+      <div className="sidebar-footer" style={{ borderTop: '1px solid var(--color-border)', padding: (!isFullView) ? '8px' : '12px' }}>
+        {isFullView && user && (
           <div style={{ marginBottom: '8px', padding: '0 8px' }}>
             <div style={{ fontWeight: 700, fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {user.name}
@@ -135,21 +153,22 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
         <div style={{ display: 'flex', gap: '4px' }}>
           <NavLink
             to="/perfil"
+            onClick={handleItemClick}
             className={({ isActive }) =>
               `nav-item nav-item-profile ${isActive ? 'nav-item-active' : ''}`
             }
             style={{ flex: 1 }}
-            title={collapsed ? 'Perfil' : undefined}
+            title={!isFullView ? 'Mi Perfil' : undefined}
           >
             <UserCircle size={18} className="nav-item-icon" />
-            {!collapsed && <span className="nav-item-label">Mi Perfil</span>}
+            {isFullView && <span className="nav-item-label">Mi Perfil</span>}
           </NavLink>
 
           <button
             type="button"
             onClick={handleLogout}
             className="nav-item"
-            style={{ width: collapsed ? '100%' : 'auto', padding: '8px 12px', justifyContent: 'center', color: '#ef4444', cursor: 'pointer', border: 'none', background: 'transparent' }}
+            style={{ width: (!isFullView) ? '100%' : 'auto', padding: '8px 12px', justifyContent: 'center', color: '#ef4444', cursor: 'pointer', border: 'none', background: 'transparent' }}
             title="Cerrar Sesión"
           >
             <LogOut size={18} />

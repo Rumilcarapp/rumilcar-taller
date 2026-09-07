@@ -1,4 +1,4 @@
-﻿.modal-backdrop {
+.modal-backdrop {
   position: fixed;
   top: 0;
   left: 0;
@@ -73,4 +73,35 @@
   max-height: 70vh;
   overflow-y: auto;
   padding-right: 16px;
+}
+
+/* Responsive Modal Grids & Small Screens */
+.modal-grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+@media (max-width: 768px) {
+  .modal-grid-2col {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+@media (max-width: 640px) {
+  .modal {
+    width: 95%;
+    max-height: 92vh;
+  }
+  .modal-body {
+    padding: 16px;
+    max-height: 68vh;
+  }
+  .modal-header {
+    padding: var(--space-3) var(--space-4);
+  }
+  .modal-footer {
+    padding: var(--space-3) var(--space-4);
+  }
 }

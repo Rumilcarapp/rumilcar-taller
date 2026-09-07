@@ -85,3 +85,41 @@
   animation: shimmer 1.5s ease-in-out infinite;
   border-radius: var(--radius-md);
 }
+
+/* === Responsive Tables & Containers (Mobile & Tablet) === */
+.table-responsive,
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Ensure data tables don't collapse columns unreadably */
+table {
+  min-width: 100%;
+}
+
+/* Responsive Grids */
+.grid-responsive-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+@media (max-width: 768px) {
+  .grid-responsive-2 {
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+  }
+}
+
+/* Touch friendly button defaults on mobile */
+@media (max-width: 640px) {
+  button, .nav-item, a {
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  .page-title {
+    font-size: var(--font-size-xl) !important;
+  }
+}

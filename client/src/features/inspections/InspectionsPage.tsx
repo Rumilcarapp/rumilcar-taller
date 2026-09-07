@@ -217,7 +217,7 @@ export const InspectionsPage: React.FC = () => {
             </div>
           }
         >
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+          <div className="modal-grid-2col">
             
             {/* LEFT COLUMN: Vehicle Details & Damage Map */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -432,7 +432,7 @@ export const InspectionsPage: React.FC = () => {
           onClose={() => setViewingInspection(null)}
           size="lg"
         >
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+          <div className="modal-grid-2col">
             {/* Left side */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
