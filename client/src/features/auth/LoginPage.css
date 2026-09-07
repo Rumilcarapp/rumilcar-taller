@@ -5,8 +5,9 @@
   justify-content: center;
   background: var(--color-bg-primary);
   position: relative;
-  overflow: hidden;
-  padding: var(--space-4);
+  overflow-y: auto;
+  padding: var(--space-6) var(--space-4);
+  transition: background-color 0.3s ease;
 }
 
 .login-bg-pattern {
@@ -19,21 +20,51 @@
   pointer-events: none;
 }
 
+/* Floating theme switch button in the top right */
+.login-theme-floating {
+  position: fixed;
+  top: 20px;
+  right: 24px;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 9999px;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+  backdrop-filter: blur(10px);
+  transition: all 0.2s ease;
+}
+
+.login-theme-floating:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--color-primary);
+}
+
 .login-card {
   width: 100%;
-  max-width: 420px;
+  max-width: 460px;
   background: var(--color-bg-secondary);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
-  padding: var(--space-10);
+  padding: var(--space-8);
   position: relative;
   z-index: 1;
   box-shadow: var(--shadow-xl);
+  transition: all 0.3s ease;
+  margin: auto;
 }
 
 .login-header {
   text-align: center;
-  margin-bottom: var(--space-8);
+  margin-bottom: var(--space-6);
 }
 
 .login-logo {
@@ -41,7 +72,7 @@
   align-items: center;
   justify-content: center;
   gap: var(--space-3);
-  margin-bottom: var(--space-6);
+  margin-bottom: var(--space-4);
 }
 
 .login-logo-icon {
@@ -73,13 +104,52 @@
 
 .login-subtitle {
   color: var(--color-text-secondary);
-  font-size: var(--font-size-base);
+  font-size: var(--font-size-sm);
+}
+
+/* Tabs for Login vs Register */
+.auth-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: var(--color-bg-tertiary);
+  padding: 4px;
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-6);
+  border: 1px solid var(--color-border);
+  gap: 4px;
+}
+
+.auth-tab {
+  padding: 9px 12px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.auth-tab:hover {
+  color: var(--color-text-primary);
+}
+
+.auth-tab.active {
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border);
 }
 
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
+  gap: var(--space-4);
 }
 
 .login-error {
@@ -90,6 +160,62 @@
   color: var(--color-error);
   font-size: var(--font-size-sm);
   text-align: center;
+}
+
+.login-success {
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-success-bg);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  border-radius: var(--radius-md);
+  color: var(--color-success);
+  font-size: var(--font-size-sm);
+  text-align: center;
+}
+
+/* Theme picker group in register form */
+.theme-selector-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.theme-choice-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.theme-choice-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.theme-choice-btn:hover {
+  border-color: var(--color-primary);
+  color: var(--color-text-primary);
+}
+
+.theme-choice-btn.active {
+  border-color: var(--color-primary);
+  background: rgba(220, 38, 38, 0.08);
+  color: var(--color-primary);
+  font-weight: 700;
 }
 
 .pass-toggle {
