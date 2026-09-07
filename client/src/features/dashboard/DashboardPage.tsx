@@ -31,6 +31,17 @@ export const DashboardPage: React.FC = () => {
   const [showQuickActions, setShowQuickActions] = useState(false);
   const [whatsAppOrder, setWhatsAppOrder] = useState<WorkOrder | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [menuTop, setMenuTop] = useState<number>(180);
+
+  useEffect(() => {
+    if (showQuickActions && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      const preferredTop = rect.bottom + 8;
+      const maxTop = Math.max(70, window.innerHeight - 400);
+      setMenuTop(Math.max(70, Math.min(preferredTop, maxTop)));
+    }
+  }, [showQuickActions]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -111,6 +122,7 @@ export const DashboardPage: React.FC = () => {
         {/* Quick Actions Floating Dropdown */}
         <div className="quick-actions-container" ref={dropdownRef}>
           <button
+            ref={buttonRef}
             className={`quick-actions-btn ${showQuickActions ? 'active' : ''}`}
             onClick={() => setShowQuickActions(!showQuickActions)}
             aria-label="Acciones rápidas"
@@ -126,7 +138,10 @@ export const DashboardPage: React.FC = () => {
                 onClick={() => setShowQuickActions(false)} 
                 aria-hidden="true"
               />
-              <div className="quick-actions-menu">
+              <div 
+                className="quick-actions-menu" 
+                style={{ '--mobile-menu-top': `${menuTop}px` } as React.CSSProperties}
+              >
                 <div className="quick-actions-header">
                   <span className="quick-actions-header-title">Acciones Rápidas</span>
                   <button 

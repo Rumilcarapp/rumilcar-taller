@@ -14,7 +14,7 @@
 /* Quick Actions */
 .quick-actions-container {
   position: relative;
-  z-index: 100;
+  z-index: 1060;
 }
 
 .quick-actions-btn {
@@ -247,13 +247,13 @@
 
   .quick-actions-menu {
     position: fixed !important;
-    top: 50% !important;
+    top: var(--mobile-menu-top, 180px) !important;
     left: 50% !important;
-    transform: translate(-50%, -50%) !important;
+    transform: translateX(-50%) !important;
     right: auto !important;
     bottom: auto !important;
     width: min(340px, calc(100vw - 32px)) !important;
-    max-height: 85vh;
+    max-height: calc(100vh - var(--mobile-menu-top, 180px) - 20px) !important;
     overflow-y: auto;
     z-index: 1100 !important;
     padding: 16px !important;
@@ -266,11 +266,11 @@
   @keyframes quickActionsMobileIn {
     from {
       opacity: 0;
-      transform: translate(-50%, -46%) scale(0.95);
+      transform: translate(-50%, -8px) scale(0.96);
     }
     to {
       opacity: 1;
-      transform: translate(-50%, -50%) scale(1);
+      transform: translate(-50%, 0) scale(1);
     }
   }
 
