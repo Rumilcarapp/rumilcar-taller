@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useWorkOrderStore } from '../../store/useWorkOrderStore';
 import { useCashStore } from '../../store/useCashStore';
@@ -105,8 +105,9 @@ export const TrackingPage: React.FC = () => {
         
         {/* Header */}
         <div className="tracking-header">
-          <div className="tracking-logo">
-            <span>🔧 RUMILCAR TALLER MECÁNICO</span>
+          <div className="tracking-logo" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+            <img src="/logo-tight.png" alt="Rumilcar Logo" style={{ width: '30px', height: '30px', objectFit: 'contain' }} />
+            <span>RUMILCAR TALLER MECÁNICO</span>
           </div>
           <h1 className="tracking-title">Estado de tu Vehículo en Vivo</h1>
           <div className="tracking-order-badge">

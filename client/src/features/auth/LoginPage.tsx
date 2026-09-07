@@ -261,7 +261,7 @@ export const LoginPage: React.FC = () => {
       <div className="login-card animate-scale-in">
         <div className="login-header">
           <div className="login-logo">
-            <div className="login-logo-icon">R</div>
+            <img src="/logo-tight.png" alt="Rumilcarapp" className="login-brand-img" />
             <span className="login-logo-text">
               Rumilcar<span className="login-logo-accent">app</span>
             </span>

@@ -152,7 +152,7 @@ export const DocumentPrintModal: React.FC<DocumentPrintModalProps> = ({
             {/* Header */}
             <div className="doc-header-row">
               <div className="doc-brand-logo">
-                <div className="doc-brand-badge">R</div>
+                <img src="/logo-tight.png" alt="Logo" className="doc-brand-img" />
                 <div>
                   <div className="doc-brand-name">RUMILCAR</div>
                   <div className="doc-brand-sub">TALLER MECÁNICO Y SERVICIOS AUTOMOTRICES</div>
@@ -291,6 +291,7 @@ export const DocumentPrintModal: React.FC<DocumentPrintModalProps> = ({
         {format === 'TICKET' && (
           <div className="doc-paper-ticket">
             <div style={{ textAlign: 'center', borderBottom: '1px dashed #000', paddingBottom: '8px', marginBottom: '8px' }}>
+              <img src="/logo-tight.png" alt="Logo" style={{ width: '32px', height: '32px', objectFit: 'contain', margin: '0 auto 4px', display: 'block' }} />
               <div style={{ fontWeight: 800, fontSize: '15px' }}>RUMILCAR TALLER</div>
               <div>RIF: J-50123456-7</div>
               <div>Tel: 0414-1234567</div>

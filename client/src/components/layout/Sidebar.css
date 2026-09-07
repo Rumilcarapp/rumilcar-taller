@@ -35,6 +35,19 @@
   overflow: hidden;
 }
 
+.sidebar-brand-img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  flex-shrink: 0;
+  filter: drop-shadow(0 2px 8px rgba(220, 38, 38, 0.4));
+  transition: transform var(--transition-fast);
+}
+
+.sidebar-brand-img:hover {
+  transform: scale(1.05);
+}
+
 .logo-icon {
   width: 36px;
   height: 36px;

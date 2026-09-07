@@ -65,11 +65,8 @@ export const ProfilePage: React.FC = () => {
       {/* ===== HEADER ===== */}
       <div className="profile-header-card">
         <div className="profile-header-left">
-          <div className="profile-logo-container">
-            <div className="profile-logo-placeholder">
-              <Upload size={24} />
-              <span>Subir logo</span>
-            </div>
+          <div className="profile-logo-container" style={{ background: 'var(--color-bg-tertiary)', border: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px' }}>
+            <img src="/logo-tight.png" alt="Logo Taller" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
           </div>
           <div className="profile-header-info">
             <h1 className="profile-workshop-name">{workshop.name}</h1>

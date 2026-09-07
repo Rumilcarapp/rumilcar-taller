@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Wrench, Calendar, FileText, Stethoscope,
@@ -73,7 +73,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
       {/* Logo */}
       <div className="sidebar-brand">
         <div className="sidebar-logo">
-          <div className="logo-icon">R</div>
+          <img src="/logo-tight.png" alt="Rumilcarapp" className="sidebar-brand-img" />
           {!collapsed && <span className="logo-text">Rumilcar<span className="logo-accent">app</span></span>}
         </div>
         <button className="sidebar-toggle" onClick={onToggle} aria-label="Toggle sidebar">

@@ -1,4 +1,4 @@
-﻿/* Document Print Preview & Single-Page Printing Styles */
+/* Document Print Preview & Single-Page Printing Styles */
 @page {
   size: A4 portrait;
   margin: 10mm 12mm;
@@ -58,6 +58,13 @@
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.doc-brand-img {
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
+  flex-shrink: 0;
 }
 
 .doc-brand-badge {
