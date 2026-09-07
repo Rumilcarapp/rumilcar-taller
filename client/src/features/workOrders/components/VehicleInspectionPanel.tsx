@@ -27,15 +27,86 @@ interface VehicleInspectionPanelProps {
   onNotesChange: (notes: string) => void;
 }
 
-const COMMON_BELONGINGS = [
-  { id: 'caucho', label: 'Caucho de repuesto', icon: '🛞' },
-  { id: 'gato', label: 'Gato y palanca', icon: '🔩' },
-  { id: 'llave', label: 'Llave de cruz', icon: '✝️' },
-  { id: 'docs', label: 'Documentos / Carnet', icon: '📑' },
-  { id: 'herramientas', label: 'Herramientas', icon: '🧰' },
-  { id: 'frontal', label: 'Frontal / Pantalla', icon: '📻' },
-  { id: 'cables', label: 'Cables auxiliares', icon: '🔋' },
-  { id: 'triangulo', label: 'Triángulo de seguridad', icon: '🔺' },
+const TireIcon: React.FC = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <circle cx="12" cy="12" r="4" />
+    <path d="M12 2v6" />
+    <path d="M12 16v6" />
+    <path d="M2 12h6" />
+    <path d="M16 12h6" />
+  </svg>
+);
+
+const CarJackIcon: React.FC = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 21h18" />
+    <path d="M6 21l6-11 6 11" />
+    <path d="M12 10V4" />
+    <path d="M9 4h6" />
+    <path d="M8.5 15h7" />
+  </svg>
+);
+
+const LugWrenchIcon: React.FC = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 2v20" />
+    <path d="M2 12h20" />
+    <circle cx="12" cy="2.5" r="1.5" fill="currentColor" />
+    <circle cx="12" cy="21.5" r="1.5" fill="currentColor" />
+    <circle cx="2.5" cy="12" r="1.5" fill="currentColor" />
+    <circle cx="21.5" cy="12" r="1.5" fill="currentColor" />
+  </svg>
+);
+
+const DocsIcon: React.FC = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+    <polyline points="14 2 14 8 20 8" />
+    <line x1="16" y1="13" x2="8" y2="13" />
+    <line x1="16" y1="17" x2="8" y2="17" />
+    <line x1="10" y1="9" x2="8" y2="9" />
+  </svg>
+);
+
+const ToolboxIcon: React.FC = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+  </svg>
+);
+
+const FrontalRadioIcon: React.FC = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect width="20" height="14" x="2" y="5" rx="2" />
+    <line x1="6" y1="9" x2="10" y2="9" />
+    <line x1="6" y1="13" x2="10" y2="13" />
+    <circle cx="16" cy="12" r="2" />
+  </svg>
+);
+
+const JumperCablesIcon: React.FC = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+  </svg>
+);
+
+const SafetyTriangleIcon: React.FC = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+    <line x1="12" y1="9" x2="12" y2="13" />
+    <line x1="12" y1="17" x2="12.01" y2="17" />
+  </svg>
+);
+
+const COMMON_BELONGINGS: Array<{ id: string; label: string; icon: React.ReactNode }> = [
+  { id: 'caucho', label: 'Caucho de repuesto', icon: <TireIcon /> },
+  { id: 'gato', label: 'Gato y palanca', icon: <CarJackIcon /> },
+  { id: 'llave', label: 'Llave de cruz', icon: <LugWrenchIcon /> },
+  { id: 'docs', label: 'Documentos / Carnet', icon: <DocsIcon /> },
+  { id: 'herramientas', label: 'Herramientas', icon: <ToolboxIcon /> },
+  { id: 'frontal', label: 'Frontal / Pantalla', icon: <FrontalRadioIcon /> },
+  { id: 'cables', label: 'Cables auxiliares', icon: <JumperCablesIcon /> },
+  { id: 'triangulo', label: 'Triángulo de seguridad', icon: <SafetyTriangleIcon /> },
 ];
 
 const FUEL_PRESETS = [

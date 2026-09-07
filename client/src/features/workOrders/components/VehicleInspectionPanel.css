@@ -423,7 +423,25 @@
 }
 
 .vip-chip-icon {
-  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary, #94a3b8);
+  transition: color 0.15s ease;
+}
+
+.vip-chip-icon svg {
+  width: 15px;
+  height: 15px;
+  display: block;
+}
+
+.vip-chip-item:hover .vip-chip-icon {
+  color: var(--color-text-primary, #ffffff);
+}
+
+.vip-chip-item.active .vip-chip-icon {
+  color: var(--color-primary, #dc2626);
 }
 
 /* --- OBSERVATIONS TEXTAREA --- */
