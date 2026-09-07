@@ -31,6 +31,13 @@ export interface WorkOrder {
   paymentMethod?: PaymentMethod | 'Mixto';
   payments?: PaymentRecord[];
   paidAt?: string;
+  mileage?: number | string;
+  mileageUnit?: 'km' | 'mi';
+  fuelPercentage?: number;
+  fuelLevel?: string;
+  belongings?: string[];
+  inspectionNotes?: string;
+  photos?: any[];
 }
 
 interface WorkOrderState {

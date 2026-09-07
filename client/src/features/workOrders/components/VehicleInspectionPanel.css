@@ -1,0 +1,458 @@
+/* ==========================================================
+   VEHICLE INSPECTION PANEL (KILOMETRAJE & NIVEL DE GASOLINA)
+   ========================================================== */
+
+.vip-container {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: 100%;
+}
+
+/* --- TWO COLUMN METRICS ROW --- */
+.vip-metrics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+@media (max-width: 768px) {
+  .vip-metrics-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.vip-card {
+  background: var(--color-bg-tertiary, #1a1e29);
+  border: 1px solid var(--color-border, #2a3142);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.vip-card:focus-within {
+  border-color: var(--color-primary, #dc2626);
+  box-shadow: 0 0 0 1px var(--color-primary, #dc2626);
+}
+
+.vip-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.vip-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--color-text-secondary, #94a3b8);
+}
+
+.vip-card-title svg {
+  color: var(--color-primary, #dc2626);
+}
+
+.vip-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  letter-spacing: 0.3px;
+}
+
+/* Badge color states */
+.vip-badge-danger {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.vip-badge-warning {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.vip-badge-info {
+  background: rgba(234, 179, 8, 0.15);
+  color: #eab308;
+  border: 1px solid rgba(234, 179, 8, 0.3);
+}
+
+.vip-badge-success {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+/* --- KILOMETRAJE / ODOMETER SECTION --- */
+.vip-odometer-box {
+  display: flex;
+  align-items: center;
+  background: var(--color-bg-primary, #0f121a);
+  border: 1px solid var(--color-border, #333d52);
+  border-radius: 8px;
+  padding: 4px 12px;
+  gap: 8px;
+}
+
+.vip-odometer-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  font-size: 24px;
+  font-weight: 800;
+  font-family: 'SF Mono', 'Roboto Mono', 'Courier New', monospace;
+  letter-spacing: 1px;
+  color: var(--color-text-primary, #ffffff);
+  outline: none;
+  width: 100%;
+}
+
+.vip-odometer-input::placeholder {
+  color: var(--color-text-muted, #64748b);
+  opacity: 0.5;
+}
+
+.vip-unit-toggle {
+  display: flex;
+  background: var(--color-bg-tertiary, #1f2533);
+  border-radius: 6px;
+  padding: 2px;
+  border: 1px solid var(--color-border, #333d52);
+}
+
+.vip-unit-btn {
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted, #64748b);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.vip-unit-btn.active {
+  background: var(--color-primary, #dc2626);
+  color: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.vip-quick-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.vip-step-chip {
+  background: var(--color-bg-secondary, #141822);
+  border: 1px solid var(--color-border, #2a3142);
+  color: var(--color-text-secondary, #94a3b8);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 9px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.vip-step-chip:hover {
+  background: var(--color-bg-primary, #0f121a);
+  color: var(--color-text-primary, #ffffff);
+  border-color: var(--color-primary, #dc2626);
+}
+
+.vip-last-record {
+  font-size: 11px;
+  color: var(--color-text-muted, #64748b);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.vip-last-record-btn {
+  background: none;
+  border: none;
+  color: var(--color-primary, #dc2626);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+
+/* --- GASOLINE / FUEL TANK GAUGE SECTION --- */
+.vip-tank-visual {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.vip-tank-meter-bar {
+  height: 18px;
+  background: var(--color-bg-primary, #0f121a);
+  border: 1px solid var(--color-border, #333d52);
+  border-radius: 9px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.vip-tank-liquid {
+  height: 100%;
+  border-radius: 8px;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s ease;
+  position: relative;
+}
+
+.vip-tank-liquid::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 40%;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.3), transparent);
+  border-radius: 8px 8px 0 0;
+}
+
+.vip-tank-ticks {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 4px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-text-muted, #64748b);
+}
+
+.vip-tank-ticks span {
+  position: relative;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.vip-tank-ticks span:hover {
+  color: var(--color-text-primary, #ffffff);
+}
+
+/* Quick Fuel Buttons (E, 1/4, 1/2, 3/4, Full) */
+.vip-fuel-presets {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+
+.vip-fuel-preset-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 2px;
+  background: var(--color-bg-secondary, #141822);
+  border: 1px solid var(--color-border, #2a3142);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  gap: 2px;
+}
+
+.vip-fuel-preset-btn .fp-label {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--color-text-primary, #ffffff);
+}
+
+.vip-fuel-preset-btn .fp-sub {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--color-text-muted, #64748b);
+}
+
+.vip-fuel-preset-btn:hover {
+  border-color: rgba(220, 38, 38, 0.5);
+  transform: translateY(-1px);
+}
+
+.vip-fuel-preset-btn.active {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  font-weight: bold;
+}
+
+.vip-fuel-preset-btn.active.preset-0 {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #ef4444;
+}
+.vip-fuel-preset-btn.active.preset-0 .fp-label { color: #ef4444; }
+
+.vip-fuel-preset-btn.active.preset-25 {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: #f59e0b;
+}
+.vip-fuel-preset-btn.active.preset-25 .fp-label { color: #f59e0b; }
+
+.vip-fuel-preset-btn.active.preset-50 {
+  background: rgba(234, 179, 8, 0.2);
+  border-color: #eab308;
+}
+.vip-fuel-preset-btn.active.preset-50 .fp-label { color: #eab308; }
+
+.vip-fuel-preset-btn.active.preset-75 {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: #10b981;
+}
+.vip-fuel-preset-btn.active.preset-75 .fp-label { color: #10b981; }
+
+.vip-fuel-preset-btn.active.preset-100 {
+  background: rgba(5, 150, 105, 0.25);
+  border-color: #059669;
+}
+.vip-fuel-preset-btn.active.preset-100 .fp-label { color: #34d399; }
+
+/* Fine tune slider */
+.vip-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.vip-fuel-slider {
+  flex: 1;
+  -webkit-appearance: none;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-bg-primary, #0f121a);
+  outline: none;
+  cursor: pointer;
+}
+
+.vip-fuel-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid var(--color-primary, #dc2626);
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  transition: transform 0.1s ease;
+}
+
+.vip-fuel-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+.vip-slider-val {
+  font-size: 12px;
+  font-weight: 700;
+  font-family: monospace;
+  color: var(--color-text-secondary, #94a3b8);
+  min-width: 38px;
+  text-align: right;
+}
+
+/* --- BELONGINGS / PERTENENCIAS SECTION --- */
+.vip-belongings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.vip-section-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text-secondary, #94a3b8);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.vip-chips-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.vip-chip-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--color-bg-secondary, #141822);
+  border: 1px solid var(--color-border, #2a3142);
+  color: var(--color-text-secondary, #94a3b8);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.vip-chip-item:hover {
+  background: var(--color-bg-tertiary, #1a1e29);
+  color: var(--color-text-primary, #ffffff);
+  border-color: var(--color-border-hover, #475569);
+}
+
+.vip-chip-item.active {
+  background: rgba(220, 38, 38, 0.12);
+  border-color: var(--color-primary, #dc2626);
+  color: var(--color-text-primary, #ffffff);
+  box-shadow: 0 1px 3px rgba(220, 38, 38, 0.2);
+}
+
+.vip-chip-icon {
+  font-size: 14px;
+}
+
+/* --- OBSERVATIONS TEXTAREA --- */
+.vip-notes-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.vip-notes-input {
+  width: 100%;
+  background: var(--color-bg-secondary, #141822);
+  border: 1px solid var(--color-border, #2a3142);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--color-text-primary, #ffffff);
+  resize: vertical;
+  min-height: 52px;
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.2s ease;
+}
+
+.vip-notes-input:focus {
+  border-color: var(--color-primary, #dc2626);
+}
+
+.vip-notes-input::placeholder {
+  color: var(--color-text-muted, #64748b);
+  opacity: 0.6;
+}

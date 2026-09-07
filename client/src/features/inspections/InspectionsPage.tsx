@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useInspectionStore, Inspection, ChecklistItem, DamageMark } from '../../store/useInspectionStore';
 import { useVehicleStore } from '../../store/useVehicleStore';
 import { Button, Card, EmptyState, Modal } from '../../components/ui';
-import { Plus, Search, ClipboardCheck, CheckCircle2, AlertTriangle, XCircle, Camera, X } from 'lucide-react';
+import { Plus, Search, ClipboardCheck, CheckCircle2, AlertTriangle, XCircle, Camera, X, Gauge, Fuel } from 'lucide-react';
 import { CarDamageMap } from './components/CarDamageMap';
 
 const INITIAL_CHECKLIST: ChecklistItem[] = [
@@ -24,7 +24,9 @@ export const InspectionsPage: React.FC = () => {
 
   // New inspection form states
   const [selectedPlaca, setSelectedPlaca] = useState('');
-  const [fuelLevel, setFuelLevel] = useState<'Vacio' | '1/4' | '1/2' | '3/4' | 'Lleno'>('1/2');
+  const [mileage, setMileage] = useState<string | number>('');
+  const [fuelLevel, setFuelLevel] = useState<string>('1/2');
+  const [fuelPercentage, setFuelPercentage] = useState<number>(50);
   const [notes, setNotes] = useState('');
   const [checklist, setChecklist] = useState<ChecklistItem[]>(INITIAL_CHECKLIST);
   const [damages, setDamages] = useState<DamageMark[]>([]);
@@ -64,6 +66,14 @@ export const InspectionsPage: React.FC = () => {
     ));
   };
 
+  const handlePlacaChange = (placa: string) => {
+    setSelectedPlaca(placa);
+    const veh = vehicles.find(v => v.placa === placa);
+    if (veh && (veh as any).kilometraje) {
+      setMileage((veh as any).kilometraje);
+    }
+  };
+
   const handleSave = () => {
     if (!selectedPlaca) return alert('Debes seleccionar un vehiculo');
 
@@ -72,6 +82,8 @@ export const InspectionsPage: React.FC = () => {
       vehiclePlaca: selectedPlaca,
       date: new Date().toISOString(),
       fuelLevel,
+      fuelPercentage,
+      mileage: mileage !== '' ? Number(mileage) : undefined,
       notes,
       checklist,
       damages
@@ -82,6 +94,8 @@ export const InspectionsPage: React.FC = () => {
 
     // Reset state
     setSelectedPlaca('');
+    setMileage('');
+    setFuelPercentage(50);
     setFuelLevel('1/2');
     setNotes('');
     setChecklist(INITIAL_CHECKLIST);
@@ -212,7 +226,7 @@ export const InspectionsPage: React.FC = () => {
                 <select 
                   className="custom-input"
                   value={selectedPlaca}
-                  onChange={e => setSelectedPlaca(e.target.value)}
+                  onChange={e => handlePlacaChange(e.target.value)}
                 >
                   <option value="">-- Seleccionar Placa --</option>
                   {vehicles.map(v => (
@@ -223,19 +237,100 @@ export const InspectionsPage: React.FC = () => {
                 </select>
               </div>
 
+              {/* KILOMETRAJE ACTUAL */}
               <div className="form-group">
-                <label className="form-label" style={{ fontWeight: 600 }}>Nivel de Combustible</label>
-                <select 
-                  className="custom-input"
-                  value={fuelLevel}
-                  onChange={e => setFuelLevel(e.target.value as any)}
-                >
-                  <option value="Vacio">Vacio</option>
-                  <option value="1/4">1/4 Tanque</option>
-                  <option value="1/2">1/2 Tanque</option>
-                  <option value="3/4">3/4 Tanque</option>
-                  <option value="Lleno">Lleno</option>
-                </select>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label className="form-label" style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', margin: 0 }}>
+                    <Gauge size={16} color="var(--color-primary)" />
+                    <span>Kilometraje Actual (Odómetro)</span>
+                  </label>
+                </div>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <input 
+                    type="number"
+                    className="custom-input"
+                    placeholder="Ej: 85000"
+                    value={mileage}
+                    onChange={e => setMileage(e.target.value === '' ? '' : Number(e.target.value))}
+                    style={{ fontWeight: 700, fontSize: '15px' }}
+                  />
+                  <span style={{ fontWeight: 700, color: 'var(--color-text-muted)', fontSize: '13px' }}>KM</span>
+                </div>
+                <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
+                  <button type="button" className="btn-action-ghost" style={{ padding: '3px 8px', fontSize: '11px', borderRadius: '4px', border: '1px solid var(--color-border)', cursor: 'pointer', background: 'var(--color-bg-secondary)' }} onClick={() => setMileage((Number(mileage) || 0) + 500)}>+500</button>
+                  <button type="button" className="btn-action-ghost" style={{ padding: '3px 8px', fontSize: '11px', borderRadius: '4px', border: '1px solid var(--color-border)', cursor: 'pointer', background: 'var(--color-bg-secondary)' }} onClick={() => setMileage((Number(mileage) || 0) + 1000)}>+1,000</button>
+                  <button type="button" className="btn-action-ghost" style={{ padding: '3px 8px', fontSize: '11px', borderRadius: '4px', border: '1px solid var(--color-border)', cursor: 'pointer', background: 'var(--color-bg-secondary)' }} onClick={() => setMileage((Number(mileage) || 0) + 5000)}>+5,000</button>
+                </div>
+              </div>
+
+              {/* NIVEL DE COMBUSTIBLE */}
+              <div className="form-group">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label className="form-label" style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', margin: 0 }}>
+                    <Fuel size={16} color="var(--color-primary)" />
+                    <span>Nivel de Combustible</span>
+                  </label>
+                  <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '10px', background: fuelPercentage <= 20 ? 'rgba(239,68,68,0.15)' : fuelPercentage <= 50 ? 'rgba(234,179,8,0.15)' : 'rgba(16,185,129,0.15)', color: fuelPercentage <= 20 ? '#ef4444' : fuelPercentage <= 50 ? '#eab308' : '#10b981' }}>
+                    {fuelLevel} ({fuelPercentage}%)
+                  </span>
+                </div>
+
+                {/* Tank meter bar */}
+                <div style={{ height: '14px', background: 'var(--color-bg-primary)', border: '1px solid var(--color-border)', borderRadius: '7px', overflow: 'hidden', marginBottom: '8px' }}>
+                  <div style={{ height: '100%', width: `${Math.max(5, fuelPercentage)}%`, background: fuelPercentage <= 20 ? '#ef4444' : fuelPercentage <= 50 ? '#eab308' : '#10b981', transition: 'width 0.2s ease, background 0.2s ease' }} />
+                </div>
+
+                {/* Preset buttons */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '4px', marginBottom: '8px' }}>
+                  {[
+                    { label: 'E', name: 'Vacío', pct: 0 },
+                    { label: '1/4', name: '1/4', pct: 25 },
+                    { label: '1/2', name: '1/2', pct: 50 },
+                    { label: '3/4', name: '3/4', pct: 75 },
+                    { label: 'F', name: 'Lleno', pct: 100 },
+                  ].map(p => (
+                    <button
+                      key={p.label}
+                      type="button"
+                      onClick={() => {
+                        setFuelPercentage(p.pct);
+                        setFuelLevel(p.name);
+                      }}
+                      style={{
+                        padding: '6px 2px',
+                        borderRadius: '6px',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        border: '1px solid',
+                        borderColor: Math.abs(fuelPercentage - p.pct) <= 12 ? 'var(--color-primary)' : 'var(--color-border)',
+                        background: Math.abs(fuelPercentage - p.pct) <= 12 ? 'rgba(220, 38, 38, 0.15)' : 'var(--color-bg-secondary)',
+                        color: Math.abs(fuelPercentage - p.pct) <= 12 ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Range Slider */}
+                <input 
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="5"
+                  value={fuelPercentage}
+                  onChange={e => {
+                    const val = Number(e.target.value);
+                    setFuelPercentage(val);
+                    if (val <= 10) setFuelLevel('Vacío');
+                    else if (val <= 35) setFuelLevel('1/4');
+                    else if (val <= 65) setFuelLevel('1/2');
+                    else if (val <= 85) setFuelLevel('3/4');
+                    else setFuelLevel('Lleno');
+                  }}
+                  style={{ width: '100%', cursor: 'pointer' }}
+                />
               </div>
 
               <div className="form-group">
@@ -345,9 +440,19 @@ export const InspectionsPage: React.FC = () => {
                 <strong style={{ fontSize: '18px' }}>{viewingInspection.vehiclePlaca}</strong>
               </div>
               
-              <div>
-                <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>Nivel de Combustible</div>
-                <strong style={{ fontSize: '15px' }}>{viewingInspection.fuelLevel} Tanque</strong>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>Kilometraje</div>
+                  <strong style={{ fontSize: '15px', color: 'var(--color-text-primary)' }}>
+                    {viewingInspection.mileage ? `${Number(viewingInspection.mileage).toLocaleString()} KM` : 'No registrado'}
+                  </strong>
+                </div>
+                <div>
+                  <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>Nivel de Combustible</div>
+                  <strong style={{ fontSize: '15px', color: 'var(--color-text-primary)' }}>
+                    {viewingInspection.fuelLevel} {viewingInspection.fuelPercentage !== undefined ? `(${viewingInspection.fuelPercentage}%)` : ''}
+                  </strong>
+                </div>
               </div>
 
               <div>

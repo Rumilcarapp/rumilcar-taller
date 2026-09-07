@@ -6,6 +6,7 @@ import { ArrowLeft, UserPlus, Car, Info, Plus } from 'lucide-react';
 import { ClientModal } from './components/ClientModal';
 import { VehicleModal } from './components/VehicleModal';
 import { PhotoUploader } from './components/PhotoUploader';
+import { VehicleInspectionPanel } from './components/VehicleInspectionPanel';
 import { ServiceLine, ServiceLineItem } from './components/ServiceLineItem';
 import { PartLine, PartLineItem } from './components/PartLineItem';
 import { OrderSummary } from './components/OrderSummary';
@@ -31,8 +32,14 @@ export const CreateWorkOrderPage: React.FC = () => {
   const [vehicleSearch, setVehicleSearch] = useState('');
   const [selectedVehicle, setSelectedVehicle] = useState<any>(null);
 
-  // Form State
+  // Inspection & Reception State (Kilometraje, Gasolina, Pertenencias, Fotos)
+  const [mileage, setMileage] = useState<string | number>('');
+  const [mileageUnit, setMileageUnit] = useState<'km' | 'mi'>('km');
+  const [fuelPercentage, setFuelPercentage] = useState<number>(50);
+  const [fuelLevel, setFuelLevel] = useState<string>('1/2 Tanque');
+  const [belongings, setBelongings] = useState<string[]>(['Caucho de repuesto', 'Gato y palanca']);
   const [inspectionNotes, setInspectionNotes] = useState('');
+  const [inspectionPhotos, setInspectionPhotos] = useState<any[]>([]);
   const [mechanicId, setMechanicId] = useState('');
 
   // Lines State
@@ -47,9 +54,23 @@ export const CreateWorkOrderPage: React.FC = () => {
         setSelectedVehicle(existingOrder.vehicle);
         setServices(existingOrder.services || []);
         setParts(existingOrder.parts || []);
+        if (existingOrder.mileage !== undefined) setMileage(existingOrder.mileage);
+        if (existingOrder.mileageUnit) setMileageUnit(existingOrder.mileageUnit);
+        if (existingOrder.fuelPercentage !== undefined) setFuelPercentage(existingOrder.fuelPercentage);
+        if (existingOrder.fuelLevel) setFuelLevel(existingOrder.fuelLevel);
+        if (existingOrder.belongings) setBelongings(existingOrder.belongings);
+        if (existingOrder.inspectionNotes) setInspectionNotes(existingOrder.inspectionNotes);
+        if (existingOrder.photos) setInspectionPhotos(existingOrder.photos);
       }
     }
   }, [id, workOrders]);
+
+  // If vehicle has previous mileage, pre-fill when selected
+  useEffect(() => {
+    if (selectedVehicle && !mileage && selectedVehicle.kilometraje) {
+      setMileage(selectedVehicle.kilometraje);
+    }
+  }, [selectedVehicle]);
 
   const handleSaveClient = (client: any) => {
     setSelectedClient(client);
@@ -105,12 +126,19 @@ export const CreateWorkOrderPage: React.FC = () => {
   const buildMockOrder = (totalUSD?: number) => ({
     id: id || 'BORRADOR',
     client: selectedClient,
-    vehicle: selectedVehicle,
+    vehicle: selectedVehicle ? { ...selectedVehicle, kilometraje: mileage !== '' ? Number(mileage) : selectedVehicle.kilometraje } : null,
     services,
     parts,
     date: new Date().toISOString(),
     totalUSD: totalUSD || 0,
-    status: (isBudget ? 'Presupuesto' : 'Recibido') as any
+    status: (isBudget ? 'Presupuesto' : 'Recibido') as any,
+    mileage: mileage !== '' ? Number(mileage) : undefined,
+    mileageUnit,
+    fuelPercentage,
+    fuelLevel,
+    belongings,
+    inspectionNotes,
+    photos: inspectionPhotos
   });
 
   const handlePrint = (totalUSD: number) => handlePrintOrder(buildMockOrder(totalUSD));
@@ -121,11 +149,18 @@ export const CreateWorkOrderPage: React.FC = () => {
     if (id) {
       updateWorkOrder(id, {
         client: selectedClient,
-        vehicle: selectedVehicle,
+        vehicle: { ...selectedVehicle, kilometraje: mileage !== '' ? Number(mileage) : selectedVehicle.kilometraje },
         services,
         parts,
         totalUSD,
-        status: 'Recibido'
+        status: 'Recibido',
+        mileage: mileage !== '' ? Number(mileage) : undefined,
+        mileageUnit,
+        fuelPercentage,
+        fuelLevel,
+        belongings,
+        inspectionNotes,
+        photos: inspectionPhotos
       });
       alert("Presupuesto aprobado y convertido a orden de trabajo!");
       navigate('/trabajos');
@@ -134,24 +169,29 @@ export const CreateWorkOrderPage: React.FC = () => {
 
   const handleSaveOrder = (totalUSD: number) => {
     if (!selectedClient || !selectedVehicle) { alert('Debes seleccionar un cliente y un vehiculo'); return; }
-    if (id) {
-      updateWorkOrder(id, {
-        client: selectedClient,
-        vehicle: selectedVehicle,
-        services,
-        parts,
-        totalUSD
-      });
-    } else {
-      addWorkOrder({
-      id: 'RMC-2026-' + Math.floor(1000 + Math.random() * 9000).toString(),
+    const orderPayload = {
       client: selectedClient,
-      vehicle: selectedVehicle,
+      vehicle: { ...selectedVehicle, kilometraje: mileage !== '' ? Number(mileage) : selectedVehicle.kilometraje },
       services,
       parts,
-      date: new Date().toISOString(),
       totalUSD,
-      status: isBudget ? 'Presupuesto' : 'Recibido'
+      mileage: mileage !== '' ? Number(mileage) : undefined,
+      mileageUnit,
+      fuelPercentage,
+      fuelLevel,
+      belongings,
+      inspectionNotes,
+      photos: inspectionPhotos
+    };
+
+    if (id) {
+      updateWorkOrder(id, orderPayload);
+    } else {
+      addWorkOrder({
+        id: 'RMC-2026-' + Math.floor(1000 + Math.random() * 9000).toString(),
+        date: new Date().toISOString(),
+        status: isBudget ? 'Presupuesto' : 'Recibido',
+        ...orderPayload
       });
     }
     alert(isBudget ? "Presupuesto guardado exitosamente!" : "Orden guardada exitosamente!");
@@ -303,21 +343,38 @@ export const CreateWorkOrderPage: React.FC = () => {
             </div>
           </Card>
 
-          <Card title="INSPECCION DE INGRESO DEL VEHICULO" className="wo-card-compact">
-            <div className="form-group">
-              <label>Observaciones generales (Kilometraje, nivel de gasolina, objetos):</label>
-              <textarea 
-                className="textarea-field textarea-compact"
-                placeholder="Ej: Vehiculo llega en grua. Medio tanque..."
-                rows={2}
-                value={inspectionNotes}
-                onChange={(e) => setInspectionNotes(e.target.value)}
-              />
-            </div>
+          <Card 
+            title="INSPECCION DE INGRESO DEL VEHICULO" 
+            className="wo-card-compact"
+            action={
+              <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600 }}>
+                Control de Recepción & Custodia
+              </span>
+            }
+          >
+            <VehicleInspectionPanel 
+              mileage={mileage}
+              onMileageChange={setMileage}
+              mileageUnit={mileageUnit}
+              onMileageUnitChange={setMileageUnit}
+              lastRecordedMileage={selectedVehicle?.kilometraje}
+              fuelPercentage={fuelPercentage}
+              fuelLevel={fuelLevel}
+              onFuelChange={(pct, label) => {
+                setFuelPercentage(pct);
+                setFuelLevel(label);
+              }}
+              belongings={belongings}
+              onBelongingsChange={setBelongings}
+              notes={inspectionNotes}
+              onNotesChange={setInspectionNotes}
+            />
 
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label>Evidencia fotografica:</label>
-              <PhotoUploader />
+            <div className="form-group" style={{ marginTop: '18px', marginBottom: 0 }}>
+              <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Evidencia fotográfica (Cámara / Galería):
+              </label>
+              <PhotoUploader photos={inspectionPhotos} onChange={setInspectionPhotos} />
             </div>
           </Card>
 

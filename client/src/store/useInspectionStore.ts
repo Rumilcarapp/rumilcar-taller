@@ -19,7 +19,9 @@ export interface Inspection {
   id: string;
   vehiclePlaca: string;
   date: string;
-  fuelLevel: 'Vacio' | '1/4' | '1/2' | '3/4' | 'Lleno';
+  fuelLevel: string;
+  fuelPercentage?: number;
+  mileage?: number | string;
   notes: string;
   checklist: ChecklistItem[];
   damages: DamageMark[];
