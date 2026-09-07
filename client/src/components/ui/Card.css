@@ -1,0 +1,99 @@
+.card {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  transition: all var(--transition-base);
+}
+
+.card-pad-none .card-body { padding: 0; }
+.card-pad-sm .card-body { padding: var(--space-3); }
+.card-pad-md .card-body { padding: var(--space-5); }
+.card-pad-lg .card-body { padding: var(--space-6); }
+
+.card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+  gap: var(--space-4);
+}
+
+.card-title {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.card-subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-top: var(--space-1);
+}
+
+.card-glass {
+  background: rgba(17, 17, 17, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Stats Card */
+.card-stats {
+  padding: var(--space-5);
+  border-top: 3px solid var(--color-primary);
+  position: relative;
+  overflow: hidden;
+}
+
+.card-stats::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 100px;
+  height: 100px;
+  background: radial-gradient(circle, var(--color-primary-subtle) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.stats-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+.stats-label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.stats-icon {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-md);
+  color: var(--color-primary);
+}
+
+.stats-value {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  line-height: var(--line-height-tight);
+}
+
+.stats-change {
+  font-size: var(--font-size-xs);
+  margin-top: var(--space-2);
+  font-weight: var(--font-weight-medium);
+}
+
+.stats-change.positive { color: var(--color-success); }
+.stats-change.negative { color: var(--color-error); }

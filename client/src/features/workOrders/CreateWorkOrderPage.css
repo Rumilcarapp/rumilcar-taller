@@ -1,0 +1,60 @@
+.create-wo-content {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-6);
+  padding-bottom: var(--space-12); /* Room for mobile footer if any */
+  align-items: start;
+}
+
+@media (min-width: 1024px) {
+  .create-wo-content {
+    grid-template-columns: 2fr 1fr; /* Form Left (65%), Summary Right (35%) */
+  }
+}
+
+.wo-form-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.wo-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
+}
+
+@media (min-width: 768px) {
+  .wo-grid-2 {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.section-header-inline {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-3);
+}
+
+.section-header-inline h3 {
+  font-size: var(--font-size-md);
+  margin: 0;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.empty-lines {
+  padding: var(--space-6);
+  text-align: center;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  background: var(--color-bg-secondary);
+}
+
+/* Hide original sticky footer as we moved actions to OrderSummary */
+.wo-sticky-footer {
+  display: none;
+}

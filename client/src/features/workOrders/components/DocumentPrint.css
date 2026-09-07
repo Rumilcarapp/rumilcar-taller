@@ -1,0 +1,283 @@
+﻿/* Document Print Preview & Single-Page Printing Styles */
+@page {
+  size: A4 portrait;
+  margin: 10mm 12mm;
+}
+
+.doc-print-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 82vh;
+  overflow-y: auto;
+  padding: 2px;
+}
+
+/* LETTER FORMAT (A4) - Optimized for 1 single page */
+.doc-paper-letter {
+  background: #ffffff;
+  color: #111827;
+  padding: 24px 28px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  max-width: 800px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* TICKET FORMAT (80mm) */
+.doc-paper-ticket {
+  background: #ffffff;
+  color: #111827;
+  padding: 14px 12px;
+  border-radius: 6px;
+  border: 1px dashed #9ca3af;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  font-family: "Courier New", Courier, monospace;
+  max-width: 320px;
+  margin: 0 auto;
+  width: 100%;
+  font-size: 11px;
+  box-sizing: border-box;
+}
+
+/* Header */
+.doc-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 2px solid #dc2626;
+  padding-bottom: 10px;
+  margin-bottom: 12px;
+}
+
+.doc-brand-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.doc-brand-badge {
+  width: 38px;
+  height: 38px;
+  background: #dc2626;
+  color: #ffffff;
+  font-weight: 900;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+}
+
+.doc-brand-name {
+  font-size: 18px;
+  font-weight: 800;
+  color: #111827;
+  line-height: 1.1;
+}
+
+.doc-brand-sub {
+  font-size: 10px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.doc-number-box {
+  text-align: right;
+}
+
+.doc-type-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: #dc2626;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.doc-number {
+  font-size: 16px;
+  font-weight: 800;
+  color: #111827;
+  margin-top: 1px;
+}
+
+.doc-date {
+  font-size: 10px;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+/* Info grid */
+.doc-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  font-size: 11px;
+}
+
+.doc-info-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.doc-info-label {
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #6b7280;
+  margin-bottom: 1px;
+}
+
+.doc-info-value {
+  font-weight: 700;
+  color: #111827;
+}
+
+/* Tables */
+.doc-items-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 12px;
+  font-size: 11px;
+}
+
+.doc-items-table th {
+  background: #f3f4f6;
+  color: #374151;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 9px;
+  padding: 6px 8px;
+  border-top: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: left;
+}
+
+.doc-items-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid #f3f4f6;
+  color: #1f2937;
+}
+
+/* Totals */
+.doc-totals-box {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 14px;
+}
+
+.doc-totals-table {
+  width: 250px;
+  font-size: 11px;
+}
+
+.doc-totals-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 2px 0;
+  color: #4b5563;
+}
+
+.doc-totals-row.grand-total {
+  border-top: 2px solid #111827;
+  padding-top: 4px;
+  margin-top: 2px;
+  font-size: 14px;
+  font-weight: 800;
+  color: #111827;
+}
+
+.doc-totals-row.ves-total {
+  color: #dc2626;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+/* Signatures & Terms */
+.doc-terms-box {
+  font-size: 9px;
+  color: #6b7280;
+  line-height: 1.35;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 8px;
+  margin-bottom: 16px;
+}
+
+.doc-signatures-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+  margin-top: 10px;
+  text-align: center;
+}
+
+.doc-sig-line {
+  border-top: 1px solid #9ca3af;
+  padding-top: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #374151;
+}
+
+/* PRINT MEDIA QUERY FOR EXACT 1 SINGLE PAGE PRINT */
+@media print {
+  html, body {
+    height: 100% !important;
+    overflow: hidden !important;
+    background: #ffffff !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .doc-paper-letter, .doc-paper-letter *,
+  .doc-paper-ticket, .doc-paper-ticket * {
+    visibility: visible;
+  }
+
+  .doc-paper-letter {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    page-break-after: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .doc-paper-ticket {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 78mm !important;
+    max-width: 78mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    page-break-after: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+}

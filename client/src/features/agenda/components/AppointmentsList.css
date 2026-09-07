@@ -1,0 +1,233 @@
+.appointments-list-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  position: relative;
+}
+
+.appointments-header {
+  padding: var(--space-4) var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.appointments-title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.appointments-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-4) var(--space-6);
+}
+
+.appointments-empty {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.appointments-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.appointment-card {
+  position: relative;
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  display: flex;
+  justify-content: space-between;
+  align-items: stretch;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.appointment-card:hover {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.appointment-card.is-cancelled {
+  opacity: 0.6;
+  background: var(--color-bg-secondary);
+  background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(0,0,0,0.02) 10px, rgba(0,0,0,0.02) 20px);
+}
+.appointment-card.is-cancelled:hover {
+  border-color: var(--color-border);
+  box-shadow: none;
+}
+
+.apt-main {
+  display: flex;
+  gap: var(--space-4);
+  align-items: flex-start;
+}
+
+.apt-time {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  min-width: 85px;
+  line-height: 1.1;
+}
+
+.apt-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.apt-client {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.apt-vehicle {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.apt-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.apt-mechanic {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.unassigned {
+  background: var(--color-bg-hover);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+}
+
+.apt-service {
+  padding-left: var(--space-3);
+  border-left: 1px solid var(--color-border);
+}
+
+.apt-actions-col {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.apt-status {
+  margin-bottom: var(--space-3);
+  position: relative;
+}
+
+.clickable-badge {
+  cursor: pointer;
+  user-select: none;
+}
+.clickable-badge:hover {
+  opacity: 0.8;
+}
+
+.status-dropdown-container {
+  position: relative;
+}
+.status-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: var(--space-1);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  z-index: 10;
+  min-width: 140px;
+  overflow: hidden;
+}
+.status-item {
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+  color: var(--color-text-primary);
+}
+.status-item:hover {
+  background: var(--color-bg-hover);
+}
+.text-danger {
+  color: var(--color-error);
+}
+
+.apt-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.apt-action-btn {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  border-radius: var(--radius-sm);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.apt-action-btn:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+  border-color: var(--color-border-light);
+}
+.apt-action-danger:hover {
+  background: var(--color-error-bg);
+  color: var(--color-error);
+  border-color: var(--color-error);
+}
+
+.cancel-confirm-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+  backdrop-filter: blur(2px);
+}
+.light-theme .cancel-confirm-overlay {
+  background: rgba(255, 255, 255, 0.9);
+}
+body:not(.light-theme) .cancel-confirm-overlay {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+.cancel-confirm-dialog {
+  text-align: center;
+  padding: var(--space-4);
+}
+.cancel-confirm-dialog p {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  margin: 0 0 var(--space-3) 0;
+  font-weight: var(--font-weight-medium);
+}
+.cancel-actions {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-3);
+}

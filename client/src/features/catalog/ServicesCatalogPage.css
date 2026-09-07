@@ -1,0 +1,8 @@
+/* Estilos especificos para el Catalogo de Servicios */
+.data-table th {
+  background-color: var(--color-bg-secondary);
+}
+
+.data-table tbody tr:hover {
+  background-color: var(--color-bg-secondary);
+}

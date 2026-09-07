@@ -1,0 +1,323 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ========================
+// Workshop & Users
+// ========================
+
+model Workshop {
+  id              String   @id @default(uuid())
+  name            String
+  legalName       String?
+  taxId           String?
+  address         String?
+  website         String?
+  phone           String?
+  email           String?
+  logoUrl         String?
+  anchorCurrency  String   @default("USD")
+  usdtSpread      Float    @default(0)
+  autoExchangeRate Boolean @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  users           User[]
+  mechanics       Mechanic[]
+  exchangeRates   ExchangeRate[]
+  paymentMethods  WorkshopPaymentMethod[]
+  clients         Client[]
+  workOrders      WorkOrder[]
+  inventoryItems  InventoryItem[]
+  appointments    Appointment[]
+  saldosVES       SaldoVES[]
+  antiInflationConversions AntiInflationConversion[]
+  alertaDevaluacionConfig  AlertaDevaluacionConfig?
+}
+
+model User {
+  id           String   @id @default(uuid())
+  workshopId   String
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         String   @default("OWNER")
+  isActive     Boolean  @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  workshop     Workshop @relation(fields: [workshopId], references: [id])
+  workOrders   WorkOrder[] @relation("CreatedBy")
+}
+
+model Mechanic {
+  id           String   @id @default(uuid())
+  workshopId   String
+  name         String
+  photoUrl     String?
+  specialty    String?
+  phone        String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  workshop     Workshop @relation(fields: [workshopId], references: [id])
+  assignments  WorkOrderAssignment[]
+  appointments Appointment[]
+}
+
+// ========================
+// Multi-Currency Engine
+// ========================
+
+model ExchangeRate {
+  id           String   @id @default(uuid())
+  workshopId   String
+  currency     String   @default("VES")
+  rateToAnchor Float
+  source       String   @default("manual")
+  effectiveAt  DateTime @default(now())
+  createdAt    DateTime @default(now())
+
+  workshop     Workshop @relation(fields: [workshopId], references: [id])
+}
+
+model ExchangeRateSnapshot {
+  id             String   @id @default(uuid())
+  vesRate        Float
+  usdtSpread     Float
+  anchorCurrency String
+  capturedAt     DateTime @default(now())
+
+  payments       Payment[]
+}
+
+model WorkshopPaymentMethod {
+  id         String  @id @default(uuid())
+  workshopId String
+  method     String
+  isEnabled  Boolean @default(true)
+
+  workshop   Workshop @relation(fields: [workshopId], references: [id])
+
+  @@unique([workshopId, method])
+}
+
+model SaldoVES {
+  id              String   @id @default(uuid())
+  workshopId      String
+  montoVES        Float    @default(0)
+  valorUSDIngreso Float    @default(0)
+  tasaIngreso     Float    @default(0)
+  fechaIngreso    DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  workshop        Workshop @relation(fields: [workshopId], references: [id])
+}
+
+model AntiInflationConversion {
+  id                      String   @id @default(uuid())
+  workshopId              String
+  fecha                   DateTime @default(now())
+  montoVES                Float
+  tasaUsada               Float
+  usdtBruto               Float
+  comisionPorcentaje      Float    @default(0)
+  usdtNeto                Float
+  plataforma              String   @default("binance_p2p")
+  plataformaPersonalizada String?
+  notas                   String?
+  createdAt               DateTime @default(now())
+
+  workshop                Workshop @relation(fields: [workshopId], references: [id])
+}
+
+model AlertaDevaluacionConfig {
+  id                     String   @id @default(uuid())
+  workshopId             String   @unique
+  umbralPorcentaje       Float    @default(3)
+  umbralDias             Int      @default(3)
+  proyeccionSubidaDiaria Float    @default(0.5)
+  canalNotificacion      String   @default("inapp")
+  activa                 Boolean  @default(true)
+  updatedAt              DateTime @updatedAt
+
+  workshop               Workshop @relation(fields: [workshopId], references: [id])
+}
+
+// ========================
+// Clients & Vehicles
+// ========================
+
+model Client {
+  id         String   @id @default(uuid())
+  workshopId String
+  name       String
+  email      String?
+  phone      String?
+  taxId      String?
+  address    String?
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  workshop   Workshop  @relation(fields: [workshopId], references: [id])
+  vehicles   Vehicle[]
+  workOrders WorkOrder[]
+  appointments Appointment[]
+}
+
+model Vehicle {
+  id           String   @id @default(uuid())
+  clientId     String
+  make         String
+  model        String
+  year         Int?
+  licensePlate String?
+  vin          String?
+  color        String?
+  mileage      Int?
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  client       Client     @relation(fields: [clientId], references: [id])
+  workOrders   WorkOrder[]
+  appointments Appointment[]
+}
+
+// ========================
+// Work Orders & Payments
+// ========================
+
+model WorkOrder {
+  id          String   @id @default(uuid())
+  workshopId  String
+  clientId    String
+  vehicleId   String
+  createdById String
+  orderNumber Int
+  status      String   @default("RECEIVED")
+  totalAnchor Float    @default(0)
+  notes       String?
+  inspectionNotes String?
+  receivedAt  DateTime @default(now())
+  completedAt DateTime?
+  deliveredAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workshop    Workshop @relation(fields: [workshopId], references: [id])
+  client      Client   @relation(fields: [clientId], references: [id])
+  vehicle     Vehicle  @relation(fields: [vehicleId], references: [id])
+  createdBy   User     @relation("CreatedBy", fields: [createdById], references: [id])
+
+  items       WorkOrderItem[]
+  photos      WorkOrderPhoto[]
+  payments    Payment[]
+  assignments WorkOrderAssignment[]
+}
+
+model WorkOrderPhoto {
+  id          String   @id @default(uuid())
+  workOrderId String
+  photoUrl    String
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id])
+}
+
+model WorkOrderItem {
+  id              String  @id @default(uuid())
+  workOrderId     String
+  type            String  @default("SERVICE")
+  description     String
+  quantity        Float   @default(1)
+  unitPriceAnchor Float
+  inventoryItemId String?
+
+  workOrder       WorkOrder      @relation(fields: [workOrderId], references: [id])
+  inventoryItem   InventoryItem? @relation(fields: [inventoryItemId], references: [id])
+}
+
+model WorkOrderAssignment {
+  id           String    @id @default(uuid())
+  workOrderId  String
+  mechanicId   String
+  assignedAt   DateTime  @default(now())
+  unassignedAt DateTime?
+
+  workOrder    WorkOrder @relation(fields: [workOrderId], references: [id])
+  mechanic     Mechanic  @relation(fields: [mechanicId], references: [id])
+}
+
+model Payment {
+  id                     String   @id @default(uuid())
+  workOrderId            String?
+  amount                 Float
+  currency               String
+  paymentMethod          String
+  exchangeRateSnapshotId String
+  reference              String?
+  notes                  String?
+  paidAt                 DateTime @default(now())
+
+  workOrder              WorkOrder?           @relation(fields: [workOrderId], references: [id])
+  exchangeRateSnapshot   ExchangeRateSnapshot @relation(fields: [exchangeRateSnapshotId], references: [id])
+}
+
+// ========================
+// Inventory
+// ========================
+
+model InventoryItem {
+  id              String   @id @default(uuid())
+  workshopId      String
+  sku             String?
+  name            String
+  description     String?
+  category        String?
+  unitPriceAnchor Float
+  costPriceAnchor Float?
+  currentStock    Float    @default(0)
+  minStock        Float    @default(0)
+  unit            String   @default("unidad")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  workshop        Workshop        @relation(fields: [workshopId], references: [id])
+  workOrderItems  WorkOrderItem[]
+}
+
+// ========================
+// Appointments (Agenda)
+// ========================
+
+model Appointment {
+  id           String   @id @default(uuid())
+  workshopId   String
+  clientId     String
+  vehicleId    String
+  mechanicId   String?
+  startAt      DateTime
+  endAt        DateTime
+  modality     String   @default("TALLER")
+  serviceMotif String
+  internalNotes String?
+  status       String   @default("PENDING")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  workshop     Workshop @relation(fields: [workshopId], references: [id])
+  client       Client   @relation(fields: [clientId], references: [id])
+  vehicle      Vehicle  @relation(fields: [vehicleId], references: [id])
+  mechanic     Mechanic? @relation(fields: [mechanicId], references: [id])
+}

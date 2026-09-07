@@ -1,0 +1,99 @@
+.photo-uploader {
+  width: 100%;
+}
+
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--space-4);
+}
+
+.photo-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.photo-preview {
+  aspect-ratio: 4/3;
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.photo-icon-placeholder {
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-2);
+  opacity: 0.5;
+}
+
+.photo-label {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+}
+
+.photo-remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 24px;
+  height: 24px;
+  background: rgba(0,0,0,0.5);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+.photo-remove:hover {
+  background: var(--color-error);
+}
+
+.photo-note-input {
+  width: 100%;
+  padding: var(--space-2);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-xs);
+}
+.photo-note-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.photo-add-btn {
+  aspect-ratio: 4/3;
+  background: transparent;
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.photo-add-btn:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+.photo-add-btn span {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+}

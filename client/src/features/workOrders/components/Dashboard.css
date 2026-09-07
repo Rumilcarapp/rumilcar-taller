@@ -1,0 +1,289 @@
+﻿/* Modern, Spacious Work Order List Card Styles with Optimized Responsive Columns */
+.wo-list-card {
+  display: grid;
+  grid-template-columns: 180px minmax(220px, 2fr) 130px 115px auto;
+  align-items: center;
+  gap: 16px;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-left-width: 6px;
+  border-radius: var(--radius-lg, 12px);
+  padding: 14px 18px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all var(--transition-fast, 0.2s);
+  position: relative;
+}
+
+@media (max-width: 1280px) {
+  .wo-list-card {
+    grid-template-columns: 165px minmax(200px, 1.8fr) 115px 105px auto;
+    gap: 12px;
+    padding: 12px 14px;
+  }
+}
+
+@media (max-width: 960px) {
+  .wo-list-card {
+    grid-template-columns: 1fr auto;
+    gap: 14px;
+  }
+}
+
+.wo-list-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  border-color: var(--color-primary);
+  transform: translateY(-1px);
+}
+
+/* Col 1: ID, Date, Status */
+.wo-col-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.wo-id-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.wo-id {
+  font-size: 14px;
+  color: var(--color-text-primary);
+  font-weight: 800;
+  white-space: nowrap;
+  letter-spacing: -0.2px;
+}
+
+.wo-date {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.wo-badge {
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.status-recibido { background: rgba(59, 130, 246, 0.12); color: #2563eb; }
+.status-enproceso { background: rgba(245, 158, 11, 0.12); color: #d97706; }
+.status-listo { background: rgba(168, 85, 247, 0.12); color: #9333ea; }
+.status-finalizado { background: rgba(16, 185, 129, 0.12); color: #059669; }
+.status-presupuesto { background: rgba(239, 68, 68, 0.12); color: #dc2626; }
+.status-rechazado { background: rgba(100, 116, 139, 0.12); color: #64748b; }
+
+/* Col 2: Client & Vehicle */
+.wo-col-client-vehicle {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.wo-client-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wo-vehicle-desc {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.wo-vehicle-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 1;
+}
+
+/* HIGH-CONTRAST LICENSE PLATE BADGE (Never clipped or shrunk) */
+.plate-badge {
+  background: #0f172a !important;
+  color: #f8fafc !important;
+  padding: 2px 8px;
+  border-radius: 5px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  border: 1px solid #334155 !important;
+  display: inline-flex;
+  align-items: center;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  flex-shrink: 0 !important;
+  white-space: nowrap !important;
+}
+
+/* Col 3: Mechanic & Summary */
+.wo-col-tech {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.wo-mechanic-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mechanic-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #dc2626;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.wo-services-count {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+/* Col 4: Total USD & Payment Status */
+.wo-col-financial {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.total-amount {
+  font-size: 17px;
+  color: #10b981;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  white-space: nowrap;
+}
+
+.payment-tag {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(16, 185, 129, 0.1);
+  color: #059669;
+  white-space: nowrap;
+}
+
+/* Col 5: Actions */
+.wo-col-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.icon-btn {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  padding: 7px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.icon-btn:hover {
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
+}
+
+/* Dropdown */
+.action-menu-wrapper {
+  position: relative;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md, 8px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  width: 240px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  animation: fadeIn 0.15s ease;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  font-size: 13px;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.1s;
+}
+
+.dropdown-item:hover {
+  background: var(--color-bg-subtle);
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: var(--color-border);
+  margin: 4px 0;
+}
+
+.success-text { color: #10b981; }
+.success-text:hover { background: rgba(16, 185, 129, 0.08); }
+.danger-text { color: #ef4444; }
+.danger-text:hover { background: rgba(239, 68, 68, 0.08); }
+
+.menu-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99;
+}
