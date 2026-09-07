@@ -11,7 +11,7 @@ import {
   DollarSign, Banknote, Wrench, Calendar,
   AlertTriangle, ArrowRight,
   Plus, FileText, ClipboardCheck, Stethoscope, ShoppingCart,
-  Wallet, Send, TrendingUp, ShieldAlert
+  Wallet, Send, TrendingUp, ShieldAlert, X
 } from 'lucide-react';
 import { WhatsAppModal } from '../../components/whatsapp/WhatsAppModal';
 import { OnboardingChecklist } from '../../components/onboarding/OnboardingChecklist';
@@ -120,36 +120,53 @@ export const DashboardPage: React.FC = () => {
           </button>
 
           {showQuickActions && (
-            <div className="quick-actions-menu">
-              <button className="quick-action-item" onClick={() => { setShowQuickActions(false); navigate('/trabajos/nueva'); }}>
-                <FileText size={18} />
-                <span>Nueva Orden de Trabajo</span>
-              </button>
-              <button className="quick-action-item" onClick={() => { setShowQuickActions(false); navigate('/presupuestos/nuevo'); }}>
-                <Banknote size={18} />
-                <span>Nuevo Presupuesto</span>
-              </button>
-              <button className="quick-action-item" onClick={() => { setShowQuickActions(false); navigate('/agenda'); }}>
-                <Calendar size={18} />
-                <span>Agendar Cita</span>
-              </button>
-              <button className="quick-action-item" onClick={() => { setShowQuickActions(false); navigate('/pos'); }}>
-                <ShoppingCart size={18} />
-                <span>Punto de Venta (POS)</span>
-              </button>
-              <button className="quick-action-item" onClick={() => { setShowQuickActions(false); navigate('/caja'); }}>
-                <Wallet size={18} />
-                <span>Caja & Finanzas</span>
-              </button>
-              <button className="quick-action-item" onClick={() => { setShowQuickActions(false); navigate('/inspecciones'); }}>
-                <ClipboardCheck size={18} />
-                <span>Inspección Visual</span>
-              </button>
-              <button className="quick-action-item" onClick={() => { setShowQuickActions(false); navigate('/diagnosticos'); }}>
-                <Stethoscope size={18} />
-                <span>Diagnóstico</span>
-              </button>
-            </div>
+            <>
+              <div 
+                className="quick-actions-backdrop" 
+                onClick={() => setShowQuickActions(false)} 
+                aria-hidden="true"
+              />
+              <div className="quick-actions-menu">
+                <div className="quick-actions-header">
+                  <span className="quick-actions-header-title">Acciones Rápidas</span>
+                  <button 
+                    className="quick-actions-close-btn" 
+                    onClick={() => setShowQuickActions(false)}
+                    aria-label="Cerrar"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+                <button className="quick-action-item" onClick={() => { setShowQuickActions(false); navigate('/trabajos/nueva'); }}>
+                  <FileText size={18} />
+                  <span>Nueva Orden de Trabajo</span>
+                </button>
+                <button className="quick-action-item" onClick={() => { setShowQuickActions(false); navigate('/presupuestos/nuevo'); }}>
+                  <Banknote size={18} />
+                  <span>Nuevo Presupuesto</span>
+                </button>
+                <button className="quick-action-item" onClick={() => { setShowQuickActions(false); navigate('/agenda'); }}>
+                  <Calendar size={18} />
+                  <span>Agendar Cita</span>
+                </button>
+                <button className="quick-action-item" onClick={() => { setShowQuickActions(false); navigate('/pos'); }}>
+                  <ShoppingCart size={18} />
+                  <span>Punto de Venta (POS)</span>
+                </button>
+                <button className="quick-action-item" onClick={() => { setShowQuickActions(false); navigate('/caja'); }}>
+                  <Wallet size={18} />
+                  <span>Caja & Finanzas</span>
+                </button>
+                <button className="quick-action-item" onClick={() => { setShowQuickActions(false); navigate('/inspecciones'); }}>
+                  <ClipboardCheck size={18} />
+                  <span>Inspección Visual</span>
+                </button>
+                <button className="quick-action-item" onClick={() => { setShowQuickActions(false); navigate('/diagnosticos'); }}>
+                  <Stethoscope size={18} />
+                  <span>Diagnóstico</span>
+                </button>
+              </div>
+            </>
           )}
         </div>
       </div>
