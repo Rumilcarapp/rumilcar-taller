@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
+import { OnboardingModal } from '../onboarding/OnboardingModal';
 import './AppLayout.css';
 
 export const AppLayout: React.FC = () => {
@@ -19,6 +20,9 @@ export const AppLayout: React.FC = () => {
           <Outlet />
         </main>
       </div>
+
+      {/* Global Onboarding Welcome Modal */}
+      <OnboardingModal />
     </div>
   );
 };

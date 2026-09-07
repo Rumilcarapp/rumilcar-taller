@@ -14,6 +14,7 @@ import {
   Wallet, Send, TrendingUp, ShieldAlert
 } from 'lucide-react';
 import { WhatsAppModal } from '../../components/whatsapp/WhatsAppModal';
+import { OnboardingChecklist } from '../../components/onboarding/OnboardingChecklist';
 import { getOrderWhatsAppContext } from '../../lib/orderActions';
 import './DashboardPage.css';
 
@@ -152,6 +153,9 @@ export const DashboardPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* GUÍA DE PRIMEROS PASOS (ONBOARDING CHECKLIST) */}
+      <OnboardingChecklist />
 
       {/* KPI Cards Grid */}
       <div className="dashboard-kpis">

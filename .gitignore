@@ -9,3 +9,4 @@ NOTAS_SUPABASE.txt
 *credenciales*.txt
 .DS_Store
 Thumbs.db
+*.tsbuildinfo
