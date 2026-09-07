@@ -56,9 +56,9 @@ export const OnboardingModal: React.FC = () => {
             />
           </div>
           <div className="onboarding-badge">
-            <Sparkles size={13} /> Bienvenido al Sistema
+            <Sparkles size={13} /> Bienvenido a Rumilcarapp
           </div>
-          <h2 className="onboarding-title">¡Hola, {userName}!</h2>
+          <h2 className="onboarding-title">¡Bienvenido a Rumilcarapp, {userName}!</h2>
           <p className="onboarding-subtitle">
             Vamos a poner en marcha <strong>{workshopName}</strong>. Elige cómo te gustaría
             comenzar a usar la plataforma hoy:
