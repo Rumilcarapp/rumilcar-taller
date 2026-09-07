@@ -1,10 +1,10 @@
-﻿import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { prisma } from '../../lib/prisma';
 
 export const inventoryRouter = Router();
 
 // GET all inventory items
-inventoryRouter.get('/', async (req, res) => {
+inventoryRouter.get('/', async (req: Request, res: Response) => {
   try {
     const workshopId = (req.query.workshopId as string) || 'default-workshop';
     const items = await prisma.inventoryItem.findMany({
@@ -18,7 +18,7 @@ inventoryRouter.get('/', async (req, res) => {
 });
 
 // POST create inventory item
-inventoryRouter.post('/', async (req, res) => {
+inventoryRouter.post('/', async (req: Request, res: Response) => {
   try {
     const { workshopId, sku, name, description, category, unitPriceAnchor, costPriceAnchor, currentStock, minStock, unit } = req.body;
     const item = await prisma.inventoryItem.create({
@@ -42,9 +42,9 @@ inventoryRouter.post('/', async (req, res) => {
 });
 
 // PUT update inventory item
-inventoryRouter.put('/:id', async (req, res) => {
+inventoryRouter.put('/:id', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const item = await prisma.inventoryItem.update({
       where: { id },
       data: req.body,
@@ -56,9 +56,9 @@ inventoryRouter.put('/:id', async (req, res) => {
 });
 
 // DELETE inventory item
-inventoryRouter.delete('/:id', async (req, res) => {
+inventoryRouter.delete('/:id', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     await prisma.inventoryItem.delete({ where: { id } });
     res.json({ success: true });
   } catch (error: any) {

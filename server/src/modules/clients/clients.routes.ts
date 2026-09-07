@@ -1,10 +1,10 @@
-﻿import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { prisma } from '../../lib/prisma';
 
 export const clientsRouter = Router();
 
 // GET all clients
-clientsRouter.get('/', async (req, res) => {
+clientsRouter.get('/', async (req: Request, res: Response) => {
   try {
     const workshopId = (req.query.workshopId as string) || 'default-workshop';
     const clients = await prisma.client.findMany({
@@ -19,7 +19,7 @@ clientsRouter.get('/', async (req, res) => {
 });
 
 // POST create client
-clientsRouter.post('/', async (req, res) => {
+clientsRouter.post('/', async (req: Request, res: Response) => {
   try {
     const { name, email, phone, taxId, address, notes, workshopId } = req.body;
     const client = await prisma.client.create({
@@ -40,9 +40,9 @@ clientsRouter.post('/', async (req, res) => {
 });
 
 // PUT update client
-clientsRouter.put('/:id', async (req, res) => {
+clientsRouter.put('/:id', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const client = await prisma.client.update({
       where: { id },
       data: req.body,
@@ -54,9 +54,9 @@ clientsRouter.put('/:id', async (req, res) => {
 });
 
 // DELETE client
-clientsRouter.delete('/:id', async (req, res) => {
+clientsRouter.delete('/:id', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     await prisma.client.delete({ where: { id } });
     res.json({ success: true });
   } catch (error: any) {

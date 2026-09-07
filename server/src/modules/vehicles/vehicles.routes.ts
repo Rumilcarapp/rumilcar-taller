@@ -1,10 +1,10 @@
-﻿import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { prisma } from '../../lib/prisma';
 
 export const vehiclesRouter = Router();
 
 // GET all vehicles
-vehiclesRouter.get('/', async (req, res) => {
+vehiclesRouter.get('/', async (req: Request, res: Response) => {
   try {
     const clientId = req.query.clientId as string | undefined;
     const vehicles = await prisma.vehicle.findMany({
@@ -19,7 +19,7 @@ vehiclesRouter.get('/', async (req, res) => {
 });
 
 // POST create vehicle
-vehiclesRouter.post('/', async (req, res) => {
+vehiclesRouter.post('/', async (req: Request, res: Response) => {
   try {
     const { clientId, make, model, year, licensePlate, vin, color, mileage, notes } = req.body;
     const vehicle = await prisma.vehicle.create({
@@ -42,9 +42,9 @@ vehiclesRouter.post('/', async (req, res) => {
 });
 
 // PUT update vehicle
-vehiclesRouter.put('/:id', async (req, res) => {
+vehiclesRouter.put('/:id', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const vehicle = await prisma.vehicle.update({
       where: { id },
       data: req.body,
@@ -56,9 +56,9 @@ vehiclesRouter.put('/:id', async (req, res) => {
 });
 
 // DELETE vehicle
-vehiclesRouter.delete('/:id', async (req, res) => {
+vehiclesRouter.delete('/:id', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     await prisma.vehicle.delete({ where: { id } });
     res.json({ success: true });
   } catch (error: any) {

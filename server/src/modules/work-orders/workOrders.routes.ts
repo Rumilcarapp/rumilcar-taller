@@ -1,10 +1,10 @@
-﻿import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { prisma } from '../../lib/prisma';
 
 export const workOrdersRouter = Router();
 
 // GET all work orders
-workOrdersRouter.get('/', async (req, res) => {
+workOrdersRouter.get('/', async (req: Request, res: Response) => {
   try {
     const workshopId = (req.query.workshopId as string) || 'default-workshop';
     const status = req.query.status as string | undefined;
@@ -30,9 +30,9 @@ workOrdersRouter.get('/', async (req, res) => {
 });
 
 // GET single work order by ID (Used by Client Tracking Portal & Workshop)
-workOrdersRouter.get('/:id', async (req, res) => {
+workOrdersRouter.get('/:id', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const order = await prisma.workOrder.findFirst({
       where: {
         OR: [
@@ -61,7 +61,7 @@ workOrdersRouter.get('/:id', async (req, res) => {
 });
 
 // POST create work order
-workOrdersRouter.post('/', async (req, res) => {
+workOrdersRouter.post('/', async (req: Request, res: Response) => {
   try {
     const { workshopId, clientId, vehicleId, createdById, status, totalAnchor, notes, inspectionNotes, items } = req.body;
     
@@ -107,9 +107,9 @@ workOrdersRouter.post('/', async (req, res) => {
 });
 
 // PUT update work order status or details
-workOrdersRouter.put('/:id', async (req, res) => {
+workOrdersRouter.put('/:id', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const { status, notes, totalAnchor, deliveredAt, completedAt } = req.body;
 
     const order = await prisma.workOrder.update({
