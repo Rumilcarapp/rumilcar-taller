@@ -73,7 +73,11 @@ export const LoginPage: React.FC = () => {
       details: `Ingreso al sistema con rol ${userToLogin.role || 'OWNER'} en ${userWorkshop}`,
     });
 
-    navigate('/');
+    if (userToLogin.role === 'SUPERADMIN') {
+      navigate('/admin/membresias');
+    } else {
+      navigate('/');
+    }
   };
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
@@ -384,6 +388,42 @@ export const LoginPage: React.FC = () => {
               >
                 <ShieldCheck size={14} color="#3b82f6" /> Acceso Rápido por Rol (Prueba):
               </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail('luarkpadilla@gmail.com');
+                  setPassword('a123789963');
+                  handleLoginUser({
+                    id: 'usr-superadmin',
+                    name: 'Luark Padilla',
+                    email: 'luarkpadilla@gmail.com',
+                    role: 'SUPERADMIN',
+                    phone: '04241550550',
+                    workshopId: 'ws-central-saas',
+                    workshopName: 'Rumilcar Central (SaaS)',
+                  });
+                }}
+                style={{
+                  width: '100%',
+                  padding: '7px 10px',
+                  marginBottom: '8px',
+                  borderRadius: '6px',
+                  border: '1px solid rgba(225, 29, 72, 0.3)',
+                  background: 'linear-gradient(135deg, rgba(225, 29, 72, 0.12), rgba(225, 29, 72, 0.04))',
+                  color: '#e11d48',
+                  cursor: 'pointer',
+                  fontSize: '11px',
+                  fontWeight: 800,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <span>👑 Super Administrador (Luark)</span>
+                <span style={{ fontSize: '10px', background: '#e11d48', color: '#fff', padding: '1px 6px', borderRadius: '4px' }}>
+                  SaaS Admin
+                </span>
+              </button>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
                 {users.slice(0, 4).map((u) => (
                   <button
