@@ -53,6 +53,19 @@ const RootIndexRoute: React.FC = () => {
   return <DashboardPage />;
 };
 
+// Workshop users route guard (Staff management is for workshops, not SuperAdmin)
+const WorkshopUsersRoute: React.FC = () => {
+  const user = useAuthStore((s) => s.user);
+  if (user?.role === 'SUPERADMIN') {
+    return <Navigate to="/admin/membresias" replace />;
+  }
+  return (
+    <PermissionGuard module="users">
+      <UsersPage />
+    </PermissionGuard>
+  );
+};
+
 export const router = createBrowserRouter([
   {
     path: '/login',
@@ -96,7 +109,7 @@ export const router = createBrowserRouter([
       { path: 'cobranza', element: <PermissionGuard module="collections"><CobranzaPage /></PermissionGuard> },
       { path: 'crm', element: <PermissionGuard module="crm"><CRMPage /></PermissionGuard> },
       { path: 'reportes', element: <PermissionGuard module="reports"><ReportesPage /></PermissionGuard> },
-      { path: 'usuarios', element: <PermissionGuard module="users"><UsersPage /></PermissionGuard> },
+      { path: 'usuarios', element: <WorkshopUsersRoute /> },
       { path: 'perfil', element: <ProfilePage /> },
       { path: 'membresia', element: <SubscriptionPage /> },
       { path: 'admin/membresias', element: <SuperAdminRoute><SuperAdminSubscriptionsPage /></SuperAdminRoute> },

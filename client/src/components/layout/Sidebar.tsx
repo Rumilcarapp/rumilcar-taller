@@ -69,7 +69,6 @@ const superAdminNavSections: { label: string; items: SuperAdminNavItem[] }[] = [
     label: '👑 Administración SaaS',
     items: [
       { path: '/admin/membresias', icon: ShieldCheck, label: 'Control de Membresías' },
-      { path: '/usuarios', icon: Users, label: 'Gestión de Usuarios' },
       { path: '/reportes', icon: BarChart3, label: 'Reportes y Métricas' },
     ],
   },
