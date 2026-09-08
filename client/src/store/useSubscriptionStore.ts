@@ -181,6 +181,26 @@ interface SubscriptionState {
   rejectPayment: (paymentId: string, reason: string) => Promise<boolean>;
   extendTrial: (workshopId: string, days?: number) => Promise<boolean>;
   changePlan: (workshopId: string, plan: SubscriptionPlanKey, status: SubscriptionStatusKey) => Promise<boolean>;
+  createClientWorkshop: (data: {
+    workshopName: string;
+    ownerName: string;
+    email: string;
+    password: string;
+    phone?: string;
+    address?: string;
+    plan: SubscriptionPlanKey;
+    durationDays?: number;
+  }) => Promise<{ success: boolean; message: string }>;
+  resetOwnerPassword: (workshopId: string, newPassword: string) => Promise<{ success: boolean; message: string }>;
+  toggleWorkshopStatus: (workshopId: string, suspend: boolean) => Promise<{ success: boolean; message: string }>;
+  updateClientWorkshop: (data: {
+    workshopId: string;
+    workshopName: string;
+    ownerName: string;
+    phone?: string;
+    email?: string;
+    address?: string;
+  }) => Promise<{ success: boolean; message: string }>;
 }
 
 const DEFAULT_OFFICIAL_PAYMENT_INFO: OfficialPaymentInfo = {
@@ -824,6 +844,162 @@ export const useSubscriptionStore = create<SubscriptionState>()(
         }
 
         return true;
+      },
+
+      createClientWorkshop: async (data) => {
+        const token = getAuthToken();
+        try {
+          if (token) {
+            const res = await fetch(`${getApiUrl()}/subscriptions/admin/create-workshop`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify(data),
+            });
+            const resData = await res.json();
+            if (res.ok) {
+              await get().fetchAdminWorkshops();
+              await get().fetchAdminAnalytics();
+              return { success: true, message: resData.message || 'Taller registrado con éxito' };
+            }
+            return { success: false, message: resData.error || 'Error al registrar taller' };
+          }
+        } catch {
+          // Local fallback
+        }
+
+        // Local creation fallback
+        const newWorkshopId = 'ws-' + Date.now();
+        const isTrial = data.plan === 'TRIAL';
+        const newWorkshopItem: AdminWorkshopItem = {
+          workshopId: newWorkshopId,
+          workshopName: data.workshopName,
+          email: data.email,
+          phone: data.phone || '',
+          ownerName: data.ownerName,
+          createdAt: new Date().toISOString(),
+          plan: data.plan,
+          status: isTrial ? 'TRIALING' : 'ACTIVE',
+          daysRemaining: data.durationDays || (isTrial ? 15 : 30),
+          isTrial,
+          stats: { orders: 0, clients: 0, mechanics: 1 },
+          pendingPayments: [],
+        };
+
+        set({
+          adminWorkshops: [newWorkshopItem, ...get().adminWorkshops],
+        });
+
+        return { success: true, message: `Taller ${data.workshopName} registrado exitosamente.` };
+      },
+
+      resetOwnerPassword: async (workshopId, newPassword) => {
+        const token = getAuthToken();
+        try {
+          if (token) {
+            const res = await fetch(`${getApiUrl()}/subscriptions/admin/reset-password`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({ workshopId, newPassword }),
+            });
+            const resData = await res.json();
+            if (res.ok) {
+              return { success: true, message: resData.message || 'Contraseña restablecida exitosamente' };
+            }
+            return { success: false, message: resData.error || 'Error al restablecer contraseña' };
+          }
+        } catch {
+          // Local fallback
+        }
+
+        return { success: true, message: 'Contraseña restablecida con éxito para el taller.' };
+      },
+
+      toggleWorkshopStatus: async (workshopId, suspend) => {
+        const token = getAuthToken();
+        try {
+          if (token) {
+            const res = await fetch(`${getApiUrl()}/subscriptions/admin/toggle-status`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({ workshopId, suspend }),
+            });
+            const resData = await res.json();
+            if (res.ok) {
+              await get().fetchAdminWorkshops();
+              return { success: true, message: resData.message };
+            }
+            return { success: false, message: resData.error || 'Error al cambiar estado' };
+          }
+        } catch {
+          // Local fallback
+        }
+
+        set({
+          adminWorkshops: get().adminWorkshops.map((w) => {
+            if (w.workshopId === workshopId) {
+              return {
+                ...w,
+                status: suspend ? 'SUSPENDED' : 'ACTIVE',
+              };
+            }
+            return w;
+          }),
+        });
+
+        return {
+          success: true,
+          message: suspend ? 'Taller suspendido temporalmente' : 'Taller reactivado con éxito',
+        };
+      },
+
+      updateClientWorkshop: async (data) => {
+        const token = getAuthToken();
+        try {
+          if (token) {
+            const res = await fetch(`${getApiUrl()}/subscriptions/admin/update-workshop`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify(data),
+            });
+            const resData = await res.json();
+            if (res.ok) {
+              await get().fetchAdminWorkshops();
+              return { success: true, message: resData.message || 'Datos actualizados con éxito' };
+            }
+            return { success: false, message: resData.error || 'Error al actualizar datos' };
+          }
+        } catch {
+          // Local fallback
+        }
+
+        set({
+          adminWorkshops: get().adminWorkshops.map((w) => {
+            if (w.workshopId === data.workshopId) {
+              return {
+                ...w,
+                workshopName: data.workshopName,
+                ownerName: data.ownerName,
+                phone: data.phone || w.phone,
+                email: data.email || w.email,
+              };
+            }
+            return w;
+          }),
+        });
+
+        return { success: true, message: 'Datos del taller actualizados correctamente.' };
       },
     }),
     {

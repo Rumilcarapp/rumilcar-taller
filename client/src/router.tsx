@@ -26,6 +26,7 @@ import { UsersPage } from './features/users/UsersPage';
 import { TrackingPage } from './features/tracking/TrackingPage';
 import { SubscriptionPage } from './features/subscription/SubscriptionPage';
 import { SuperAdminSubscriptionsPage } from './features/admin/SuperAdminSubscriptionsPage';
+import { SuperAdminWorkshopsPage } from './features/admin/SuperAdminWorkshopsPage';
 import { PermissionGuard } from './components/shared/PermissionGuard';
 import { useAuthStore } from './stores/authStore';
 
@@ -57,7 +58,7 @@ const RootIndexRoute: React.FC = () => {
 const WorkshopUsersRoute: React.FC = () => {
   const user = useAuthStore((s) => s.user);
   if (user?.role === 'SUPERADMIN') {
-    return <Navigate to="/admin/membresias" replace />;
+    return <Navigate to="/admin/talleres" replace />;
   }
   return (
     <PermissionGuard module="users">
@@ -113,6 +114,7 @@ export const router = createBrowserRouter([
       { path: 'perfil', element: <ProfilePage /> },
       { path: 'membresia', element: <SubscriptionPage /> },
       { path: 'admin/membresias', element: <SuperAdminRoute><SuperAdminSubscriptionsPage /></SuperAdminRoute> },
+      { path: 'admin/talleres', element: <SuperAdminRoute><SuperAdminWorkshopsPage /></SuperAdminRoute> },
     ],
   },
 ]);

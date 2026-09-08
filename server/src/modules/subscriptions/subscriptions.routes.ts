@@ -1,4 +1,5 @@
 import { Router, Response } from 'express';
+import bcrypt from 'bcryptjs';
 import { prisma } from '../../config/database';
 import { authenticate, AuthRequest } from '../../middleware/auth';
 
@@ -722,4 +723,213 @@ subscriptionsRouter.get('/admin/analytics', authenticate, requireSuperAdmin, asy
     res.status(500).json({ error: 'Error al calcular métricas analíticas del SaaS' });
   }
 });
+
+// POST /api/subscriptions/admin/create-workshop — SuperAdmin creates a new client workshop
+subscriptionsRouter.post('/admin/create-workshop', authenticate, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+  try {
+    const { workshopName, ownerName, email, password, phone, address, plan = 'TRIAL', durationDays = 15 } = req.body;
+
+    if (!workshopName || !ownerName || !email || !password) {
+      res.status(400).json({ error: 'Faltan campos requeridos (nombre taller, nombre dueño, correo, contraseña)' });
+      return;
+    }
+
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) {
+      res.status(400).json({ error: 'Ya existe un usuario con este correo electrónico' });
+      return;
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    const now = new Date();
+    const endsAt = new Date(now.getTime() + Number(durationDays) * 24 * 60 * 60 * 1000);
+
+    const isTrial = plan === 'TRIAL';
+    const status = isTrial ? 'TRIALING' : 'ACTIVE';
+
+    const result = await prisma.$transaction(async (tx) => {
+      const workshop = await tx.workshop.create({
+        data: {
+          name: workshopName,
+          phone: phone || null,
+          email: email,
+          address: address || null,
+          paymentMethods: {
+            createMany: {
+              data: [
+                { method: 'CASH_USD', isEnabled: true },
+                { method: 'CASH_VES', isEnabled: true },
+                { method: 'PAGO_MOVIL', isEnabled: true },
+                { method: 'BANK_TRANSFER', isEnabled: true },
+                { method: 'ZELLE', isEnabled: true },
+                { method: 'USDT_WALLET', isEnabled: true },
+                { method: 'POS_DEBIT', isEnabled: false },
+              ],
+            },
+          },
+        },
+      });
+
+      const user = await tx.user.create({
+        data: {
+          workshopId: workshop.id,
+          name: ownerName,
+          email,
+          passwordHash,
+          role: 'OWNER',
+          isActive: true,
+        },
+      });
+
+      const maxMechanics = plan === 'ELITE' ? 999 : plan === 'PRO' ? 6 : 3;
+
+      const subscription = await tx.subscription.create({
+        data: {
+          workshopId: workshop.id,
+          plan,
+          status,
+          trialStartedAt: now,
+          trialEndsAt: endsAt,
+          currentPeriodStart: !isTrial ? now : null,
+          currentPeriodEnd: !isTrial ? endsAt : null,
+          billingCycle: 'MONTHLY',
+          priceUSD: plan === 'BASIC' ? 19 : plan === 'PRO' ? 39 : plan === 'ELITE' ? 79 : 0,
+          maxMechanics,
+        },
+      });
+
+      return { workshop, user, subscription };
+    });
+
+    res.status(201).json({
+      message: `Taller ${result.workshop.name} registrado exitosamente con plan ${plan}`,
+      workshopId: result.workshop.id,
+      workshopName: result.workshop.name,
+      ownerEmail: result.user.email,
+    });
+  } catch (error: any) {
+    console.error('Error creating workshop by SuperAdmin:', error);
+    res.status(500).json({ error: 'Error al registrar taller cliente' });
+  }
+});
+
+// POST /api/subscriptions/admin/reset-password — SuperAdmin resets password for workshop owner
+subscriptionsRouter.post('/admin/reset-password', authenticate, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+  try {
+    const { workshopId, newPassword } = req.body;
+
+    if (!workshopId || !newPassword) {
+      res.status(400).json({ error: 'workshopId y newPassword son requeridos' });
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres' });
+      return;
+    }
+
+    const owner = await prisma.user.findFirst({
+      where: { workshopId, role: 'OWNER' },
+    });
+
+    if (!owner) {
+      res.status(404).json({ error: 'No se encontró la cuenta del titular para este taller' });
+      return;
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+
+    await prisma.user.update({
+      where: { id: owner.id },
+      data: { passwordHash },
+    });
+
+    res.json({
+      message: `Contraseña restablecida con éxito para ${owner.name} (${owner.email})`,
+      ownerEmail: owner.email,
+    });
+  } catch (error: any) {
+    console.error('Error resetting password by SuperAdmin:', error);
+    res.status(500).json({ error: 'Error al restablecer contraseña' });
+  }
+});
+
+// POST /api/subscriptions/admin/toggle-status — SuperAdmin activates or suspends workshop
+subscriptionsRouter.post('/admin/toggle-status', authenticate, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+  try {
+    const { workshopId, suspend } = req.body;
+
+    if (!workshopId) {
+      res.status(400).json({ error: 'workshopId es requerido' });
+      return;
+    }
+
+    const newStatus = suspend ? 'SUSPENDED' : 'ACTIVE';
+    const usersActive = !suspend;
+
+    await prisma.$transaction([
+      prisma.subscription.update({
+        where: { workshopId },
+        data: { status: newStatus },
+      }),
+      prisma.user.updateMany({
+        where: { workshopId },
+        data: { isActive: usersActive },
+      }),
+    ]);
+
+    res.json({
+      message: suspend
+        ? 'El taller ha sido suspendido y se ha pausado el acceso a sus usuarios'
+        : 'El taller ha sido reactivado y se ha habilitado el acceso al software',
+      status: newStatus,
+    });
+  } catch (error: any) {
+    console.error('Error toggling workshop status by SuperAdmin:', error);
+    res.status(500).json({ error: 'Error al cambiar estado del taller' });
+  }
+});
+
+// PUT /api/subscriptions/admin/update-workshop — SuperAdmin edits workshop and owner information
+subscriptionsRouter.put('/admin/update-workshop', authenticate, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+  try {
+    const { workshopId, workshopName, ownerName, phone, email, address } = req.body;
+
+    if (!workshopId || !workshopName) {
+      res.status(400).json({ error: 'workshopId y workshopName son requeridos' });
+      return;
+    }
+
+    await prisma.workshop.update({
+      where: { id: workshopId },
+      data: {
+        name: workshopName,
+        phone: phone || null,
+        email: email || null,
+        address: address || null,
+      },
+    });
+
+    if (ownerName || email) {
+      const owner = await prisma.user.findFirst({
+        where: { workshopId, role: 'OWNER' },
+      });
+      if (owner) {
+        await prisma.user.update({
+          where: { id: owner.id },
+          data: {
+            name: ownerName || owner.name,
+            email: email || owner.email,
+          },
+        });
+      }
+    }
+
+    res.json({ message: 'Datos del taller actualizados correctamente' });
+  } catch (error: any) {
+    console.error('Error updating workshop details by SuperAdmin:', error);
+    res.status(500).json({ error: 'Error al actualizar datos del taller' });
+  }
+});
+
 
