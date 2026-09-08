@@ -251,8 +251,8 @@ export const SubscriptionPage: React.FC = () => {
                 <strong className="copyable">{paymentInfo.pagoMovil.phone}</strong>
               </div>
               <div className="detail-row">
-                <span className="label">Bancos:</span>
-                <span>{paymentInfo.pagoMovil.bank}</span>
+                <span className="label">Banco:</span>
+                <span>Banco Mercantil</span>
               </div>
               <div className="detail-row">
                 <span className="label">Titular:</span>
@@ -260,7 +260,7 @@ export const SubscriptionPage: React.FC = () => {
               </div>
               <div className="detail-row">
                 <span className="label">Cédula:</span>
-                <span>{paymentInfo.pagoMovil.idNumber}</span>
+                <span>V-24.317.195</span>
               </div>
             </div>
           </div>
@@ -277,11 +277,11 @@ export const SubscriptionPage: React.FC = () => {
             <div className="account-details">
               <div className="detail-row">
                 <span className="label">Correo Zinli:</span>
-                <strong className="copyable">{paymentInfo.zinli.email}</strong>
+                <strong className="copyable">luarkpadilla@gmail.com</strong>
               </div>
               <div className="detail-row">
                 <span className="label">Titular:</span>
-                <span>{paymentInfo.zinli.holder}</span>
+                <span>Luark Padilla</span>
               </div>
               <div className="detail-row">
                 <span className="label">Moneda:</span>
@@ -295,22 +295,22 @@ export const SubscriptionPage: React.FC = () => {
             <div className="account-box-header">
               <Coins className="account-icon text-emerald" size={24} />
               <div>
-                <h4 className="account-name">USDT Binance Pay / Crypto</h4>
+                <h4 className="account-name">USDT (Solo Binance Pay)</h4>
                 <span className="account-sub">Cero comisión con Binance Pay</span>
               </div>
             </div>
             <div className="account-details">
               <div className="detail-row">
-                <span className="label">Binance Pay ID / Correo:</span>
-                <strong className="copyable">{paymentInfo.usdtBinance.emailOrPayId}</strong>
+                <span className="label">Correo Binance Pay:</span>
+                <strong className="copyable">luarkpadilla@gmail.com</strong>
               </div>
               <div className="detail-row">
-                <span className="label">Redes:</span>
-                <span>{paymentInfo.usdtBinance.network}</span>
+                <span className="label">Modalidad:</span>
+                <span>Solo Binance Pay</span>
               </div>
               <div className="detail-row">
                 <span className="label">Titular:</span>
-                <span>{paymentInfo.usdtBinance.holder}</span>
+                <span>Luark Padilla</span>
               </div>
             </div>
           </div>

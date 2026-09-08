@@ -121,9 +121,9 @@ interface SubscriptionState {
 const DEFAULT_OFFICIAL_PAYMENT_INFO: OfficialPaymentInfo = {
   pagoMovil: {
     phone: '04241550550',
-    bank: 'Banesco / Mercantil / Venezuela',
+    bank: 'Banco Mercantil',
     holder: 'Luark Padilla',
-    idNumber: 'V-20.123.456',
+    idNumber: 'V-24.317.195',
   },
   zinli: {
     email: 'luarkpadilla@gmail.com',
@@ -131,7 +131,7 @@ const DEFAULT_OFFICIAL_PAYMENT_INFO: OfficialPaymentInfo = {
   },
   usdtBinance: {
     emailOrPayId: 'luarkpadilla@gmail.com',
-    network: 'Binance Pay / USDT (TRC20 / BEP20)',
+    network: 'Solo Binance Pay',
     holder: 'Luark Padilla',
   },
   plans: [

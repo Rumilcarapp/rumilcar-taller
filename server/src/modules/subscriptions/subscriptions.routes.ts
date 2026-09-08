@@ -17,9 +17,9 @@ const requireSuperAdmin = (req: AuthRequest, res: Response, next: () => void): v
 export const OFFICIAL_PAYMENT_INFO = {
   pagoMovil: {
     phone: '04241550550',
-    bank: 'Banesco / Mercantil / Venezuela',
+    bank: 'Banco Mercantil',
     holder: 'Luark Padilla',
-    idNumber: 'V-20.123.456',
+    idNumber: 'V-24.317.195',
   },
   zinli: {
     email: 'luarkpadilla@gmail.com',
@@ -27,7 +27,7 @@ export const OFFICIAL_PAYMENT_INFO = {
   },
   usdtBinance: {
     emailOrPayId: 'luarkpadilla@gmail.com',
-    network: 'Binance Pay / USDT (TRC20 / BEP20)',
+    network: 'Binance Pay',
     holder: 'Luark Padilla',
   },
   plans: [
