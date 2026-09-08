@@ -1,4 +1,4 @@
-﻿import { create } from 'zustand';
+import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 export type AppRoleKey = 'OWNER' | 'ADMIN' | 'RECEPTIONIST' | 'MECHANIC' | 'CASHIER' | 'INVENTORY' | string;
@@ -108,9 +108,17 @@ const ALL_PERMISSIONS_TRUE: Record<AppModuleKey, ModulePermissions> = {
 
 const DEFAULT_ROLES: RoleDefinition[] = [
   {
+    id: 'SUPERADMIN',
+    name: '👑 Super Administrador SaaS',
+    description: 'Control global de la plataforma Rumilcarapp, gestión de talleres, membresías y verificación de pagos.',
+    color: '#e11d48',
+    isSystem: true,
+    permissions: ALL_PERMISSIONS_TRUE,
+  },
+  {
     id: 'OWNER',
-    name: '👑 Dueño / Super Administrador',
-    description: 'Acceso y control total de todos los módulos, finanzas, inventario y gestión de usuarios.',
+    name: '🏢 Dueño del Taller',
+    description: 'Acceso y control total de su taller, finanzas, inventario y gestión de usuarios.',
     color: '#8b5cf6',
     isSystem: true,
     permissions: ALL_PERMISSIONS_TRUE,
@@ -233,6 +241,17 @@ const DEFAULT_ROLES: RoleDefinition[] = [
 ];
 
 const DEFAULT_USERS: ManagedUser[] = [
+  {
+    id: 'usr-superadmin',
+    name: 'Luark Padilla',
+    email: 'luarkpadilla@gmail.com',
+    password: 'a123789963',
+    phone: '04241550550',
+    role: 'SUPERADMIN',
+    isActive: true,
+    lastLogin: new Date().toISOString(),
+    createdAt: new Date().toISOString(),
+  },
   {
     id: 'usr-1',
     name: 'Don Pedro (Dueño)',

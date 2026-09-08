@@ -24,6 +24,8 @@ import { AgendaPage } from './features/agenda/AgendaPage';
 import { BudgetsPage } from './features/budgets/BudgetsPage';
 import { UsersPage } from './features/users/UsersPage';
 import { TrackingPage } from './features/tracking/TrackingPage';
+import { SubscriptionPage } from './features/subscription/SubscriptionPage';
+import { SuperAdminSubscriptionsPage } from './features/admin/SuperAdminSubscriptionsPage';
 import { PermissionGuard } from './components/shared/PermissionGuard';
 import { useAuthStore } from './stores/authStore';
 
@@ -32,6 +34,13 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const token = localStorage.getItem('rumilcar_token');
   if (!isAuthenticated || !token) return <Navigate to="/login" replace />;
+  return <>{children}</>;
+};
+
+// SuperAdmin guard
+const SuperAdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const user = useAuthStore((s) => s.user);
+  if (user?.role !== 'SUPERADMIN') return <Navigate to="/" replace />;
   return <>{children}</>;
 };
 
@@ -80,6 +89,8 @@ export const router = createBrowserRouter([
       { path: 'reportes', element: <PermissionGuard module="reports"><ReportesPage /></PermissionGuard> },
       { path: 'usuarios', element: <PermissionGuard module="users"><UsersPage /></PermissionGuard> },
       { path: 'perfil', element: <ProfilePage /> },
+      { path: 'membresia', element: <SubscriptionPage /> },
+      { path: 'admin/membresias', element: <SuperAdminRoute><SuperAdminSubscriptionsPage /></SuperAdminRoute> },
     ],
   },
 ]);

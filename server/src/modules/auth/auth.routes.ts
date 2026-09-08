@@ -50,6 +50,22 @@ authRouter.post('/register', async (req: Request, res: Response) => {
         },
       });
 
+      // Initialize 15-Day Free Trial Subscription for new workshop
+      const now = new Date();
+      const trialEndsAt = new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000);
+      await tx.subscription.create({
+        data: {
+          workshopId: workshop.id,
+          plan: 'TRIAL',
+          status: 'TRIALING',
+          trialStartedAt: now,
+          trialEndsAt,
+          billingCycle: 'MONTHLY',
+          priceUSD: 0,
+          maxMechanics: 3,
+        },
+      });
+
       return { workshop, user };
     });
 
@@ -84,9 +100,76 @@ authRouter.post('/register', async (req: Request, res: Response) => {
 authRouter.post('/login', async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
+    const cleanEmail = (email || '').trim().toLowerCase();
 
-    const user = await prisma.user.findUnique({
-      where: { email },
+    // 1. Check for SuperAdmin credentials (luark / luarkpadilla@gmail.com)
+    if ((cleanEmail === 'luark' || cleanEmail === 'luarkpadilla@gmail.com') && password === 'a123789963') {
+      let superUser = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { email: 'luarkpadilla@gmail.com' },
+            { name: { equals: 'Luark Padilla', mode: 'insensitive' } },
+            { role: 'SUPERADMIN' },
+          ],
+        },
+        include: { workshop: true },
+      });
+
+      if (!superUser) {
+        // Ensure central workshop and superadmin user exist
+        const superWorkshop = await prisma.workshop.create({
+          data: {
+            name: 'Rumilcar Central (SaaS)',
+            email: 'luarkpadilla@gmail.com',
+            phone: '04241550550',
+          },
+        });
+
+        const hash = await bcrypt.hash('a123789963', 10);
+        superUser = await prisma.user.create({
+          data: {
+            workshopId: superWorkshop.id,
+            name: 'Luark Padilla',
+            email: 'luarkpadilla@gmail.com',
+            passwordHash: hash,
+            role: 'SUPERADMIN',
+          },
+          include: { workshop: true },
+        });
+      }
+
+      const token = jwt.sign(
+        {
+          userId: superUser.id,
+          workshopId: superUser.workshopId,
+          role: 'SUPERADMIN',
+        },
+        JWT_SECRET,
+        { expiresIn: JWT_EXPIRES_IN }
+      );
+
+      res.json({
+        token,
+        user: {
+          id: superUser.id,
+          name: superUser.name,
+          email: superUser.email,
+          role: 'SUPERADMIN',
+          workshopId: superUser.workshopId,
+          workshopName: superUser.workshop?.name || 'Rumilcar Central (SaaS)',
+        },
+      });
+      return;
+    }
+
+    // 2. Regular user login
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: cleanEmail },
+          { email: { equals: cleanEmail, mode: 'insensitive' } },
+        ],
+      },
       include: { workshop: true },
     });
 

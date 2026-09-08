@@ -39,6 +39,8 @@ model Workshop {
   saldosVES       SaldoVES[]
   antiInflationConversions AntiInflationConversion[]
   alertaDevaluacionConfig  AlertaDevaluacionConfig?
+  subscription             Subscription?
+  subscriptionPayments     SubscriptionPayment[]
 }
 
 model User {
@@ -320,4 +322,48 @@ model Appointment {
   client       Client   @relation(fields: [clientId], references: [id])
   vehicle      Vehicle  @relation(fields: [vehicleId], references: [id])
   mechanic     Mechanic? @relation(fields: [mechanicId], references: [id])
+}
+
+// ========================
+// SaaS Memberships & Subscriptions
+// ========================
+
+model Subscription {
+  id                 String   @id @default(uuid())
+  workshopId         String   @unique
+  plan               String   @default("TRIAL") // TRIAL, BASIC, PRO, ELITE
+  status             String   @default("TRIALING") // TRIALING, ACTIVE, PAST_DUE, SUSPENDED, CANCELED
+  trialStartedAt     DateTime @default(now())
+  trialEndsAt        DateTime
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  billingCycle       String   @default("MONTHLY") // MONTHLY, YEARLY
+  priceUSD           Float    @default(0)
+  maxMechanics       Int      @default(3)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  workshop           Workshop @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+  payments           SubscriptionPayment[]
+}
+
+model SubscriptionPayment {
+  id              String   @id @default(uuid())
+  subscriptionId  String
+  workshopId      String
+  amountUSD       Float
+  amountVES       Float?
+  paymentMethod   String   // PAGO_MOVIL, ZINLI, USDT_BINANCE
+  referenceNumber String
+  receiptUrl      String?
+  status          String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  notes           String?
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  rejectionReason String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  subscription    Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  workshop        Workshop     @relation(fields: [workshopId], references: [id], onDelete: Cascade)
 }

@@ -1,4 +1,4 @@
-﻿import express from 'express';
+import express from 'express';
 import cors from 'cors';
 import { authRouter } from './modules/auth/auth.routes';
 import { workshopRouter } from './modules/workshop/workshop.routes';
@@ -8,6 +8,7 @@ import { clientsRouter } from './modules/clients/clients.routes';
 import { vehiclesRouter } from './modules/vehicles/vehicles.routes';
 import { inventoryRouter } from './modules/inventory/inventory.routes';
 import { workOrdersRouter } from './modules/work-orders/workOrders.routes';
+import { subscriptionsRouter } from './modules/subscriptions/subscriptions.routes';
 
 const app = express();
 
@@ -51,6 +52,7 @@ app.use('/api/clients', clientsRouter);
 app.use('/api/vehicles', vehiclesRouter);
 app.use('/api/inventory', inventoryRouter);
 app.use('/api/work-orders', workOrdersRouter);
+app.use('/api/subscriptions', subscriptionsRouter);
 
 // Global Error handler
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

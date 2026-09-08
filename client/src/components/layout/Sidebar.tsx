@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Wrench, Calendar, FileText, Stethoscope,
   ClipboardCheck, Car, Users, Package, ShoppingCart,
   Wallet, CarFront, Truck, CreditCard, HeartHandshake,
-  BarChart3, UserCircle, ChevronLeft, ChevronRight, ShieldCheck, LogOut, X
+  BarChart3, UserCircle, ChevronLeft, ChevronRight, ShieldCheck, LogOut, X, Sparkles
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { useUserManagementStore, AppModuleKey } from '../../store/useUserManagementStore';
@@ -53,6 +53,7 @@ const navSections: { label: string; items: NavItemConfig[] }[] = [
       { path: '/crm', icon: HeartHandshake, label: 'CRM & WhatsApp', module: 'crm' },
       { path: '/reportes', icon: BarChart3, label: 'Reportes', module: 'reports' },
       { path: '/usuarios', icon: ShieldCheck, label: 'Usuarios & Permisos', module: 'users' },
+      { path: '/membresia', icon: Sparkles, label: 'Mi Membresía', module: 'dashboard' },
     ],
   },
 ];
@@ -135,6 +136,36 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, mobileOpe
             </div>
           );
         })}
+
+        {/* SuperAdmin SaaS Section */}
+        {userRole === 'SUPERADMIN' && (
+          <div className="nav-section" key="SUPERADMIN">
+            {isFullView && (
+              <span className="nav-section-label" style={{ color: '#e11d48', fontWeight: 800 }}>
+                👑 SaaS Admin
+              </span>
+            )}
+            <NavLink
+              to="/admin/membresias"
+              onClick={handleItemClick}
+              className={({ isActive }) => `nav-item ${isActive ? 'nav-item-active' : ''}`}
+              title={!isFullView ? 'Control de Membresías' : undefined}
+              style={{
+                background: 'rgba(225, 29, 72, 0.08)',
+                border: '1px solid rgba(225, 29, 72, 0.2)',
+                borderRadius: '8px',
+                marginTop: '4px',
+              }}
+            >
+              <ShieldCheck size={20} className="nav-item-icon" color="#e11d48" />
+              {isFullView && (
+                <span className="nav-item-label" style={{ fontWeight: 800, color: '#e11d48' }}>
+                  Control de Membresías
+                </span>
+              )}
+            </NavLink>
+          </div>
+        )}
       </nav>
 
       {/* Profile & User Role badge in Footer */}

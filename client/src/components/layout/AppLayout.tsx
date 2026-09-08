@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 import { OnboardingModal } from '../onboarding/OnboardingModal';
+import { SubscriptionBanner } from '../subscription/SubscriptionBanner';
 import './AppLayout.css';
 
 export const AppLayout: React.FC = () => {
@@ -58,6 +59,7 @@ export const AppLayout: React.FC = () => {
       <div className="app-main">
         <TopBar onMenuClick={handleMenuClick} />
         <main className="app-content">
+          <SubscriptionBanner />
           <Outlet />
         </main>
       </div>

