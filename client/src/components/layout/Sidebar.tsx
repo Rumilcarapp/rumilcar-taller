@@ -108,6 +108,37 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, mobileOpe
 
       {/* Navigation filtered by user role permissions */}
       <nav className="sidebar-nav">
+        {/* SuperAdmin SaaS Primary Section */}
+        {userRole === 'SUPERADMIN' && (
+          <div className="nav-section" key="SUPERADMIN">
+            {isFullView && (
+              <span className="nav-section-label" style={{ color: '#e11d48', fontWeight: 800 }}>
+                👑 SaaS Admin
+              </span>
+            )}
+            <NavLink
+              to="/admin/membresias"
+              onClick={handleItemClick}
+              className={({ isActive }) => `nav-item ${isActive ? 'nav-item-active' : ''}`}
+              title={!isFullView ? 'Control de Membresías' : undefined}
+              style={{
+                background: 'rgba(225, 29, 72, 0.08)',
+                border: '1px solid rgba(225, 29, 72, 0.25)',
+                borderRadius: '8px',
+                marginTop: '2px',
+                marginBottom: '6px',
+              }}
+            >
+              <ShieldCheck size={20} className="nav-item-icon" color="#e11d48" />
+              {isFullView && (
+                <span className="nav-item-label" style={{ fontWeight: 800, color: '#e11d48' }}>
+                  Control de Membresías
+                </span>
+              )}
+            </NavLink>
+          </div>
+        )}
+
         {navSections.map((section) => {
           const visibleItems = section.items.filter((item) =>
             hasPermission(userRole, item.module, 'view')
@@ -136,36 +167,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, mobileOpe
             </div>
           );
         })}
-
-        {/* SuperAdmin SaaS Section */}
-        {userRole === 'SUPERADMIN' && (
-          <div className="nav-section" key="SUPERADMIN">
-            {isFullView && (
-              <span className="nav-section-label" style={{ color: '#e11d48', fontWeight: 800 }}>
-                👑 SaaS Admin
-              </span>
-            )}
-            <NavLink
-              to="/admin/membresias"
-              onClick={handleItemClick}
-              className={({ isActive }) => `nav-item ${isActive ? 'nav-item-active' : ''}`}
-              title={!isFullView ? 'Control de Membresías' : undefined}
-              style={{
-                background: 'rgba(225, 29, 72, 0.08)',
-                border: '1px solid rgba(225, 29, 72, 0.2)',
-                borderRadius: '8px',
-                marginTop: '4px',
-              }}
-            >
-              <ShieldCheck size={20} className="nav-item-icon" color="#e11d48" />
-              {isFullView && (
-                <span className="nav-item-label" style={{ fontWeight: 800, color: '#e11d48' }}>
-                  Control de Membresías
-                </span>
-              )}
-            </NavLink>
-          </div>
-        )}
       </nav>
 
       {/* Profile & User Role badge in Footer */}

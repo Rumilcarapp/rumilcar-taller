@@ -44,6 +44,15 @@ const SuperAdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) 
   return <>{children}</>;
 };
 
+// Index route guard (Redirects SuperAdmin to SaaS Admin panel)
+const RootIndexRoute: React.FC = () => {
+  const user = useAuthStore((s) => s.user);
+  if (user?.role === 'SUPERADMIN') {
+    return <Navigate to="/admin/membresias" replace />;
+  }
+  return <DashboardPage />;
+};
+
 export const router = createBrowserRouter([
   {
     path: '/login',
@@ -65,7 +74,7 @@ export const router = createBrowserRouter([
       </ProtectedRoute>
     ),
     children: [
-      { index: true, element: <DashboardPage /> },
+      { index: true, element: <RootIndexRoute /> },
       { path: 'trabajos', element: <PermissionGuard module="workOrders"><WorkOrdersPage /></PermissionGuard> },
       { path: 'trabajos/nueva', element: <PermissionGuard module="workOrders" action="create"><CreateWorkOrderPage /></PermissionGuard> },
       { path: 'trabajos/:id', element: <PermissionGuard module="workOrders"><CreateWorkOrderPage /></PermissionGuard> },

@@ -406,10 +406,10 @@ export const useUserManagementStore = create<UserManagementState>()(
       })),
 
       hasPermission: (roleId, module, action) => {
+        if (roleId === 'SUPERADMIN' || roleId === 'OWNER') return true;
         const state = get();
         const role = state.roles.find((r) => r.id === roleId);
         if (!role) return false;
-        if (role.id === 'OWNER') return true; // Owner always has all permissions
 
         const modulePerms = role.permissions[module];
         if (!modulePerms) return false;

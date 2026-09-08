@@ -35,6 +35,12 @@ export const DashboardPage: React.FC = () => {
   const [menuTop, setMenuTop] = useState<number>(180);
 
   useEffect(() => {
+    if (user?.role === 'SUPERADMIN') {
+      navigate('/admin/membresias', { replace: true });
+    }
+  }, [user]);
+
+  useEffect(() => {
     if (showQuickActions && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
       const preferredTop = rect.bottom + 8;
