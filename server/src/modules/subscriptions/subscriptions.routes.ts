@@ -500,3 +500,226 @@ subscriptionsRouter.post('/admin/change-plan', authenticate, requireSuperAdmin, 
     res.status(500).json({ error: 'Error al modificar plan de taller' });
   }
 });
+
+// GET /api/subscriptions/admin/analytics — Comprehensive SaaS Platform Intelligence & Metrics for SuperAdmin
+subscriptionsRouter.get('/admin/analytics', authenticate, requireSuperAdmin, async (_req: AuthRequest, res: Response) => {
+  try {
+    const [
+      workshops,
+      totalOrders,
+      totalClients,
+      totalVehicles,
+      totalUsers,
+      allPayments,
+    ] = await Promise.all([
+      prisma.workshop.findMany({
+        include: {
+          users: { select: { id: true, name: true, email: true, role: true } },
+          subscription: {
+            include: {
+              payments: true,
+            },
+          },
+          _count: {
+            select: {
+              workOrders: true,
+              clients: true,
+              mechanics: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.workOrder.count(),
+      prisma.client.count(),
+      prisma.vehicle.count(),
+      prisma.user.count(),
+      prisma.subscriptionPayment.findMany({
+        include: { workshop: { select: { name: true } } },
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
+
+    const now = new Date();
+
+    const totalWorkshops = workshops.length;
+    let activePaidWorkshops = 0;
+    let trialingWorkshops = 0;
+    let expiringSoonWorkshops = 0;
+    let suspendedWorkshops = 0;
+    let mrrUSD = 0;
+
+    const planCounts: Record<string, number> = {
+      TRIAL: 0,
+      BASIC: 0,
+      PRO: 0,
+      ELITE: 0,
+    };
+
+    workshops.forEach((w) => {
+      const sub = w.subscription;
+      const plan = sub?.plan || 'TRIAL';
+      const status = sub?.status || 'TRIALING';
+
+      if (planCounts[plan] !== undefined) {
+        planCounts[plan]++;
+      } else {
+        planCounts[plan] = 1;
+      }
+
+      let daysRemaining = 0;
+      if (sub?.currentPeriodEnd && status === 'ACTIVE') {
+        daysRemaining = Math.ceil((sub.currentPeriodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      } else if (sub?.trialEndsAt) {
+        daysRemaining = Math.ceil((sub.trialEndsAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      }
+
+      if (status === 'ACTIVE') {
+        activePaidWorkshops++;
+        if (plan === 'BASIC') mrrUSD += 19;
+        else if (plan === 'PRO') mrrUSD += 39;
+        else if (plan === 'ELITE') mrrUSD += 79;
+        else mrrUSD += (sub?.priceUSD || 0);
+      } else if (status === 'TRIALING' || plan === 'TRIAL') {
+        trialingWorkshops++;
+      } else if (status === 'SUSPENDED' || status === 'PAST_DUE') {
+        suspendedWorkshops++;
+      }
+
+      if (daysRemaining <= 3 && daysRemaining >= 0) {
+        expiringSoonWorkshops++;
+      }
+    });
+
+    const arrUSD = mrrUSD * 12;
+    const conversionRate = totalWorkshops > 0 ? (activePaidWorkshops / totalWorkshops) * 100 : 0;
+
+    // Payments calculations
+    const approvedPayments = allPayments.filter((p) => p.status === 'APPROVED');
+    const totalRevenueUSD = approvedPayments.reduce((acc, p) => acc + (p.amountUSD || 0), 0);
+    const totalRevenueVES = approvedPayments.reduce((acc, p) => acc + (p.amountVES || 0), 0);
+
+    // Payment methods breakdown
+    const methodsMap: Record<string, { count: number; totalUSD: number; totalVES: number; label: string }> = {
+      PAGO_MOVIL: { count: 0, totalUSD: 0, totalVES: 0, label: 'Pago Móvil (Mercantil)' },
+      USDT_BINANCE: { count: 0, totalUSD: 0, totalVES: 0, label: 'Binance Pay (USDT)' },
+      ZINLI: { count: 0, totalUSD: 0, totalVES: 0, label: 'Zinli Wallet (USD)' },
+    };
+
+    approvedPayments.forEach((p) => {
+      const m = p.paymentMethod || 'PAGO_MOVIL';
+      if (!methodsMap[m]) {
+        methodsMap[m] = { count: 0, totalUSD: 0, totalVES: 0, label: m };
+      }
+      methodsMap[m].count++;
+      methodsMap[m].totalUSD += p.amountUSD || 0;
+      methodsMap[m].totalVES += p.amountVES || 0;
+    });
+
+    const paymentMethodsBreakdown = Object.keys(methodsMap).map((key) => ({
+      method: key,
+      label: methodsMap[key].label,
+      count: methodsMap[key].count,
+      totalUSD: methodsMap[key].totalUSD,
+      totalVES: methodsMap[key].totalVES,
+    }));
+
+    // Plan distribution
+    const planDistribution = [
+      { plan: 'TRIAL', name: 'Prueba Gratuita (15d)', count: planCounts['TRIAL'] || 0, priceUSD: 0, mrrUSD: 0, color: '#64748b' },
+      { plan: 'BASIC', name: 'Taller Emprendedor', count: planCounts['BASIC'] || 0, priceUSD: 19, mrrUSD: (planCounts['BASIC'] || 0) * 19, color: '#3b82f6' },
+      { plan: 'PRO', name: 'Taller Profesional', count: planCounts['PRO'] || 0, priceUSD: 39, mrrUSD: (planCounts['PRO'] || 0) * 39, color: '#e11d48' },
+      { plan: 'ELITE', name: 'Taller Élite / Multisede', count: planCounts['ELITE'] || 0, priceUSD: 79, mrrUSD: (planCounts['ELITE'] || 0) * 79, color: '#8b5cf6' },
+    ];
+
+    // Monthly revenue trend (last 6 months)
+    const monthlyRevenueTrend: { month: string; revenueUSD: number; paidWorkshops: number }[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthLabel = d.toLocaleDateString('es-ES', { month: 'short', year: 'numeric' });
+      const nextMonth = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
+
+      const inMonth = approvedPayments.filter((p) => {
+        const pDate = new Date(p.createdAt);
+        return pDate >= d && pDate < nextMonth;
+      });
+
+      const rev = inMonth.reduce((acc, p) => acc + (p.amountUSD || 0), 0);
+      monthlyRevenueTrend.push({
+        month: monthLabel,
+        revenueUSD: rev,
+        paidWorkshops: inMonth.length,
+      });
+    }
+
+    // Top workshops by activity
+    const topWorkshops = workshops
+      .map((w) => {
+        const owner = w.users.find((u) => u.role === 'OWNER') || w.users[0];
+        let daysRemaining = 0;
+        const sub = w.subscription;
+        if (sub?.currentPeriodEnd && sub.status === 'ACTIVE') {
+          daysRemaining = Math.max(0, Math.ceil((sub.currentPeriodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+        } else if (sub?.trialEndsAt) {
+          daysRemaining = Math.max(0, Math.ceil((sub.trialEndsAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+        }
+
+        return {
+          workshopId: w.id,
+          workshopName: w.name,
+          ownerName: owner?.name || 'Dueño',
+          phone: w.phone || '',
+          email: w.email || owner?.email || '',
+          plan: (w.subscription?.plan || 'TRIAL'),
+          status: (w.subscription?.status || 'TRIALING'),
+          daysRemaining,
+          ordersCount: w._count.workOrders,
+          clientsCount: w._count.clients,
+          mechanicsCount: w._count.mechanics,
+          createdAt: w.createdAt.toISOString(),
+        };
+      })
+      .sort((a, b) => b.ordersCount - a.ordersCount)
+      .slice(0, 15);
+
+    // Recent payments ledger
+    const recentPayments = allPayments.slice(0, 20).map((p) => ({
+      id: p.id,
+      workshopName: p.workshop?.name || 'Taller',
+      amountUSD: p.amountUSD,
+      amountVES: p.amountVES,
+      paymentMethod: p.paymentMethod,
+      referenceNumber: p.referenceNumber,
+      status: p.status,
+      createdAt: p.createdAt.toISOString(),
+    }));
+
+    res.json({
+      summary: {
+        mrrUSD,
+        arrUSD,
+        totalRevenueUSD,
+        totalRevenueVES,
+        totalWorkshops,
+        activePaidWorkshops,
+        trialingWorkshops,
+        expiringSoonWorkshops,
+        suspendedWorkshops,
+        conversionRate: Math.round(conversionRate * 10) / 10,
+        totalPlatformOrders: totalOrders,
+        totalPlatformClients: totalClients,
+        totalPlatformVehicles: totalVehicles,
+        totalPlatformUsers: totalUsers,
+      },
+      planDistribution,
+      paymentMethodsBreakdown,
+      monthlyRevenueTrend,
+      topWorkshops,
+      recentPayments,
+    });
+  } catch (error: any) {
+    console.error('Error fetching admin analytics:', error);
+    res.status(500).json({ error: 'Error al calcular métricas analíticas del SaaS' });
+  }
+});
+

@@ -21,8 +21,17 @@ import {
   Award,
   RefreshCw
 } from 'lucide-react';
+import { useAuthStore } from '../../stores/authStore';
+import { SuperAdminReportsPage } from '../admin/SuperAdminReportsPage';
 
 export const ReportesPage: React.FC = () => {
+  const { user } = useAuthStore();
+
+  // SuperAdmin sees SaaS Platform Intelligence & Metrics instead of workshop operations
+  if (user?.role === 'SUPERADMIN') {
+    return <SuperAdminReportsPage />;
+  }
+
   const { workOrders } = useWorkOrderStore();
   const { exchangeRateVES, getBalances } = useCashStore();
   const { items: inventoryItems } = useInventoryStore();
