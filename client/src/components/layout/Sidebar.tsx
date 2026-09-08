@@ -58,6 +58,23 @@ const navSections: { label: string; items: NavItemConfig[] }[] = [
   },
 ];
 
+interface SuperAdminNavItem {
+  path: string;
+  icon: any;
+  label: string;
+}
+
+const superAdminNavSections: { label: string; items: SuperAdminNavItem[] }[] = [
+  {
+    label: '👑 Administración SaaS',
+    items: [
+      { path: '/admin/membresias', icon: ShieldCheck, label: 'Control de Membresías' },
+      { path: '/usuarios', icon: Users, label: 'Gestión de Usuarios' },
+      { path: '/reportes', icon: BarChart3, label: 'Reportes y Métricas' },
+    ],
+  },
+];
+
 interface SidebarProps {
   collapsed: boolean;
   onToggle: () => void;
@@ -106,54 +123,21 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, mobileOpe
         </div>
       </div>
 
-      {/* Navigation filtered by user role permissions */}
+      {/* Navigation filtered by user role */}
       <nav className="sidebar-nav">
-        {/* SuperAdmin SaaS Primary Section */}
-        {userRole === 'SUPERADMIN' && (
-          <div className="nav-section" key="SUPERADMIN">
-            {isFullView && (
-              <span className="nav-section-label" style={{ color: '#e11d48', fontWeight: 800 }}>
-                👑 SaaS Admin
-              </span>
-            )}
-            <NavLink
-              to="/admin/membresias"
-              onClick={handleItemClick}
-              className={({ isActive }) => `nav-item ${isActive ? 'nav-item-active' : ''}`}
-              title={!isFullView ? 'Control de Membresías' : undefined}
-              style={{
-                background: 'rgba(225, 29, 72, 0.08)',
-                border: '1px solid rgba(225, 29, 72, 0.25)',
-                borderRadius: '8px',
-                marginTop: '2px',
-                marginBottom: '6px',
-              }}
-            >
-              <ShieldCheck size={20} className="nav-item-icon" color="#e11d48" />
+        {userRole === 'SUPERADMIN' ? (
+          /* SuperAdmin Exclusive Menu: Only SaaS Administration */
+          superAdminNavSections.map((section) => (
+            <div className="nav-section" key={section.label}>
               {isFullView && (
-                <span className="nav-item-label" style={{ fontWeight: 800, color: '#e11d48' }}>
-                  Control de Membresías
+                <span className="nav-section-label" style={{ color: '#e11d48', fontWeight: 800, letterSpacing: '0.05em' }}>
+                  {section.label}
                 </span>
               )}
-            </NavLink>
-          </div>
-        )}
-
-        {navSections.map((section) => {
-          const visibleItems = section.items.filter((item) =>
-            hasPermission(userRole, item.module, 'view')
-          );
-
-          if (visibleItems.length === 0) return null;
-
-          return (
-            <div className="nav-section" key={section.label}>
-              {isFullView && <span className="nav-section-label">{section.label}</span>}
-              {visibleItems.map((item) => (
+              {section.items.map((item) => (
                 <NavLink
                   key={item.path}
                   to={item.path}
-                  end={item.path === '/'}
                   onClick={handleItemClick}
                   className={({ isActive }) =>
                     `nav-item ${isActive ? 'nav-item-active' : ''}`
@@ -165,8 +149,38 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, mobileOpe
                 </NavLink>
               ))}
             </div>
-          );
-        })}
+          ))
+        ) : (
+          /* Workshop Users Menu: Operational modules according to role permissions */
+          navSections.map((section) => {
+            const visibleItems = section.items.filter((item) =>
+              hasPermission(userRole, item.module, 'view')
+            );
+
+            if (visibleItems.length === 0) return null;
+
+            return (
+              <div className="nav-section" key={section.label}>
+                {isFullView && <span className="nav-section-label">{section.label}</span>}
+                {visibleItems.map((item) => (
+                  <NavLink
+                    key={item.path}
+                    to={item.path}
+                    end={item.path === '/'}
+                    onClick={handleItemClick}
+                    className={({ isActive }) =>
+                      `nav-item ${isActive ? 'nav-item-active' : ''}`
+                    }
+                    title={!isFullView ? item.label : undefined}
+                  >
+                    <item.icon size={20} className="nav-item-icon" />
+                    {isFullView && <span className="nav-item-label">{item.label}</span>}
+                  </NavLink>
+                ))}
+              </div>
+            );
+          })
+        )}
       </nav>
 
       {/* Profile & User Role badge in Footer */}

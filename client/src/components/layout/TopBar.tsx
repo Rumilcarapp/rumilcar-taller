@@ -68,14 +68,16 @@ export const TopBar: React.FC<TopBarProps> = ({ title, onMenuClick }) => {
           <input type="text" placeholder="Buscar..." className="topbar-search-input" />
         </div>
         
-        <button
-          className="topbar-icon-btn"
-          aria-label="Primeros Pasos"
-          onClick={openWelcomeModal}
-          title="Guía de Primeros Pasos & Limpieza de Taller"
-        >
-          <Rocket size={19} color="#ef4444" />
-        </button>
+        {user?.role !== 'SUPERADMIN' && (
+          <button
+            className="topbar-icon-btn"
+            aria-label="Primeros Pasos"
+            onClick={openWelcomeModal}
+            title="Guía de Primeros Pasos & Limpieza de Taller"
+          >
+            <Rocket size={19} color="#ef4444" />
+          </button>
+        )}
 
         <button className="topbar-icon-btn" aria-label="Cambiar tema" onClick={toggleTheme} title="Cambiar tema claro/oscuro">
           {isLight ? <Moon size={20} /> : <Sun size={20} />}
