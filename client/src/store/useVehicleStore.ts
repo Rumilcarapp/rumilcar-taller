@@ -21,26 +21,7 @@ interface VehicleState {
 export const useVehicleStore = create<VehicleState>()(
   persist(
     (set) => ({
-      vehicles: [
-        {
-          id: 'VEH-001',
-          placa: 'AA11BB',
-          marca: 'Toyota',
-          modelo: 'Corolla',
-          ano: '2015',
-          color: 'Gris',
-          ownerDocumento: 'V-12345678'
-        },
-        {
-          id: 'VEH-002',
-          placa: 'XAE123',
-          marca: 'Ford',
-          modelo: 'Fiesta',
-          ano: '2012',
-          color: 'Negro',
-          ownerDocumento: 'V-87654321'
-        }
-      ],
+      vehicles: [],
       addVehicle: (vehicle) => set((state) => {
         if (state.vehicles.some(v => v.placa === vehicle.placa)) return state;
         return { vehicles: [vehicle, ...state.vehicles] };
@@ -53,7 +34,14 @@ export const useVehicleStore = create<VehicleState>()(
       }))
     }),
     {
-      name: 'rumilcar-vehicles-storage'
+      name: 'rumilcar-vehicles-storage',
+      onRehydrateStorage: () => (state) => {
+        if (state && Array.isArray(state.vehicles)) {
+          state.vehicles = state.vehicles.filter(
+            (v) => !['VEH-001', 'VEH-002'].includes(v.id)
+          );
+        }
+      },
     }
   )
 );

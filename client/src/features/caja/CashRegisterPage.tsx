@@ -78,7 +78,7 @@ export const CashRegisterPage: React.FC = () => {
 
   // Box Open / Close Audit Modal state
   const [showOpenModal, setShowOpenModal] = useState(false);
-  const [openBalanceInput, setOpenBalanceInput] = useState('50.00');
+  const [openBalanceInput, setOpenBalanceInput] = useState('0.00');
 
   const [showAuditCloseModal, setShowAuditCloseModal] = useState(false);
   const [reportedMap, setReportedMap] = useState<Record<PaymentMethod, number>>({

@@ -10,6 +10,7 @@ import { useExpenseStore } from './useExpenseStore';
 import { usePayrollStore } from './usePayrollStore';
 import { usePersonnelStore } from './usePersonnelStore';
 import { useWorkshopStore } from './useWorkshopStore';
+import { useAntiInflationStore } from './useAntiInflationStore';
 
 export interface OnboardingStep {
   id: string;
@@ -71,6 +72,11 @@ export const useOnboardingStore = create<OnboardingState>()(
         usePayrollStore.getState().clearPayroll();
         usePersonnelStore.getState().clearPersonnel();
         useWorkshopStore.getState().resetToCleanProfile('Multiservicios Rumilcar');
+        useAntiInflationStore.setState({
+          saldoVES: { monto_ves: 0, valor_usd_ingreso: 0, tasa_ingreso: 0, fecha_ingreso: new Date().toISOString().split('T')[0] },
+          conversiones: [],
+          tasasHistorial: [],
+        });
 
         set({
           isCleanSlate: true,

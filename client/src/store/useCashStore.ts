@@ -286,7 +286,16 @@ export const useCashStore = create<CashState>()(
       }
     }),
     {
-      name: 'rumilcar-cash-register-storage'
+      name: 'rumilcar-cash-register-storage',
+      onRehydrateStorage: () => (state) => {
+        if (state && Array.isArray(state.transactions)) {
+          state.transactions = state.transactions.filter(
+            (tx) =>
+              !tx.orderId ||
+              !['RMC-2026-1001', 'RMC-2026-1002', 'RMC-2026-1003', 'RMC-2026-1004'].includes(tx.orderId)
+          );
+        }
+      },
     }
   )
 );

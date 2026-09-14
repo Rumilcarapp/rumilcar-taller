@@ -21,26 +21,7 @@ interface ClientState {
 export const useClientStore = create<ClientState>()(
   persist(
     (set) => ({
-      clients: [
-        {
-          id: 'CLI-001',
-          type: 'persona',
-          nombre: 'Luis',
-          apellido: 'Perez',
-          documento: 'V-12345678',
-          telefono: '4141234567',
-          direccion: 'Chacao, Caracas'
-        },
-        {
-          id: 'CLI-002',
-          type: 'persona',
-          nombre: 'Ana',
-          apellido: 'Gomez',
-          documento: 'V-87654321',
-          telefono: '4247654321',
-          direccion: 'Las Mercedes, Caracas'
-        }
-      ],
+      clients: [],
       addClient: (client) => set((state) => {
         if (state.clients.some(c => c.documento === client.documento)) return state;
         return { clients: [client, ...state.clients] };
@@ -53,7 +34,14 @@ export const useClientStore = create<ClientState>()(
       }))
     }),
     {
-      name: 'rumilcar-clients-storage'
+      name: 'rumilcar-clients-storage',
+      onRehydrateStorage: () => (state) => {
+        if (state && Array.isArray(state.clients)) {
+          state.clients = state.clients.filter(
+            (c) => !['CLI-001', 'CLI-002'].includes(c.id)
+          );
+        }
+      },
     }
   )
 );

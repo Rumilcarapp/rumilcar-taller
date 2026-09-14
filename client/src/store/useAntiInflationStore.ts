@@ -140,17 +140,13 @@ export const useAntiInflationStore = create<AntiInflationState>()(
   persist(
     (set, get) => ({
       saldoVES: {
-        monto_ves: 45200,
-        valor_usd_ingreso: 489.18,
-        tasa_ingreso: 92.40,
-        fecha_ingreso: (() => {
-          const d = new Date();
-          d.setDate(d.getDate() - 5);
-          return d.toISOString().split('T')[0];
-        })(),
+        monto_ves: 0,
+        valor_usd_ingreso: 0,
+        tasa_ingreso: 0,
+        fecha_ingreso: new Date().toISOString().split('T')[0],
       },
-      tasasHistorial: getInitialRates(),
-      conversiones: getInitialConversions(),
+      tasasHistorial: [],
+      conversiones: [],
       alertaConfig: {
         umbral_porcentaje: 3,
         umbral_dias: 3,
@@ -158,7 +154,7 @@ export const useAntiInflationStore = create<AntiInflationState>()(
         canal_notificacion: 'inapp',
         activa: true,
       },
-      ultimaTasaVES: 97.80,
+      ultimaTasaVES: 40.00,
 
       actualizarSaldoVES: (nuevoMontoVES, tasaMomento, fechaIngreso) => {
         const state = get();
@@ -405,6 +401,23 @@ export const useAntiInflationStore = create<AntiInflationState>()(
     }),
     {
       name: 'rumilcar-anti-inflation-storage',
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          if (state.saldoVES && (state.saldoVES.monto_ves === 45200 || state.saldoVES.valor_usd_ingreso === 489.18)) {
+            state.saldoVES = {
+              monto_ves: 0,
+              valor_usd_ingreso: 0,
+              tasa_ingreso: 0,
+              fecha_ingreso: new Date().toISOString().split('T')[0],
+            };
+          }
+          if (Array.isArray(state.conversiones)) {
+            state.conversiones = state.conversiones.filter(
+              (c) => !['CONV-1001', 'CONV-1002'].includes(c.id)
+            );
+          }
+        }
+      },
     }
   )
 );

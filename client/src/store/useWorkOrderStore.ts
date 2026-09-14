@@ -58,70 +58,7 @@ const todayIso = new Date().toISOString();
 export const useWorkOrderStore = create<WorkOrderState>()(
   persist(
     (set, get) => ({
-      workOrders: [
-        {
-          id: 'RMC-2026-1001',
-          client: { nombre: 'Luis', apellido: 'Perez', documento: 'V-12345678', telefono: '04141234567' },
-          vehicle: { marca: 'Toyota', modelo: 'Corolla', placa: 'AA11BB' },
-          services: [{ id: 's1', name: 'Cambio de Aceite y Filtro', price: 35, currency: 'USD' }],
-          parts: [{ id: 'p1', name: 'Filtro de Aceite', quantity: 1, price: 15, currency: 'USD' }],
-          date: tenDaysAgo,
-          deliveredAt: tenDaysAgo,
-          totalUSD: 150.00,
-          status: 'Listo',
-          mechanicName: 'Carlos P.',
-          partsDeducted: true,
-          payments: [
-            { id: 'PAY-1001', method: 'Efectivo', amountUSD: 50.00, date: tenDaysAgo, note: 'Abono inicial en taller' }
-          ]
-        },
-        {
-          id: 'RMC-2026-1002',
-          client: { nombre: 'Ana', apellido: 'Gomez', documento: 'V-87654321', telefono: '04247654321' },
-          vehicle: { marca: 'Ford', modelo: 'Fiesta', placa: 'XAE123' },
-          services: [{ id: 's2', name: 'Revision de Frenos', price: 40, currency: 'USD' }],
-          parts: [{ id: 'p2', name: 'Pastillas de Freno', quantity: 1, price: 45.50, currency: 'USD' }],
-          date: todayIso,
-          deliveredAt: todayIso,
-          totalUSD: 85.50,
-          status: 'En Proceso',
-          mechanicName: 'Pedro R.',
-          partsDeducted: false,
-          payments: []
-        },
-        {
-          id: 'RMC-2026-1003',
-          client: { nombre: 'Roberto', apellido: 'Mendoza', documento: 'V-15987432', telefono: '04129876543' },
-          vehicle: { marca: 'Chevrolet', modelo: 'Aveo', placa: 'AB998CD' },
-          services: [{ id: 's3', name: 'Mantenimiento de Alternador', price: 180, currency: 'USD' }],
-          parts: [{ id: 'p3', name: 'Batería 800AMP', quantity: 1, price: 200, currency: 'USD' }],
-          date: thirtyFiveDaysAgo,
-          deliveredAt: thirtyFiveDaysAgo,
-          totalUSD: 380.00,
-          status: 'Listo',
-          mechanicName: 'Carlos P.',
-          partsDeducted: true,
-          payments: []
-        },
-        {
-          id: 'RMC-2026-1004',
-          client: { nombre: 'María', apellido: 'Rojas', documento: 'V-20112233', telefono: '04163344556' },
-          vehicle: { marca: 'Hyundai', modelo: 'Tucson', placa: 'KZZ441' },
-          services: [{ id: 's4', name: 'Limpieza de Inyectores', price: 95, currency: 'USD' }],
-          parts: [],
-          date: todayIso,
-          deliveredAt: todayIso,
-          totalUSD: 95.00,
-          status: 'Finalizado',
-          mechanicName: 'Pedro R.',
-          partsDeducted: true,
-          payments: [
-            { id: 'PAY-1004', method: 'Pago Movil', amountUSD: 95.00, date: todayIso, reference: '887612', note: 'Pago completo' }
-          ],
-          paymentMethod: 'Pago Movil',
-          paidAt: todayIso
-        }
-      ],
+      workOrders: [],
       addWorkOrder: (order) => set((state) => ({ workOrders: [order, ...state.workOrders] })),
       updateWorkOrder: (id, order) => set((state) => ({ workOrders: state.workOrders.map(wo => wo.id === id ? { ...wo, ...order } : wo) })),
       
@@ -283,6 +220,13 @@ export const useWorkOrderStore = create<WorkOrderState>()(
     }),
     {
       name: 'rumilcar-workorders-storage',
+      onRehydrateStorage: () => (state) => {
+        if (state && Array.isArray(state.workOrders)) {
+          state.workOrders = state.workOrders.filter(
+            (wo) => !['RMC-2026-1001', 'RMC-2026-1002', 'RMC-2026-1003', 'RMC-2026-1004'].includes(wo.id)
+          );
+        }
+      },
     }
   )
 );
