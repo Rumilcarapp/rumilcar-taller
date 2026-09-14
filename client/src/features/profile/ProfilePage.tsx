@@ -22,7 +22,9 @@ export const ProfilePage: React.FC = () => {
     updateWorkshop,
     paymentMethods,
     togglePaymentMethod,
-    lastSavedAt
+    lastSavedAt,
+    isSaving,
+    fetchWorkshop
   } = useWorkshopStore();
 
   // CashStore currency and automatic exchange rate state
@@ -43,6 +45,7 @@ export const ProfilePage: React.FC = () => {
   // Personnel Store
   const {
     personnel,
+    fetchPersonnel,
     addPersonnel,
     updatePersonnel,
     deletePersonnel,
@@ -87,6 +90,12 @@ export const ProfilePage: React.FC = () => {
   const { isLight, toggleTheme } = useThemeStore();
   const navigate = useNavigate();
   const { logout } = useAuthStore();
+
+  // Load fresh workshop and personnel from PostgreSQL database on mount
+  useEffect(() => {
+    fetchWorkshop();
+    fetchPersonnel();
+  }, []);
 
   // Automatic Rate sync when page loads or when autoRate changes
   useEffect(() => {
@@ -252,15 +261,25 @@ export const ProfilePage: React.FC = () => {
             alignItems: 'center',
             gap: '6px',
             fontSize: '12px',
-            color: '#10b981',
-            background: 'rgba(16, 185, 129, 0.1)',
-            border: '1px solid rgba(16, 185, 129, 0.25)',
+            color: isSaving ? 'var(--color-primary)' : '#10b981',
+            background: isSaving ? 'rgba(59, 130, 246, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+            border: `1px solid ${isSaving ? 'rgba(59, 130, 246, 0.25)' : 'rgba(16, 185, 129, 0.25)'}`,
             padding: '5px 12px',
             borderRadius: '20px',
-            fontWeight: 600
+            fontWeight: 600,
+            transition: 'all 0.2s ease'
           }} title="Todos los campos se guardan automáticamente al escribir o cambiar opciones">
-            <CheckCircle2 size={15} />
-            <span>Guardado automáticamente{lastSavedAt ? ` (${new Date(lastSavedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})` : ''}</span>
+            {isSaving ? (
+              <>
+                <RefreshCw size={14} className="spin-icon" />
+                <span>Guardando en la nube...</span>
+              </>
+            ) : (
+              <>
+                <CheckCircle2 size={15} />
+                <span>Guardado automáticamente{lastSavedAt ? ` (${new Date(lastSavedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})` : ''}</span>
+              </>
+            )}
           </div>
 
           <div className="profile-completeness">
