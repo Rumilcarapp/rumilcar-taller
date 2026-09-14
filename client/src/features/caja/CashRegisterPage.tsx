@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useCashStore, PaymentMethod, CashTransaction } from '../../store/useCashStore';
 import { useExpenseStore, Gasto, ExpenseCategory } from '../../store/useExpenseStore';
-import { usePayrollStore, PagoMecanico, ConfigNominaMecanico } from '../../store/usePayrollStore';
+import { usePayrollStore, PagoMecanico, ConfigNominaMecanico, PayrollSchemeType } from '../../store/usePayrollStore';
 import { useWorkOrderStore, WorkOrder } from '../../store/useWorkOrderStore';
+import { usePersonnelStore } from '../../store/usePersonnelStore';
 import { Button, Card, EmptyState, Modal } from '../../components/ui';
 import { AntiInflationTab } from './tabs/AntiInflationTab';
 import { 
@@ -55,6 +56,7 @@ export const CashRegisterPage: React.FC = () => {
   const { gastos, customCategories, addGasto, deleteGasto, addCustomCategory } = useExpenseStore();
   const { configs, payments: payrollPayments, saveMechanicConfig, addPayrollPayment, deletePayrollPayment } = usePayrollStore();
   const { workOrders } = useWorkOrderStore();
+  const { personnel } = usePersonnelStore();
 
   // Navigation state
   const [searchParams, setSearchParams] = useSearchParams();
@@ -236,20 +238,28 @@ export const CashRegisterPage: React.FC = () => {
   // -------------------------------------------------------------
   // PAYROLL COMPUTATION LOGIC
   // -------------------------------------------------------------
-  // Mechanics list (from seed/configs + work orders)
-  const mechanicsList = [
-    { id: 'Carlos P.', nombre: 'Carlos Martínez (Carlos P.)' },
-    { id: 'Pedro R.', nombre: 'Pedro Rodríguez (Pedro R.)' },
-    { id: 'Luis G.', nombre: 'Luis García (Luis G.)' },
-    { id: 'José H.', nombre: 'José Hernández (José H.)' }
-  ];
+  // Mechanics list (dynamically from personnel store, matching work orders and configs)
+  const mechanicsList = personnel.length > 0
+    ? personnel.map(p => ({
+        id: p.name,
+        nombre: `${p.name} (${p.specialty})`,
+        specialty: p.specialty,
+        raw: p
+      }))
+    : [
+        { id: 'Carlos P.', nombre: 'Carlos Martínez (Carlos P.)', specialty: 'Mecánica general', raw: null },
+        { id: 'Pedro R.', nombre: 'Pedro Rodríguez (Pedro R.)', specialty: 'Electricidad', raw: null },
+        { id: 'Luis G.', nombre: 'Luis García (Luis G.)', specialty: 'Frenos', raw: null },
+        { id: 'José H.', nombre: 'José Hernández (José H.)', specialty: 'A/A', raw: null }
+      ];
 
   const payrollSummaryList = mechanicsList.map(mech => {
-    const config = configs.find(c => c.mecanicoId === mech.id) || {
+    const config = configs.find(c => c.mecanicoId === mech.id || c.mecanicoNombre === mech.id || (mech.raw && c.mecanicoNombre === mech.raw.name)) || {
       mecanicoId: mech.id,
       mecanicoNombre: mech.nombre,
-      esquema: 'porcentaje' as const,
-      porcentajeServicios: 30
+      esquema: (mech.raw?.esquema || 'porcentaje') as PayrollSchemeType,
+      porcentajeServicios: mech.raw?.porcentajeServicios ?? 30,
+      montoFijo: mech.raw?.montoFijo ?? 200
     };
 
     // Orders delivered in selected period

@@ -1,0 +1,78 @@
+.broadcast-banners-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.broadcast-banner-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+.bb-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.bb-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.bb-content {
+  line-height: 1.4;
+}
+
+.bb-close-btn {
+  background: transparent;
+  border: none;
+  color: inherit;
+  opacity: 0.8;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: opacity 0.2s ease;
+}
+
+.bb-close-btn:hover {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+/* Color variations */
+.bb-info {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.bb-update {
+  background: #7c3aed;
+  color: #ffffff;
+}
+
+.bb-promo {
+  background: #059669;
+  color: #ffffff;
+}
+
+.bb-warning {
+  background: #d97706;
+  color: #ffffff;
+}

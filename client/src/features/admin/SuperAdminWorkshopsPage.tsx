@@ -22,8 +22,10 @@ import {
   Pause,
   ExternalLink,
   Copy,
-  Check
+  Check,
+  Eye
 } from 'lucide-react';
+import { useAuthStore } from '../../stores/authStore';
 import './SuperAdminWorkshopsPage.css';
 
 export const SuperAdminWorkshopsPage: React.FC = () => {
@@ -192,6 +194,39 @@ export const SuperAdminWorkshopsPage: React.FC = () => {
       setShowEditModal(false);
     } else {
       showToast('error', res.message);
+    }
+  };
+
+  const handleImpersonate = async (w: AdminWorkshopItem) => {
+    if (
+      !window.confirm(
+        `¿Deseas acceder al software como el taller "${w.workshopName}"?\n\nPodrás operar y verificar su sistema en vivo. Para regresar al panel SuperAdmin, solo haz clic en el botón flotante superior.`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://rumilcar-taller.onrender.com/api';
+      const authToken = localStorage.getItem('rumilcar_token') || '';
+      const response = await fetch(`${apiUrl}/subscriptions/admin/impersonate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({ workshopId: w.workshopId }),
+      });
+      const data = await response.json();
+      if (response.ok && data.success && data.token && data.user) {
+        useAuthStore.getState().startImpersonation(data.user, data.token);
+        showToast('success', `Sesión iniciada como "${w.workshopName}"`);
+        navigate('/');
+      } else {
+        showToast('error', data.message || 'No se pudo iniciar la sesión como este taller.');
+      }
+    } catch (err: any) {
+      showToast('error', err.message || 'Error al acceder como este taller');
     }
   };
 
@@ -550,6 +585,16 @@ export const SuperAdminWorkshopsPage: React.FC = () => {
                             title="Gestionar pagos y membresía"
                           >
                             <ShieldCheck size={16} />
+                          </button>
+
+                          {/* Modo Ver como Taller (Impersonation) */}
+                          <button
+                            className="saas-icon-btn"
+                            onClick={() => handleImpersonate(w)}
+                            title="👁️ Entrar al software como este Taller (Supervisión)"
+                            style={{ color: '#0ea5e9', borderColor: 'rgba(14, 165, 233, 0.4)', background: 'rgba(14, 165, 233, 0.1)' }}
+                          >
+                            <Eye size={16} />
                           </button>
                         </div>
                       </td>

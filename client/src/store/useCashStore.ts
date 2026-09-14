@@ -47,8 +47,14 @@ interface CashState {
   currentBalanceUSD: number;
   transactions: CashTransaction[];
   exchangeRateVES: number;
+  autoRate: boolean;
+  lastRateUpdate: string | null;
+  isFetchingRate: boolean;
+  rateError: string | null;
   closureHistory: CierreCajaRegistro[];
   setExchangeRateVES: (rate: number) => void;
+  setAutoRate: (auto: boolean) => void;
+  fetchAutoExchangeRate: () => Promise<number | null>;
   openBox: (initialBalance: number) => void;
   closeBox: () => void;
   closeBoxWithAudit: (reportedBalances: Record<PaymentMethod, number>, notes?: string) => CierreCajaRegistro;
@@ -76,8 +82,70 @@ export const useCashStore = create<CashState>()(
       currentBalanceUSD: 0,
       transactions: [],
       exchangeRateVES: 40.00,
+      autoRate: true,
+      lastRateUpdate: null,
+      isFetchingRate: false,
+      rateError: null,
       closureHistory: [],
       setExchangeRateVES: (rate) => set({ exchangeRateVES: rate }),
+      setAutoRate: (auto) => {
+        set({ autoRate: auto });
+        if (auto) {
+          get().fetchAutoExchangeRate();
+        }
+      },
+      fetchAutoExchangeRate: async () => {
+        set({ isFetchingRate: true, rateError: null });
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 6000);
+          const res = await fetch('https://ve.dolarapi.com/v1/dolares/oficial', {
+            signal: controller.signal,
+          });
+          clearTimeout(timeoutId);
+
+          if (res.ok) {
+            const data = await res.json();
+            if (data && typeof data.promedio === 'number' && data.promedio > 0) {
+              const newRate = Number(data.promedio.toFixed(2));
+              const now = new Date().toISOString();
+              set({
+                exchangeRateVES: newRate,
+                lastRateUpdate: now,
+                isFetchingRate: false,
+                rateError: null,
+              });
+              return newRate;
+            }
+          }
+          throw new Error('Respuesta inválida de la API oficial de divisas');
+        } catch (err: any) {
+          console.warn('Error actualizando tasa automáticamente desde dolarapi:', err);
+          try {
+            const fallbackRes = await fetch('https://pydolarvenezuela-api.vercel.app/api/v1/dollar?page=bcv');
+            if (fallbackRes.ok) {
+              const fbData = await fallbackRes.json();
+              const rateVal = fbData?.monitors?.usd?.price || fbData?.price;
+              if (typeof rateVal === 'number' && rateVal > 0) {
+                const newRate = Number(rateVal.toFixed(2));
+                const now = new Date().toISOString();
+                set({
+                  exchangeRateVES: newRate,
+                  lastRateUpdate: now,
+                  isFetchingRate: false,
+                  rateError: null,
+                });
+                return newRate;
+              }
+            }
+          } catch (fallbackErr) {
+            console.warn('Fallback de tasa también falló:', fallbackErr);
+          }
+
+          set({ isFetchingRate: false, rateError: 'No se pudo consultar la tasa oficial en línea' });
+          return null;
+        }
+      },
       openBox: (initialBalance) => set({
         isOpened: true,
         openedAt: new Date().toISOString(),

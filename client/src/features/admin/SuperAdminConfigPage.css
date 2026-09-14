@@ -1,0 +1,170 @@
+.saas-config-page {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  animation: fadeIn 0.25s ease-in-out;
+}
+
+.saas-config-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--color-border, #3f3f46);
+}
+
+.saas-config-title {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--color-text-primary, #ffffff);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.saas-config-subtitle {
+  font-size: 14px;
+  color: var(--color-text-muted, #a1a1aa);
+  margin: 4px 0 0 0;
+}
+
+.saas-config-tabs {
+  display: flex;
+  gap: 10px;
+  border-bottom: 1px solid var(--color-border, #3f3f46);
+  padding-bottom: 2px;
+  overflow-x: auto;
+}
+
+.saas-config-tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted, #a1a1aa);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.saas-config-tab-btn:hover {
+  color: var(--color-text-primary, #ffffff);
+}
+
+.saas-config-tab-btn.active {
+  color: #e11d48;
+  border-bottom-color: #e11d48;
+  font-weight: 700;
+}
+
+.saas-config-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 20px;
+}
+
+.saas-config-card {
+  background: var(--color-bg-surface, #1e1e1e);
+  border: 1px solid var(--color-border, #27272a);
+  border-radius: 14px;
+  padding: 22px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.saas-config-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.saas-config-card-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.saas-config-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.saas-plan-edit-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--color-border, #27272a);
+  border-radius: 10px;
+}
+
+.saas-btn-save {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: #10b981;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  align-self: flex-start;
+  transition: background 0.2s ease;
+}
+
+.saas-btn-save:hover {
+  background: #059669;
+}
+
+.saas-announcement-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--color-border, #27272a);
+  border-radius: 10px;
+  gap: 12px;
+}
+
+.saas-announcement-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+  text-transform: uppercase;
+}
+
+.saas-backup-box {
+  background: linear-gradient(135deg, rgba(225, 29, 72, 0.08) 0%, rgba(124, 58, 237, 0.08) 100%);
+  border: 1px solid rgba(225, 29, 72, 0.25);
+  border-radius: 14px;
+  padding: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}

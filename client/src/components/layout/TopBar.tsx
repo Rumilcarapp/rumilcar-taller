@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Bell, Menu, Sun, Moon, ShieldAlert, AlertTriangle, ArrowRight, X, Rocket, UserCircle, LogOut } from 'lucide-react';
+import { Search, Bell, Menu, Sun, Moon, ShieldAlert, AlertTriangle, ArrowRight, X, Rocket, UserCircle, LogOut, LifeBuoy } from 'lucide-react';
 import { useThemeStore } from '../../store/themeStore';
 import { useAntiInflationStore } from '../../store/useAntiInflationStore';
 import { useOnboardingStore } from '../../store/useOnboardingStore';
 import { useAuthStore } from '../../stores/authStore';
+import { WorkshopSupportModal } from '../support/WorkshopSupportModal';
 import './TopBar.css';
 
 interface TopBarProps {
@@ -21,6 +22,7 @@ export const TopBar: React.FC<TopBarProps> = ({ title, onMenuClick }) => {
 
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showSupportModal, setShowSupportModal] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
@@ -69,14 +71,25 @@ export const TopBar: React.FC<TopBarProps> = ({ title, onMenuClick }) => {
         </div>
         
         {user?.role !== 'SUPERADMIN' && (
-          <button
-            className="topbar-icon-btn"
-            aria-label="Primeros Pasos"
-            onClick={openWelcomeModal}
-            title="Guía de Primeros Pasos & Limpieza de Taller"
-          >
-            <Rocket size={19} color="#ef4444" />
-          </button>
+          <>
+            <button
+              className="topbar-icon-btn"
+              aria-label="Primeros Pasos"
+              onClick={openWelcomeModal}
+              title="Guía de Primeros Pasos & Limpieza de Taller"
+            >
+              <Rocket size={19} color="#ef4444" />
+            </button>
+            <button
+              className="topbar-icon-btn"
+              aria-label="Soporte Técnico"
+              onClick={() => setShowSupportModal(true)}
+              title="Centro de Ayuda y Soporte Técnico"
+              style={{ color: '#0ea5e9' }}
+            >
+              <LifeBuoy size={19} />
+            </button>
+          </>
         )}
 
         <button className="topbar-icon-btn" aria-label="Cambiar tema" onClick={toggleTheme} title="Cambiar tema claro/oscuro">
@@ -267,6 +280,12 @@ export const TopBar: React.FC<TopBarProps> = ({ title, onMenuClick }) => {
           )}
         </div>
       </div>
+
+      {/* Workshop Support Ticket Modal */}
+      <WorkshopSupportModal
+        isOpen={showSupportModal}
+        onClose={() => setShowSupportModal(false)}
+      />
     </header>
   );
 };

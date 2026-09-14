@@ -1,28 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, Button, Input, Badge, Modal } from '../../components/ui';
 import { useThemeStore } from '../../store/themeStore';
 import { useAuthStore } from '../../stores/authStore';
+import { useCashStore } from '../../store/useCashStore';
+import { usePersonnelStore, PersonnelMember } from '../../store/usePersonnelStore';
+import { usePayrollStore } from '../../store/usePayrollStore';
 import {
   Sun, Moon, Palette, Building2, User, Globe, Phone, Mail, MapPin, FileText,
-  Upload, Wifi, WifiOff, Plus, Edit, UserCheck, UserX,
+  Plus, Edit, UserCheck, UserX, Trash2,
   RefreshCw, DollarSign, Percent, CreditCard, Calendar,
-  LogIn, Wrench, Clock, LogOut
+  LogIn, Wrench, LogOut, CheckCircle2, AlertCircle
 } from 'lucide-react';
 import './ProfilePage.css';
-
-// Mock data
-const mockMechanics = [
-  { id: '1', name: 'Carlos Martinez', specialty: 'Mecanica general', phone: '0412-5551234', isActive: true, activeOrders: 3, completedOrders: 47, avgTime: '2.5 dias' },
-  { id: '2', name: 'Pedro Rodriguez', specialty: 'Electricidad automotriz', phone: '0414-5554567', isActive: true, activeOrders: 2, completedOrders: 35, avgTime: '1.8 dias' },
-  { id: '3', name: 'Luis Garcia', specialty: 'Frenos y suspension', phone: '0424-5557890', isActive: true, activeOrders: 1, completedOrders: 52, avgTime: '1.2 dias' },
-  { id: '4', name: 'Jose Hernandez', specialty: 'Aire acondicionado', phone: '0416-5550123', isActive: false, activeOrders: 0, completedOrders: 28, avgTime: '3.1 dias' },
-];
 
 const paymentMethods = [
   { key: 'CASH_USD', label: 'Efectivo USD', enabled: true },
   { key: 'CASH_VES', label: 'Efectivo VES', enabled: true },
-  { key: 'PAGO_MOVIL', label: 'Pago Movil', enabled: true },
+  { key: 'PAGO_MOVIL', label: 'Pago Móvil', enabled: true },
   { key: 'BANK_TRANSFER', label: 'Transferencia bancaria', enabled: true },
   { key: 'ZELLE', label: 'Zelle', enabled: true },
   { key: 'USDT_WALLET', label: 'USDT / Binance Pay', enabled: true },
@@ -34,31 +29,82 @@ export const ProfilePage: React.FC = () => {
     name: 'Taller Don Pedro',
     legalName: 'Inversiones Don Pedro C.A.',
     taxId: 'J-12345678-9',
-    address: 'Av. Principal, Centro Comercial El Mecanico, Local 5, Caracas',
+    address: 'Av. Principal, Centro Comercial El Mecánico, Local 5, Caracas',
     website: 'www.tallerdonpedro.com',
-    ownerName: 'Pedro Rodriguez',
+    ownerName: 'Pedro Rodríguez',
     email: 'contacto@tallerdonpedro.com',
     phone: '0212-5551234',
     anchorCurrency: 'USD',
-    vesRate: '36.50',
-    autoRate: false,
     usdtSpread: '2',
     createdAt: '15 de marzo de 2024',
     lastLogin: 'Hoy, 10:45 AM',
   });
 
   const [methods, setMethods] = useState(paymentMethods);
-  const [mechanics, setMechanics] = useState(mockMechanics);
-  const [showMechanicModal, setShowMechanicModal] = useState(false);
+
+  // CashStore currency and automatic exchange rate state
+  const {
+    exchangeRateVES,
+    autoRate,
+    lastRateUpdate,
+    isFetchingRate,
+    rateError,
+    setAutoRate,
+    setExchangeRateVES,
+    fetchAutoExchangeRate
+  } = useCashStore();
+
+  const [manualRateInput, setManualRateInput] = useState(exchangeRateVES.toString());
+
+  // Personnel Store
+  const {
+    personnel,
+    addPersonnel,
+    updatePersonnel,
+    deletePersonnel,
+    togglePersonnelStatus
+  } = usePersonnelStore();
+
+  // Personnel Modal state
+  const [showPersonnelModal, setShowPersonnelModal] = useState(false);
+  const [editingMember, setEditingMember] = useState<PersonnelMember | null>(null);
+  const [personnelForm, setPersonnelForm] = useState<{
+    name: string;
+    specialty: string;
+    phone: string;
+    isActive: boolean;
+    esquema: 'porcentaje' | 'fijo' | 'mixto';
+    porcentajeServicios: number;
+    montoFijo: number;
+  }>({
+    name: '',
+    specialty: '',
+    phone: '',
+    isActive: true,
+    esquema: 'porcentaje',
+    porcentajeServicios: 30,
+    montoFijo: 200
+  });
 
   // Profile completeness
-  const fields = [workshop.name, workshop.legalName, workshop.taxId, workshop.address, workshop.ownerName, workshop.email, workshop.phone, workshop.vesRate];
+  const fields = [workshop.name, workshop.legalName, workshop.taxId, workshop.address, workshop.ownerName, workshop.email, workshop.phone, exchangeRateVES];
   const filled = fields.filter(Boolean).length;
   const completeness = Math.round((filled / fields.length) * 100);
 
   const { isLight, toggleTheme } = useThemeStore();
   const navigate = useNavigate();
   const { logout } = useAuthStore();
+
+  // Automatic Rate sync when page loads or when autoRate changes
+  useEffect(() => {
+    if (autoRate) {
+      fetchAutoExchangeRate();
+    }
+  }, [autoRate]);
+
+  useEffect(() => {
+    setManualRateInput(exchangeRateVES.toString());
+  }, [exchangeRateVES]);
 
   const handleLogout = () => {
     logout();
@@ -67,6 +113,103 @@ export const ProfilePage: React.FC = () => {
 
   const toggleMethod = (key: string) => {
     setMethods(methods.map(m => m.key === key ? { ...m, enabled: !m.enabled } : m));
+  };
+
+  // Personnel Handlers
+  const handleOpenAddPersonnel = () => {
+    setEditingMember(null);
+    setPersonnelForm({
+      name: '',
+      specialty: 'Mecánica general',
+      phone: '',
+      isActive: true,
+      esquema: 'porcentaje',
+      porcentajeServicios: 30,
+      montoFijo: 200
+    });
+    setShowPersonnelModal(true);
+  };
+
+  const handleOpenEditPersonnel = (member: PersonnelMember) => {
+    setEditingMember(member);
+    setPersonnelForm({
+      name: member.name,
+      specialty: member.specialty,
+      phone: member.phone || '',
+      isActive: member.isActive,
+      esquema: member.esquema || 'porcentaje',
+      porcentajeServicios: member.porcentajeServicios ?? 30,
+      montoFijo: member.montoFijo ?? 200
+    });
+    setShowPersonnelModal(true);
+  };
+
+  const handleDeletePersonnel = (member: PersonnelMember) => {
+    const ok = window.confirm(
+      `¿Estás seguro de que deseas eliminar a "${member.name}" del equipo de personal?\n\nEsta acción no se puede deshacer.`
+    );
+    if (ok) {
+      deletePersonnel(member.id);
+      if (editingMember?.id === member.id) {
+        setShowPersonnelModal(false);
+        setEditingMember(null);
+      }
+    }
+  };
+
+  const handleSavePersonnel = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!personnelForm.name.trim()) {
+      alert('Por favor indica el nombre completo del personal.');
+      return;
+    }
+    if (!personnelForm.specialty.trim()) {
+      alert('Por favor especifica la especialidad o cargo.');
+      return;
+    }
+
+    if (editingMember) {
+      updatePersonnel(editingMember.id, {
+        name: personnelForm.name.trim(),
+        specialty: personnelForm.specialty.trim(),
+        phone: personnelForm.phone.trim(),
+        isActive: personnelForm.isActive,
+        esquema: personnelForm.esquema,
+        porcentajeServicios: Number(personnelForm.porcentajeServicios) || 0,
+        montoFijo: Number(personnelForm.montoFijo) || 0
+      });
+
+      // Synchronize with usePayrollStore config
+      usePayrollStore.getState().saveMechanicConfig({
+        mecanicoId: editingMember.name,
+        mecanicoNombre: personnelForm.name.trim(),
+        esquema: personnelForm.esquema,
+        porcentajeServicios: Number(personnelForm.porcentajeServicios) || 0,
+        montoFijo: Number(personnelForm.montoFijo) || 0
+      });
+    } else {
+      const created = addPersonnel({
+        name: personnelForm.name.trim(),
+        specialty: personnelForm.specialty.trim(),
+        phone: personnelForm.phone.trim(),
+        isActive: personnelForm.isActive,
+        esquema: personnelForm.esquema,
+        porcentajeServicios: Number(personnelForm.porcentajeServicios) || 0,
+        montoFijo: Number(personnelForm.montoFijo) || 0
+      });
+
+      // Synchronize with usePayrollStore config
+      usePayrollStore.getState().saveMechanicConfig({
+        mecanicoId: created.name,
+        mecanicoNombre: created.name,
+        esquema: personnelForm.esquema,
+        porcentajeServicios: Number(personnelForm.porcentajeServicios) || 0,
+        montoFijo: Number(personnelForm.montoFijo) || 0
+      });
+    }
+
+    setShowPersonnelModal(false);
+    setEditingMember(null);
   };
 
   return (
@@ -110,11 +253,11 @@ export const ProfilePage: React.FC = () => {
           <div className="form-grid">
             <Input label="Nombre de la empresa" value={workshop.name} icon={<Building2 size={16} />}
               onChange={e => setWorkshop({...workshop, name: e.target.value})} />
-            <Input label="Razon social" value={workshop.legalName}
+            <Input label="Razón social" value={workshop.legalName}
               onChange={e => setWorkshop({...workshop, legalName: e.target.value})} />
             <Input label="RIF" value={workshop.taxId} icon={<FileText size={16} />} placeholder="J-00000000-0"
               onChange={e => setWorkshop({...workshop, taxId: e.target.value})} />
-            <Input label="Direccion" value={workshop.address} icon={<MapPin size={16} />}
+            <Input label="Dirección" value={workshop.address} icon={<MapPin size={16} />}
               onChange={e => setWorkshop({...workshop, address: e.target.value})} />
             <Input label="Sitio web" value={workshop.website} icon={<Globe size={16} />} placeholder="www.ejemplo.com"
               onChange={e => setWorkshop({...workshop, website: e.target.value})} />
@@ -132,54 +275,105 @@ export const ProfilePage: React.FC = () => {
               <div className="phone-prefix">
                 <span>+58</span>
               </div>
-              <Input label="Telefono" value={workshop.phone} icon={<Phone size={16} />}
+              <Input label="Teléfono" value={workshop.phone} icon={<Phone size={16} />}
                 onChange={e => setWorkshop({...workshop, phone: e.target.value})} />
             </div>
           </div>
         </Card>
 
         {/* ===== CARD D: CONFIG REGIONAL Y MONEDAS ===== */}
-        <Card title="Configuracion Regional y Monedas" subtitle="Configura las monedas y tasas de cambio de tu taller" className="profile-currency-card">
+        <Card title="Configuración Regional y Monedas" subtitle="Configura las monedas y tasas de cambio de tu taller" className="profile-currency-card">
           <div className="currency-config">
             <div className="form-grid">
               <div className="input-group">
                 <label className="input-label">Moneda ancla</label>
                 <select className="input-field" value={workshop.anchorCurrency}
                   onChange={e => setWorkshop({...workshop, anchorCurrency: e.target.value})}>
-                  <option value="USD">USD - Dolar estadounidense</option>
-                  <option value="VES">VES - Bolivar</option>
+                  <option value="USD">USD - Dólar estadounidense</option>
+                  <option value="VES">VES - Bolívar</option>
                 </select>
               </div>
 
               <div className="rate-input-row">
-                <Input label="Tasa VES/USD" value={workshop.vesRate} type="number" step="0.01"
+                <Input
+                  label="Tasa VES/USD"
+                  value={autoRate ? exchangeRateVES.toString() : manualRateInput}
+                  type="number"
+                  step="0.01"
                   icon={<DollarSign size={16} />}
                   suffix={<span className="rate-suffix">Bs/$</span>}
-                  onChange={e => setWorkshop({...workshop, vesRate: e.target.value})} />
+                  disabled={autoRate}
+                  hint={
+                    autoRate
+                      ? `🟢 Tasa oficial actualizada automáticamente vía BCV${
+                          lastRateUpdate
+                            ? ` (${new Date(lastRateUpdate).toLocaleDateString('es-VE')} ${new Date(lastRateUpdate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`
+                            : ''
+                        }`
+                      : 'Modo manual: escribe la tasa personalizada que prefieras aplicar.'
+                  }
+                  onChange={e => {
+                    setManualRateInput(e.target.value);
+                    const val = parseFloat(e.target.value);
+                    if (!isNaN(val) && val > 0) {
+                      setExchangeRateVES(val);
+                    }
+                  }}
+                />
+
                 <div className="rate-toggle">
-                  <label className="toggle-label">
-                    <input type="checkbox" className="toggle-input" checked={workshop.autoRate}
-                      onChange={e => setWorkshop({...workshop, autoRate: e.target.checked})} />
+                  <label className="toggle-label" title={autoRate ? "Modo automático activado (sincroniza con BCV)" : "Modo manual activado"}>
+                    <input
+                      type="checkbox"
+                      className="toggle-input"
+                      checked={autoRate}
+                      onChange={e => {
+                        const checked = e.target.checked;
+                        setAutoRate(checked);
+                      }}
+                    />
                     <span className="toggle-track"><span className="toggle-thumb" /></span>
-                    <span className="toggle-text">{workshop.autoRate ? 'Automatico' : 'Manual'}</span>
+                    <span className="toggle-text" style={{ fontWeight: 700 }}>
+                      {autoRate ? 'Automático (BCV)' : 'Manual'}
+                    </span>
                   </label>
-                  {workshop.autoRate && (
-                    <button className="rate-refresh-btn">
-                      <RefreshCw size={14} /> Actualizar
+
+                  {autoRate && (
+                    <button
+                      type="button"
+                      className="rate-refresh-btn"
+                      onClick={() => fetchAutoExchangeRate()}
+                      disabled={isFetchingRate}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        cursor: isFetchingRate ? 'wait' : 'pointer'
+                      }}
+                      title="Consultar y actualizar tasa oficial en este momento"
+                    >
+                      <RefreshCw size={14} className={isFetchingRate ? 'spin-icon' : ''} />
+                      {isFetchingRate ? 'Actualizando...' : 'Actualizar'}
                     </button>
                   )}
                 </div>
               </div>
 
+              {rateError && (
+                <div style={{ fontSize: '12px', color: '#ef4444', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <AlertCircle size={14} /> {rateError}
+                </div>
+              )}
+
               <Input label="Spread USDT" value={workshop.usdtSpread} type="number" step="0.1"
                 icon={<Percent size={16} />}
-                hint="Comision adicional al cobrar en USDT. 0% = igual que USD."
+                hint="Comisión adicional al cobrar en USDT. 0% = igual que USD."
                 onChange={e => setWorkshop({...workshop, usdtSpread: e.target.value})} />
             </div>
 
             <div className="payment-methods-section">
               <h4 className="methods-title">
-                <CreditCard size={16} /> Metodos de pago habilitados
+                <CreditCard size={16} /> Métodos de pago habilitados
               </h4>
               <div className="methods-grid">
                 {methods.map(m => (
@@ -203,7 +397,7 @@ export const ProfilePage: React.FC = () => {
               </div>
               <div className="integration-info">
                 <span className="integration-name">WhatsApp Business</span>
-                <span className="integration-desc">Envia recordatorios y notificaciones a tus clientes</span>
+                <span className="integration-desc">Envía recordatorios y notificaciones a tus clientes</span>
               </div>
               <Badge variant="success" dot>Conectado</Badge>
               <Button variant="ghost" size="sm">Configurar</Button>
@@ -223,57 +417,109 @@ export const ProfilePage: React.FC = () => {
           </div>
         </Card>
 
-        {/* ===== CARD F: EQUIPO DE MECANICOS ===== */}
+        {/* ===== CARD F: EQUIPO DE MECÁNICOS / PERSONAL ===== */}
         <Card
-          title="Equipo de Mecanicos"
-          subtitle={`${mechanics.filter(m => m.isActive).length} mecanicos activos`}
-          action={<Button variant="primary" size="sm" icon={<Plus size={14} />} onClick={() => setShowMechanicModal(true)}>Agregar</Button>}
+          title="Equipo de Mecánicos y Personal"
+          subtitle={`${personnel.filter(m => m.isActive).length} miembros del personal activos`}
+          action={
+            <Button
+              variant="primary"
+              size="sm"
+              icon={<Plus size={14} />}
+              onClick={handleOpenAddPersonnel}
+            >
+              Agregar Personal
+            </Button>
+          }
           className="profile-mechanics-card"
         >
           <div className="mechanics-table-container">
             <table className="mechanics-table">
               <thead>
                 <tr>
-                  <th>Mecanico</th>
-                  <th>Especialidad</th>
-                  <th>Ordenes activas</th>
+                  <th>Personal / Mecánico</th>
+                  <th>Especialidad / Cargo</th>
+                  <th>Esquema Nómina</th>
+                  <th>Órdenes Activas</th>
                   <th>Completadas</th>
-                  <th>Tiempo prom.</th>
                   <th>Estado</th>
-                  <th>Acciones</th>
+                  <th style={{ textAlign: 'right' }}>Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {mechanics.map(mech => (
-                  <tr key={mech.id} className={!mech.isActive ? 'row-inactive' : ''}>
-                    <td>
-                      <div className="mechanic-cell">
-                        <div className="mechanic-avatar">{mech.name.charAt(0)}</div>
-                        <div>
-                          <span className="mechanic-name">{mech.name}</span>
-                          <span className="mechanic-phone">{mech.phone}</span>
-                        </div>
-                      </div>
-                    </td>
-                    <td><span className="mechanic-specialty">{mech.specialty}</span></td>
-                    <td><span className="mechanic-stat">{mech.activeOrders}</span></td>
-                    <td><span className="mechanic-stat">{mech.completedOrders}</span></td>
-                    <td><span className="mechanic-stat">{mech.avgTime}</span></td>
-                    <td>
-                      <Badge variant={mech.isActive ? 'success' : 'default'} dot>
-                        {mech.isActive ? 'Activo' : 'Inactivo'}
-                      </Badge>
-                    </td>
-                    <td>
-                      <div className="mechanic-actions">
-                        <button className="action-btn" title="Editar"><Edit size={14} /></button>
-                        <button className="action-btn" title={mech.isActive ? 'Desactivar' : 'Activar'}>
-                          {mech.isActive ? <UserX size={14} /> : <UserCheck size={14} />}
-                        </button>
-                      </div>
+                {personnel.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} style={{ textAlign: 'center', padding: '24px', color: 'var(--color-text-muted)' }}>
+                      No hay miembros registrados en el personal. Haz clic en "Agregar Personal" para comenzar.
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  personnel.map(mech => (
+                    <tr key={mech.id} className={!mech.isActive ? 'row-inactive' : ''}>
+                      <td>
+                        <div className="mechanic-cell">
+                          <div className="mechanic-avatar">{mech.name.charAt(0).toUpperCase()}</div>
+                          <div>
+                            <span className="mechanic-name">{mech.name}</span>
+                            <span className="mechanic-phone">{mech.phone || 'Sin teléfono'}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td><span className="mechanic-specialty">{mech.specialty}</span></td>
+                      <td>
+                        <span style={{
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          padding: '2px 6px',
+                          borderRadius: '4px',
+                          background: 'var(--color-bg-secondary)',
+                          border: '1px solid var(--color-border)'
+                        }}>
+                          {mech.esquema === 'porcentaje'
+                            ? `${mech.porcentajeServicios || 30}% comisión`
+                            : mech.esquema === 'fijo'
+                            ? `$${mech.montoFijo || 200} fijo`
+                            : `Mixto ($${mech.montoFijo || 100} + ${mech.porcentajeServicios || 15}%)`}
+                        </span>
+                      </td>
+                      <td><span className="mechanic-stat">{mech.activeOrders || 0}</span></td>
+                      <td><span className="mechanic-stat">{mech.completedOrders || 0}</span></td>
+                      <td>
+                        <Badge variant={mech.isActive ? 'success' : 'default'} dot>
+                          {mech.isActive ? 'Activo' : 'Inactivo'}
+                        </Badge>
+                      </td>
+                      <td>
+                        <div className="mechanic-actions" style={{ justifyContent: 'flex-end' }}>
+                          <button
+                            type="button"
+                            className="action-btn"
+                            title="Editar datos del personal"
+                            onClick={() => handleOpenEditPersonnel(mech)}
+                          >
+                            <Edit size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            className="action-btn action-btn-delete"
+                            title="Eliminar este miembro del personal"
+                            onClick={() => handleDeletePersonnel(mech)}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            className="action-btn"
+                            title={mech.isActive ? 'Desactivar personal' : 'Activar personal'}
+                            onClick={() => togglePersonnelStatus(mech.id)}
+                          >
+                            {mech.isActive ? <UserX size={14} /> : <UserCheck size={14} />}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -292,12 +538,13 @@ export const ProfilePage: React.FC = () => {
             <div className="activity-item">
               <LogIn size={18} className="activity-icon" />
               <div>
-                <span className="activity-label">Ultimo ingreso</span>
+                <span className="activity-label">Último ingreso</span>
                 <span className="activity-value">{workshop.lastLogin}</span>
               </div>
             </div>
           </div>
         </Card>
+
         {/* ===== CARD H: PREFERENCIAS DE INTERFAZ ===== */}
         <Card title="Preferencias de Interfaz">
           <div className="account-activity">
@@ -305,7 +552,7 @@ export const ProfilePage: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <Palette size={18} className="activity-icon" />
                 <div>
-                  <span className="activity-label">Modo de visualizacion</span>
+                  <span className="activity-label">Modo de visualización</span>
                   <span className="activity-value">{isLight ? 'Modo Claro' : 'Modo Oscuro'}</span>
                 </div>
               </div>
@@ -321,22 +568,110 @@ export const ProfilePage: React.FC = () => {
         </Card>
       </div>
 
-      {/* Modal para agregar mecanico */}
+      {/* Modal para Agregar / Editar Personal */}
       <Modal
-        isOpen={showMechanicModal}
-        onClose={() => setShowMechanicModal(false)}
-        title="Agregar Mecanico"
+        isOpen={showPersonnelModal}
+        onClose={() => {
+          setShowPersonnelModal(false);
+          setEditingMember(null);
+        }}
+        title={editingMember ? `Editar Personal: ${editingMember.name}` : 'Registrar Nuevo Miembro del Personal'}
         footer={
-          <>
-            <Button variant="secondary" onClick={() => setShowMechanicModal(false)}>Cancelar</Button>
-            <Button variant="primary" onClick={() => setShowMechanicModal(false)}>Guardar</Button>
-          </>
+          <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+            {editingMember ? (
+              <Button
+                variant="danger"
+                size="sm"
+                type="button"
+                icon={<Trash2 size={14} />}
+                onClick={() => handleDeletePersonnel(editingMember)}
+              >
+                Eliminar
+              </Button>
+            ) : <div />}
+
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <Button
+                variant="secondary"
+                type="button"
+                onClick={() => {
+                  setShowPersonnelModal(false);
+                  setEditingMember(null);
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="primary"
+                type="button"
+                onClick={handleSavePersonnel}
+                icon={editingMember ? <CheckCircle2 size={16} /> : <Plus size={16} />}
+              >
+                {editingMember ? 'Guardar Cambios' : 'Registrar Personal'}
+              </Button>
+            </div>
+          </div>
         }
       >
-        <div className="form-grid" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <Input label="Nombre completo" placeholder="Ej: Carlos Martinez" icon={<User size={16} />} />
-          <Input label="Especialidad" placeholder="Ej: Mecanica general" icon={<Wrench size={16} />} />
-          <Input label="Telefono" placeholder="0412-5551234" icon={<Phone size={16} />} />
+        <form onSubmit={handleSavePersonnel} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>
+              Nombre Completo *
+            </label>
+            <input
+              type="text"
+              required
+              className="input-field"
+              placeholder="Ej: Carlos Martínez"
+              value={personnelForm.name}
+              onChange={e => setPersonnelForm({ ...personnelForm, name: e.target.value })}
+              style={{ width: '100%' }}
+            />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>
+                Especialidad / Cargo *
+              </label>
+              <input
+                type="text"
+                required
+                className="input-field"
+                placeholder="Ej: Mecánica general, Electricidad..."
+                value={personnelForm.specialty}
+                onChange={e => setPersonnelForm({ ...personnelForm, specialty: e.target.value })}
+                style={{ width: '100%' }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>
+                Teléfono / Celular
+              </label>
+              <input
+                type="text"
+                className="input-field"
+                placeholder="0412-1234567"
+                value={personnelForm.phone}
+                onChange={e => setPersonnelForm({ ...personnelForm, phone: e.target.value })}
+                style={{ width: '100%' }}
+              />
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 0' }}>
+            <input
+              type="checkbox"
+              id="personnelActiveCheck"
+              checked={personnelForm.isActive}
+              onChange={e => setPersonnelForm({ ...personnelForm, isActive: e.target.checked })}
+              style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+            />
+            <label htmlFor="personnelActiveCheck" style={{ fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
+              Personal Activo (Disponible para asignación de órdenes y liquidación)
+            </label>
+          </div>
 
           <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '12px', marginTop: '4px' }}>
             <label className="input-label" style={{ fontWeight: 700, fontSize: '13px', display: 'block', marginBottom: '8px' }}>
@@ -345,19 +680,56 @@ export const ProfilePage: React.FC = () => {
 
             <div className="input-group">
               <label className="input-label">Tipo de Esquema</label>
-              <select className="input-field">
-                <option value="porcentaje">Opción A — Porcentaje (%) sobre servicios de órdenes</option>
-                <option value="fijo">Opción B — Monto Fijo Acordado</option>
+              <select
+                className="input-field"
+                value={personnelForm.esquema}
+                onChange={e => setPersonnelForm({ ...personnelForm, esquema: e.target.value as any })}
+              >
+                <option value="porcentaje">Opción A — Porcentaje (%) sobre mano de obra de órdenes</option>
+                <option value="fijo">Opción B — Monto Fijo Acordado ($ quincenal o mensual)</option>
                 <option value="mixto">Opción C — Mixto (Monto base fijo + % comisión)</option>
               </select>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '10px' }}>
-              <Input label="Porcentaje comisión (%)" type="number" placeholder="Ej: 30" hint="Aplica sobre el valor de los servicios (excluye repuestos)" />
-              <Input label="Monto Fijo / Base ($)" type="number" placeholder="Ej: 200" />
+              {(personnelForm.esquema === 'porcentaje' || personnelForm.esquema === 'mixto') && (
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '4px' }}>
+                    Porcentaje Comisión (%)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    className="input-field"
+                    placeholder="30"
+                    value={personnelForm.porcentajeServicios}
+                    onChange={e => setPersonnelForm({ ...personnelForm, porcentajeServicios: parseFloat(e.target.value) || 0 })}
+                    style={{ width: '100%' }}
+                  />
+                  <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Sobre servicios (excluye repuestos)</span>
+                </div>
+              )}
+
+              {(personnelForm.esquema === 'fijo' || personnelForm.esquema === 'mixto') && (
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '4px' }}>
+                    Monto Fijo / Base ($ USD)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    className="input-field"
+                    placeholder="200"
+                    value={personnelForm.montoFijo}
+                    onChange={e => setPersonnelForm({ ...personnelForm, montoFijo: parseFloat(e.target.value) || 0 })}
+                    style={{ width: '100%' }}
+                  />
+                </div>
+              )}
             </div>
           </div>
-        </div>
+        </form>
       </Modal>
     </div>
   );

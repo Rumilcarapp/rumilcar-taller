@@ -4,10 +4,40 @@ import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 import { OnboardingModal } from '../onboarding/OnboardingModal';
 import { SubscriptionBanner } from '../subscription/SubscriptionBanner';
+import { ImpersonationBanner } from '../shared/ImpersonationBanner';
+import { BroadcastBanner } from '../shared/BroadcastBanner';
+import { useCashStore } from '../../store/useCashStore';
 import './AppLayout.css';
 
 export const AppLayout: React.FC = () => {
   const location = useLocation();
+  const { autoRate, fetchAutoExchangeRate } = useCashStore();
+
+  // Automatic official dollar rate sync in background
+  useEffect(() => {
+    if (autoRate) {
+      fetchAutoExchangeRate();
+    }
+
+    const interval = setInterval(() => {
+      if (useCashStore.getState().autoRate) {
+        fetchAutoExchangeRate();
+      }
+    }, 15 * 60 * 1000);
+
+    const handleFocus = () => {
+      if (useCashStore.getState().autoRate) {
+        fetchAutoExchangeRate();
+      }
+    };
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [autoRate, fetchAutoExchangeRate]);
+
   // On tablets (768px - 1024px), default to collapsed for extra working space
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     return window.innerWidth > 768 && window.innerWidth <= 1024;
@@ -57,8 +87,10 @@ export const AppLayout: React.FC = () => {
       />
 
       <div className="app-main">
+        <ImpersonationBanner />
         <TopBar onMenuClick={handleMenuClick} />
         <main className="app-content">
+          <BroadcastBanner />
           <SubscriptionBanner />
           <Outlet />
         </main>

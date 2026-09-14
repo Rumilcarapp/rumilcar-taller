@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Modal, Button } from '../../../components/ui';
 import { useUserManagementStore, ManagedUser } from '../../../store/useUserManagementStore';
 
@@ -13,7 +13,7 @@ export const UserModal: React.FC<UserModalProps> = ({
   onClose,
   initialUser,
 }) => {
-  const { roles, addUser, updateUser, addAuditLog } = useUserManagementStore();
+  const { roles, addUser, updateUser, deleteUser, addAuditLog } = useUserManagementStore();
 
   const [name, setName] = useState(initialUser?.name || '');
   const [email, setEmail] = useState(initialUser?.email || '');
@@ -151,13 +151,39 @@ export const UserModal: React.FC<UserModalProps> = ({
           </label>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
-          <Button variant="ghost" type="button" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button variant="primary" type="submit">
-            {initialUser ? 'Guardar Cambios' : 'Registrar Gestor'}
-          </Button>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '14px', width: '100%' }}>
+          {initialUser && initialUser.role !== 'OWNER' ? (
+            <Button
+              variant="danger"
+              size="sm"
+              type="button"
+              onClick={() => {
+                if (window.confirm(`¿Estás seguro de que deseas eliminar permanentemente la cuenta de ${initialUser.name}?`)) {
+                  deleteUser(initialUser.id);
+                  addAuditLog({
+                    userId: 'admin',
+                    userName: 'Administrador',
+                    userRole: 'ADMIN',
+                    action: 'Eliminación de Usuario',
+                    module: 'users',
+                    details: `Se eliminó la cuenta del personal/gestor: ${initialUser.name} (${initialUser.email})`,
+                  });
+                  onClose();
+                }
+              }}
+            >
+              Eliminar Personal
+            </Button>
+          ) : <div />}
+
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <Button variant="ghost" type="button" onClick={onClose}>
+              Cancelar
+            </Button>
+            <Button variant="primary" type="submit">
+              {initialUser ? 'Guardar Cambios' : 'Registrar Gestor'}
+            </Button>
+          </div>
         </div>
       </form>
     </Modal>

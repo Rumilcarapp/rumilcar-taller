@@ -1,7 +1,9 @@
 import { Router, Response } from 'express';
 import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 import { prisma } from '../../config/database';
 import { authenticate, AuthRequest } from '../../middleware/auth';
+import { JWT_SECRET } from '../../config/jwt';
 
 export const subscriptionsRouter = Router();
 
@@ -931,5 +933,403 @@ subscriptionsRouter.put('/admin/update-workshop', authenticate, requireSuperAdmi
     res.status(500).json({ error: 'Error al actualizar datos del taller' });
   }
 });
+
+// GET /api/subscriptions/admin/workshops — List all client workshops for SuperAdmin
+subscriptionsRouter.get('/admin/workshops', authenticate, requireSuperAdmin, async (_req: AuthRequest, res: Response) => {
+  try {
+    const workshops = await prisma.workshop.findMany({
+      include: {
+        users: true,
+        subscription: {
+          include: { payments: true },
+        },
+        _count: {
+          select: { workOrders: true, clients: true, mechanics: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const now = new Date();
+    const formatted = workshops.map((w) => {
+      const owner = w.users.find((u) => u.role === 'OWNER') || w.users[0];
+      const sub = w.subscription;
+      let daysRemaining = 0;
+      if (sub?.currentPeriodEnd && sub.status === 'ACTIVE') {
+        daysRemaining = Math.max(0, Math.ceil((sub.currentPeriodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+      } else if (sub?.trialEndsAt) {
+        daysRemaining = Math.max(0, Math.ceil((sub.trialEndsAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+      }
+
+      return {
+        workshopId: w.id,
+        workshopName: w.name,
+        ownerName: owner?.name || 'Dueño',
+        phone: w.phone || '',
+        email: w.email || owner?.email || '',
+        plan: sub?.plan || 'TRIAL',
+        status: sub?.status || 'TRIALING',
+        isTrial: sub?.plan === 'TRIAL' || sub?.status === 'TRIALING',
+        daysRemaining,
+        subscriptionEnd: sub?.currentPeriodEnd || sub?.trialEndsAt,
+        stats: {
+          orders: w._count.workOrders,
+          clients: w._count.clients,
+          mechanics: w._count.mechanics,
+        },
+        payments: sub?.payments || [],
+        createdAt: w.createdAt,
+      };
+    });
+
+    res.json({ success: true, workshops: formatted, data: formatted });
+  } catch (error: any) {
+    console.error('Error fetching admin workshops:', error);
+    res.status(500).json({ error: 'Error al listar talleres' });
+  }
+});
+
+// =========================================================================
+// 🎯 OBJETIVO 1: MODO "VER COMO TALLER" (IMPERSONATION / LOGIN AS)
+// =========================================================================
+
+// POST /api/subscriptions/admin/impersonate
+subscriptionsRouter.post('/admin/impersonate', authenticate, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+  try {
+    const { workshopId } = req.body;
+    if (!workshopId) {
+      res.status(400).json({ error: 'workshopId es requerido' });
+      return;
+    }
+
+    const workshop = await prisma.workshop.findUnique({
+      where: { id: workshopId },
+      include: {
+        users: { where: { role: 'OWNER' } },
+        subscription: true,
+      },
+    });
+
+    if (!workshop) {
+      res.status(404).json({ error: 'Taller no encontrado' });
+      return;
+    }
+
+    const targetUser = workshop.users[0] || (await prisma.user.findFirst({ where: { workshopId } }));
+    if (!targetUser) {
+      res.status(404).json({ error: 'No se encontró un usuario titular para este taller' });
+      return;
+    }
+
+    const token = jwt.sign(
+      {
+        userId: targetUser.id,
+        email: targetUser.email,
+        role: targetUser.role,
+        workshopId: workshop.id,
+        isImpersonated: true,
+        impersonatedBy: req.userId || 'SuperAdmin',
+      },
+      JWT_SECRET,
+      { expiresIn: '4h' }
+    );
+
+    res.json({
+      message: `Sesión iniciada como ${workshop.name}`,
+      token,
+      user: {
+        id: targetUser.id,
+        name: targetUser.name,
+        email: targetUser.email,
+        role: targetUser.role,
+        workshopId: workshop.id,
+        workshopName: workshop.name,
+        isImpersonated: true,
+      },
+      workshop: {
+        id: workshop.id,
+        name: workshop.name,
+        phone: workshop.phone,
+        email: workshop.email,
+        plan: workshop.subscription?.plan || 'TRIAL',
+      },
+    });
+  } catch (error: any) {
+    console.error('Error in impersonation:', error);
+    res.status(500).json({ error: 'Error al generar sesión de suplantación' });
+  }
+});
+
+// =========================================================================
+// 🎯 OBJETIVO 2: COMUNICADOS Y AVISOS GLOBALES (BROADCAST BANNERS)
+// =========================================================================
+
+// GET /api/subscriptions/announcements — Active announcements for workshops
+subscriptionsRouter.get('/announcements', async (_req, res) => {
+  try {
+    const announcements = await prisma.saaSAnnouncement.findMany({
+      where: { isActive: true },
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+    });
+    res.json(announcements);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al consultar comunicados' });
+  }
+});
+
+// GET /api/subscriptions/admin/announcements — SuperAdmin lists all
+subscriptionsRouter.get('/admin/announcements', authenticate, requireSuperAdmin, async (_req, res) => {
+  try {
+    const list = await prisma.saaSAnnouncement.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json(list);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al listar comunicados' });
+  }
+});
+
+// POST /api/subscriptions/admin/announcements — SuperAdmin creates/updates announcement
+subscriptionsRouter.post('/admin/announcements', authenticate, requireSuperAdmin, async (req: AuthRequest, res) => {
+  try {
+    const { id, title, message, type = 'INFO', targetPlan = 'ALL', isActive = true } = req.body;
+    if (!title || !message) {
+      res.status(400).json({ error: 'Título y mensaje son obligatorios' });
+      return;
+    }
+
+    let announcement;
+    if (id) {
+      announcement = await prisma.saaSAnnouncement.update({
+        where: { id },
+        data: { title, message, type, targetPlan, isActive },
+      });
+    } else {
+      announcement = await prisma.saaSAnnouncement.create({
+        data: {
+          title,
+          message,
+          type,
+          targetPlan,
+          isActive,
+          createdBy: req.userId || 'SuperAdmin',
+        },
+      });
+    }
+
+    res.json({ message: 'Comunicado guardado exitosamente', announcement });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al guardar comunicado' });
+  }
+});
+
+// DELETE /api/subscriptions/admin/announcements/:id
+subscriptionsRouter.delete('/admin/announcements/:id', authenticate, requireSuperAdmin, async (req, res) => {
+  try {
+    await prisma.saaSAnnouncement.delete({ where: { id: String(req.params.id) } });
+    res.json({ message: 'Comunicado eliminado correctamente' });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al eliminar comunicado' });
+  }
+});
+
+// =========================================================================
+// 🎯 OBJETIVO 3: EDITOR DE PRECIOS, PLANES Y CUENTAS BANCARIAS
+// =========================================================================
+
+// GET /api/subscriptions/admin/config
+subscriptionsRouter.get('/admin/config', authenticate, requireSuperAdmin, (_req, res) => {
+  res.json(OFFICIAL_PAYMENT_INFO);
+});
+
+// PUT /api/subscriptions/admin/config
+subscriptionsRouter.put('/admin/config', authenticate, requireSuperAdmin, (req, res) => {
+  const { pagoMovil, zinli, usdtBinance, plans } = req.body;
+  if (pagoMovil) OFFICIAL_PAYMENT_INFO.pagoMovil = { ...OFFICIAL_PAYMENT_INFO.pagoMovil, ...pagoMovil };
+  if (zinli) OFFICIAL_PAYMENT_INFO.zinli = { ...OFFICIAL_PAYMENT_INFO.zinli, ...zinli };
+  if (usdtBinance) OFFICIAL_PAYMENT_INFO.usdtBinance = { ...OFFICIAL_PAYMENT_INFO.usdtBinance, ...usdtBinance };
+  if (plans && Array.isArray(plans)) OFFICIAL_PAYMENT_INFO.plans = plans;
+
+  res.json({ message: 'Configuración oficial actualizada correctamente', paymentInfo: OFFICIAL_PAYMENT_INFO });
+});
+
+// =========================================================================
+// 🎯 OBJETIVO 5: CENTRO DE TICKETS DE SOPORTE (HELPDESK)
+// =========================================================================
+
+// POST /api/subscriptions/support/tickets — Workshop creates ticket
+subscriptionsRouter.post('/support/tickets', authenticate, async (req: AuthRequest, res) => {
+  try {
+    const { subject, description, priority = 'MEDIUM', contactName, contactPhone, contactEmail } = req.body;
+    const workshopId = req.workshopId;
+    const textDesc = description || req.body.message || '';
+
+    if (!workshopId || !subject || !textDesc) {
+      res.status(400).json({ error: 'Faltan campos obligatorios' });
+      return;
+    }
+
+    const ticket = await prisma.supportTicket.create({
+      data: {
+        workshopId,
+        subject,
+        description: textDesc,
+        priority,
+        contactName: contactName || req.userName || 'Usuario',
+        contactPhone: contactPhone || req.body.userPhone || null,
+        contactEmail: contactEmail || req.userEmail || null,
+        status: 'OPEN',
+      },
+      include: {
+        workshop: { select: { id: true, name: true, phone: true } },
+      },
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Ticket de soporte creado con éxito. Luark Padilla responderá a la brevedad.',
+      ticket,
+      data: ticket,
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al enviar ticket de soporte' });
+  }
+});
+
+// GET /api/subscriptions/admin/support/tickets — SuperAdmin lists tickets
+subscriptionsRouter.get('/admin/support/tickets', authenticate, requireSuperAdmin, async (_req, res) => {
+  try {
+    const tickets = await prisma.supportTicket.findMany({
+      include: {
+        workshop: {
+          select: { id: true, name: true, phone: true, email: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    const formatted = tickets.map((t) => ({
+      ...t,
+      message: t.description,
+      adminNotes: t.resolutionNotes,
+      userName: t.contactName || 'Usuario Taller',
+      userEmail: t.contactEmail || '',
+      userPhone: t.contactPhone || t.workshop?.phone || '',
+    }));
+    res.json({ success: true, data: formatted });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al listar tickets de soporte' });
+  }
+});
+
+// PUT /api/subscriptions/admin/support/tickets/:id — SuperAdmin updates ticket status
+subscriptionsRouter.put('/admin/support/tickets/:id', authenticate, requireSuperAdmin, async (req, res) => {
+  try {
+    const { status, resolutionNotes, adminNotes } = req.body;
+    const notes = resolutionNotes || adminNotes;
+    const ticket = await prisma.supportTicket.update({
+      where: { id: String(req.params.id) },
+      data: {
+        ...(status && { status }),
+        ...(notes && { resolutionNotes: notes }),
+      },
+      include: {
+        workshop: { select: { id: true, name: true, phone: true } },
+      },
+    });
+    res.json({
+      success: true,
+      message: 'Ticket actualizado correctamente',
+      data: {
+        ...ticket,
+        message: ticket.description,
+        adminNotes: ticket.resolutionNotes,
+        userName: ticket.contactName || 'Usuario Taller',
+        userEmail: ticket.contactEmail || '',
+        userPhone: ticket.contactPhone || ticket.workshop?.phone || '',
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al actualizar ticket' });
+  }
+});
+
+// =========================================================================
+// 🎯 OBJETIVO 6: MONITOR DE SALUD & COPIAS DE SEGURIDAD (BACKUPS)
+// =========================================================================
+
+// GET /api/subscriptions/admin/backup — SuperAdmin downloads consolidated JSON database backup
+subscriptionsRouter.get('/admin/backup', authenticate, requireSuperAdmin, async (_req, res) => {
+  try {
+    const [workshops, users, workOrders, clients, vehicles, inventoryItems, subscriptions, payments] = await Promise.all([
+      prisma.workshop.findMany(),
+      prisma.user.findMany({ select: { id: true, workshopId: true, name: true, email: true, role: true, isActive: true, createdAt: true } }),
+      prisma.workOrder.findMany(),
+      prisma.client.findMany(),
+      prisma.vehicle.findMany(),
+      prisma.inventoryItem.findMany(),
+      prisma.subscription.findMany(),
+      prisma.subscriptionPayment.findMany(),
+    ]);
+
+    const backupData = {
+      version: '1.0.0',
+      exportedAt: new Date().toISOString(),
+      exportedBy: 'SuperAdmin',
+      metadata: {
+        totalWorkshops: workshops.length,
+        totalUsers: users.length,
+        totalOrders: workOrders.length,
+        totalClients: clients.length,
+        totalVehicles: vehicles.length,
+        totalInventory: inventoryItems.length,
+      },
+      data: {
+        workshops,
+        users,
+        workOrders,
+        clients,
+        vehicles,
+        inventoryItems,
+        subscriptions,
+        payments,
+      },
+    };
+
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename=rumilcarapp_backup_${new Date().toISOString().slice(0, 10)}.json`);
+    res.json(backupData);
+  } catch (error) {
+    console.error('Error generating backup:', error);
+    res.status(500).json({ error: 'Error al generar copia de seguridad' });
+  }
+});
+
+// GET /api/subscriptions/admin/health — SuperAdmin database latency & system metrics
+subscriptionsRouter.get('/admin/health', authenticate, requireSuperAdmin, async (_req, res) => {
+  try {
+    const start = Date.now();
+    await prisma.$queryRaw`SELECT 1`;
+    const dbLatencyMs = Date.now() - start;
+
+    const memoryUsage = process.memoryUsage();
+
+    res.json({
+      status: 'HEALTHY',
+      serverUptimeSeconds: Math.round(process.uptime()),
+      dbLatencyMs,
+      timestamp: new Date().toISOString(),
+      memory: {
+        rssMB: Math.round(memoryUsage.rss / (1024 * 1024)),
+        heapUsedMB: Math.round(memoryUsage.heapUsed / (1024 * 1024)),
+      },
+      environment: process.env.NODE_ENV || 'production',
+      database: 'Supabase PostgreSQL (Active)',
+    });
+  } catch (error: any) {
+    res.status(500).json({ status: 'DEGRADED', error: error?.message || 'Error de conexión a base de datos' });
+  }
+});
+
 
 

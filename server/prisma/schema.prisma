@@ -41,6 +41,7 @@ model Workshop {
   alertaDevaluacionConfig  AlertaDevaluacionConfig?
   subscription             Subscription?
   subscriptionPayments     SubscriptionPayment[]
+  supportTickets           SupportTicket[]
 }
 
 model User {
@@ -367,3 +368,33 @@ model SubscriptionPayment {
   subscription    Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
   workshop        Workshop     @relation(fields: [workshopId], references: [id], onDelete: Cascade)
 }
+
+model SaaSAnnouncement {
+  id          String   @id @default(uuid())
+  title       String
+  message     String
+  type        String   @default("INFO") // INFO, UPDATE, WARNING, PROMO
+  targetPlan  String   @default("ALL")  // ALL, TRIAL, BASIC, PRO, ELITE
+  isActive    Boolean  @default(true)
+  createdBy   String   @default("SuperAdmin")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model SupportTicket {
+  id              String   @id @default(uuid())
+  workshopId      String
+  subject         String
+  description     String
+  priority        String   @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  status          String   @default("OPEN")   // OPEN, IN_PROGRESS, RESOLVED
+  contactName     String?
+  contactPhone    String?
+  contactEmail    String?
+  resolutionNotes String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  workshop        Workshop @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+}
+
