@@ -10,29 +10,44 @@ import { inventoryRouter } from './modules/inventory/inventory.routes';
 import { workOrdersRouter } from './modules/work-orders/workOrders.routes';
 import { subscriptionsRouter } from './modules/subscriptions/subscriptions.routes';
 
+import { apiRateLimiter } from './middleware/auth';
+
 const app = express();
 
-// Dynamic CORS configuration (Supports Localhost, Vercel preview & Custom Production Domains)
+// Parse allowed CORS origins from environment
+const rawOrigins = process.env.CORS_ORIGIN || 'http://localhost:5173,http://localhost:3000,https://rumilcar-taller-mecanico.vercel.app';
+const allowedOriginsList = rawOrigins.split(',').map((o) => o.trim()).filter(Boolean);
+
+// Strict CORS configuration
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps, curl, server-to-server)
+      // Allow requests with no origin (e.g. mobile native apps, server-to-server, curl in dev)
       if (!origin) return callback(null, true);
-      // Allow localhost or any vercel.app preview or production domain
-      if (
-        origin.includes('localhost') ||
-        origin.includes('vercel.app') ||
-        process.env.CORS_ORIGIN === '*'
-      ) {
+
+      // Check against allowed origins list or wildcard
+      const isAllowed = allowedOriginsList.some((allowed) => {
+        if (allowed === '*') return true;
+        if (allowed.includes('*')) {
+          const regex = new RegExp('^' + allowed.replace(/\./g, '\\.').replace(/\*/g, '.*') + '$');
+          return regex.test(origin);
+        }
+        return allowed === origin;
+      });
+
+      if (isAllowed || origin.endsWith('.vercel.app')) {
         return callback(null, true);
       }
-      return callback(null, true);
+
+      console.warn(`[SECURITY] Blocked CORS request from unauthorized origin: ${origin}`);
+      return callback(new Error(`Origen no permitido por la política CORS: ${origin}`));
     },
     credentials: true,
   })
 );
 
 app.use(express.json());
+app.use('/api/', apiRateLimiter);
 
 // Health check
 app.get('/api/health', (_req, res) => {

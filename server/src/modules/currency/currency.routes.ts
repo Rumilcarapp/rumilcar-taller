@@ -1,15 +1,28 @@
 import { Router, Response } from 'express';
 import { prisma } from '../../config/database';
-import { authenticate, AuthRequest } from '../../middleware/auth';
+import { authenticate, requireWorkshop, requireRole, AuthRequest } from '../../middleware/auth';
+import { z } from 'zod';
 
 export const currencyRouter = Router();
 currencyRouter.use(authenticate);
+currencyRouter.use(requireWorkshop);
+
+const setRateSchema = z.object({
+  rate: z.union([z.number(), z.string()]).transform((val) => {
+    const num = typeof val === 'string' ? parseFloat(val) : val;
+    if (isNaN(num) || num <= 0) {
+      throw new Error('La tasa debe ser un número positivo');
+    }
+    return num;
+  }),
+  source: z.string().trim().optional().default('manual'),
+});
 
 // GET /api/currency/rate — Get current exchange rate
 currencyRouter.get('/rate', async (req: AuthRequest, res: Response) => {
   try {
     const rate = await prisma.exchangeRate.findFirst({
-      where: { workshopId: req.workshopId },
+      where: { workshopId: req.workshopId! },
       orderBy: { effectiveAt: 'desc' },
     });
     res.json(rate || { rateToAnchor: 0, currency: 'VES', source: 'none' });
@@ -18,15 +31,21 @@ currencyRouter.get('/rate', async (req: AuthRequest, res: Response) => {
   }
 });
 
-// POST /api/currency/rate — Set new exchange rate
-currencyRouter.post('/rate', async (req: AuthRequest, res: Response) => {
+// POST /api/currency/rate — Set new exchange rate (OWNER, ADMIN, CASHIER)
+currencyRouter.post('/rate', requireRole('OWNER', 'ADMIN', 'CASHIER'), async (req: AuthRequest, res: Response) => {
   try {
-    const { rate, source } = req.body;
+    const parseResult = setRateSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      res.status(400).json({ error: 'Tasa inválida', details: parseResult.error.format() });
+      return;
+    }
+
+    const { rate, source } = parseResult.data;
     const exchangeRate = await prisma.exchangeRate.create({
       data: {
         workshopId: req.workshopId!,
         currency: 'VES',
-        rateToAnchor: parseFloat(rate),
+        rateToAnchor: rate,
         source: source || 'manual',
       },
     });

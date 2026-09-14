@@ -1,67 +1,232 @@
-import { Router, Request, Response } from 'express';
+import { Router, Response } from 'express';
+import { z } from 'zod';
 import { prisma } from '../../lib/prisma';
+import { authenticate, requireWorkshop, requireRole, AuthRequest, logSecurityEvent } from '../../middleware/auth';
 
 export const inventoryRouter = Router();
 
-// GET all inventory items
-inventoryRouter.get('/', async (req: Request, res: Response) => {
+// Apply authentication and workshop requirement to all inventory routes
+inventoryRouter.use(authenticate);
+inventoryRouter.use(requireWorkshop);
+
+// Zod schemas for input validation
+const createItemSchema = z.object({
+  sku: z.string().optional().nullable(),
+  name: z.string().min(2, 'El nombre del repuesto o artículo es requerido'),
+  description: z.string().optional().nullable(),
+  category: z.string().optional().nullable(),
+  unitPriceAnchor: z.union([z.number(), z.string()]),
+  costPriceAnchor: z.union([z.number(), z.string()]).optional().nullable(),
+  currentStock: z.union([z.number(), z.string()]).optional().default(0),
+  minStock: z.union([z.number(), z.string()]).optional().default(0),
+  unit: z.string().optional().default('unidad'),
+});
+
+const updateItemSchema = createItemSchema.partial();
+
+// GET /api/inventory - Get all inventory items belonging strictly to this workshop
+inventoryRouter.get('/', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const workshopId = (req.query.workshopId as string) || 'default-workshop';
+    const workshopId = req.workshopId!;
+    const search = req.query.search as string | undefined;
+    const category = req.query.category as string | undefined;
+
     const items = await prisma.inventoryItem.findMany({
-      where: { workshopId },
+      where: {
+        workshopId,
+        ...(category && category !== 'TODOS' ? { category } : {}),
+        ...(search
+          ? {
+              OR: [
+                { name: { contains: search, mode: 'insensitive' } },
+                { sku: { contains: search, mode: 'insensitive' } },
+                { description: { contains: search, mode: 'insensitive' } },
+              ],
+            }
+          : {}),
+      },
       orderBy: { name: 'asc' },
     });
+
     res.json(items);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error('Error fetching inventory:', error);
+    res.status(500).json({ error: 'Error al consultar inventario del taller' });
   }
 });
 
-// POST create inventory item
-inventoryRouter.post('/', async (req: Request, res: Response) => {
+// GET /api/inventory/:id - Get a single item with ownership check
+inventoryRouter.get('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { workshopId, sku, name, description, category, unitPriceAnchor, costPriceAnchor, currentStock, minStock, unit } = req.body;
-    const item = await prisma.inventoryItem.create({
-      data: {
-        workshopId: workshopId || 'default-workshop',
-        sku,
-        name,
-        description,
-        category,
-        unitPriceAnchor: parseFloat(unitPriceAnchor || 0),
-        costPriceAnchor: costPriceAnchor ? parseFloat(costPriceAnchor) : null,
-        currentStock: parseFloat(currentStock || 0),
-        minStock: parseFloat(minStock || 0),
-        unit: unit || 'unidad',
-      },
-    });
-    res.status(201).json(item);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// PUT update inventory item
-inventoryRouter.put('/:id', async (req: Request, res: Response) => {
-  try {
+    const workshopId = req.workshopId!;
     const id = req.params.id as string;
-    const item = await prisma.inventoryItem.update({
-      where: { id },
-      data: req.body,
+
+    const item = await prisma.inventoryItem.findFirst({
+      where: { id, workshopId },
     });
+
+    if (!item) {
+      res.status(404).json({ error: 'Artículo de inventario no encontrado en tu taller' });
+      return;
+    }
+
     res.json(item);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error('Error fetching inventory item by id:', error);
+    res.status(500).json({ error: 'Error al consultar artículo de inventario' });
   }
 });
 
-// DELETE inventory item
-inventoryRouter.delete('/:id', async (req: Request, res: Response) => {
+// POST /api/inventory - Create item securely scoped to authenticated workshop
+inventoryRouter.post('/', requireRole('OWNER', 'ADMIN', 'INVENTORY'), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const id = req.params.id as string;
-    await prisma.inventoryItem.delete({ where: { id } });
-    res.json({ success: true });
+    const workshopId = req.workshopId!;
+    const parseResult = createItemSchema.safeParse(req.body);
+
+    if (!parseResult.success) {
+      res.status(400).json({ error: parseResult.error.errors[0].message });
+      return;
+    }
+
+    const { sku, name, description, category, unitPriceAnchor, costPriceAnchor, currentStock, minStock, unit } = parseResult.data;
+    const cleanSku = sku ? sku.trim().toUpperCase() : null;
+
+    // Check for duplicate SKU in this workshop
+    if (cleanSku) {
+      const existing = await prisma.inventoryItem.findFirst({
+        where: { workshopId, sku: cleanSku },
+      });
+      if (existing) {
+        res.status(400).json({
+          error: `Ya existe un artículo registrado con el código / SKU ${cleanSku} en tu taller (${existing.name}).`,
+        });
+        return;
+      }
+    }
+
+    const item = await prisma.inventoryItem.create({
+      data: {
+        workshopId,
+        sku: cleanSku,
+        name: name.trim(),
+        description: description ? description.trim() : null,
+        category: category ? category.trim() : null,
+        unitPriceAnchor: parseFloat(String(unitPriceAnchor)),
+        costPriceAnchor: costPriceAnchor !== null && costPriceAnchor !== undefined ? parseFloat(String(costPriceAnchor)) : null,
+        currentStock: parseFloat(String(currentStock || 0)),
+        minStock: parseFloat(String(minStock || 0)),
+        unit: unit ? unit.trim() : 'unidad',
+      },
+    });
+
+    logSecurityEvent({
+      action: 'CREATE_INVENTORY_ITEM',
+      workshopId,
+      userId: req.userId,
+      details: `Artículo creado: ${item.name} (${cleanSku || 'Sin SKU'}) - Stock: ${item.currentStock}`,
+    });
+
+    res.status(201).json(item);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error('Error creating inventory item:', error);
+    res.status(500).json({ error: 'Error al registrar artículo en inventario' });
+  }
+});
+
+// PUT /api/inventory/:id - Update item with strict ownership check
+inventoryRouter.put('/:id', requireRole('OWNER', 'ADMIN', 'INVENTORY'), async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const workshopId = req.workshopId!;
+    const id = req.params.id as string;
+
+    const parseResult = updateItemSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      res.status(400).json({ error: parseResult.error.errors[0].message });
+      return;
+    }
+
+    const existing = await prisma.inventoryItem.findFirst({
+      where: { id, workshopId },
+    });
+
+    if (!existing) {
+      res.status(404).json({ error: 'Artículo no encontrado en tu taller' });
+      return;
+    }
+
+    const data = parseResult.data;
+    const cleanSku = data.sku !== undefined ? (data.sku ? data.sku.trim().toUpperCase() : null) : undefined;
+
+    // If changing SKU, check for collision
+    if (cleanSku && cleanSku !== existing.sku) {
+      const collision = await prisma.inventoryItem.findFirst({
+        where: { workshopId, sku: cleanSku, id: { not: id } },
+      });
+      if (collision) {
+        res.status(400).json({ error: `El código/SKU ${cleanSku} ya está siendo utilizado por ${collision.name}.` });
+        return;
+      }
+    }
+
+    const updated = await prisma.inventoryItem.update({
+      where: { id },
+      data: {
+        sku: cleanSku,
+        name: data.name !== undefined ? data.name.trim() : undefined,
+        description: data.description !== undefined ? (data.description ? data.description.trim() : null) : undefined,
+        category: data.category !== undefined ? (data.category ? data.category.trim() : null) : undefined,
+        unitPriceAnchor: data.unitPriceAnchor !== undefined ? parseFloat(String(data.unitPriceAnchor)) : undefined,
+        costPriceAnchor: data.costPriceAnchor !== undefined ? (data.costPriceAnchor ? parseFloat(String(data.costPriceAnchor)) : null) : undefined,
+        currentStock: data.currentStock !== undefined ? parseFloat(String(data.currentStock)) : undefined,
+        minStock: data.minStock !== undefined ? parseFloat(String(data.minStock)) : undefined,
+        unit: data.unit !== undefined ? (data.unit ? data.unit.trim() : 'unidad') : undefined,
+      },
+    });
+
+    res.json(updated);
+  } catch (error: any) {
+    console.error('Error updating inventory item:', error);
+    res.status(500).json({ error: 'Error al actualizar artículo de inventario' });
+  }
+});
+
+// DELETE /api/inventory/:id - Delete item (requires OWNER or ADMIN role)
+inventoryRouter.delete('/:id', requireRole('OWNER', 'ADMIN'), async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const workshopId = req.workshopId!;
+    const id = req.params.id as string;
+
+    const existing = await prisma.inventoryItem.findFirst({
+      where: { id, workshopId },
+      include: {
+        _count: { select: { workOrderItems: true } },
+      },
+    });
+
+    if (!existing) {
+      res.status(404).json({ error: 'Artículo no encontrado en tu taller' });
+      return;
+    }
+
+    if (existing._count.workOrderItems > 0) {
+      res.status(400).json({
+        error: `No se puede eliminar el repuesto porque está referenciado en ${existing._count.workOrderItems} orden(es) de trabajo. Puedes ajustar su stock a 0.`,
+      });
+      return;
+    }
+
+    await prisma.inventoryItem.delete({ where: { id } });
+
+    logSecurityEvent({
+      action: 'DELETE_INVENTORY_ITEM',
+      workshopId,
+      userId: req.userId,
+      details: `Artículo eliminado: ${existing.name} (ID: ${id})`,
+    });
+
+    res.json({ success: true, message: 'Artículo eliminado correctamente del inventario' });
+  } catch (error: any) {
+    console.error('Error deleting inventory item:', error);
+    res.status(500).json({ error: 'Error al eliminar el artículo de inventario' });
   }
 });

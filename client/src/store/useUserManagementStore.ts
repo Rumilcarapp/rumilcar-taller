@@ -245,7 +245,6 @@ const DEFAULT_USERS: ManagedUser[] = [
     id: 'usr-superadmin',
     name: 'Luark Padilla',
     email: 'luarkpadilla@gmail.com',
-    password: 'a123789963',
     phone: '04241550550',
     role: 'SUPERADMIN',
     isActive: true,

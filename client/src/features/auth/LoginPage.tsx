@@ -33,8 +33,8 @@ export const LoginPage: React.FC = () => {
   const [mode, setMode] = useState<'login' | 'register'>('login');
 
   // Login form state
-  const [email, setEmail] = useState('admin@taller.com');
-  const [password, setPassword] = useState('123456');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
 
   // Register form state
@@ -92,40 +92,20 @@ export const LoginPage: React.FC = () => {
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setLoading(true);
 
     const cleanEmail = email.trim().toLowerCase();
-
-    // Special SuperAdmin check: username 'luark' or email 'luarkpadilla@gmail.com'
-    if ((cleanEmail === 'luark' || cleanEmail === 'luarkpadilla@gmail.com') && password === 'a123789963') {
-      handleLoginUser({
-        id: 'usr-superadmin',
-        name: 'Luark Padilla',
-        email: 'luarkpadilla@gmail.com',
-        role: 'SUPERADMIN',
-        phone: '04241550550',
-        workshopId: 'ws-central-saas',
-        workshopName: 'Rumilcar Central (SaaS)',
-      });
-      setLoading(false);
+    if (!cleanEmail) {
+      setError('Por favor ingresa tu correo electrónico o usuario.');
+      return;
+    }
+    if (!password) {
+      setError('Por favor ingresa tu contraseña.');
       return;
     }
 
-    // 1. Try local user store first for quick login
-    const found = users.find((u) => u.email.toLowerCase() === cleanEmail);
+    setLoading(true);
 
-    if (found) {
-      if (!found.isActive) {
-        setError('Este usuario se encuentra inactivo. Contacte al administrador.');
-        setLoading(false);
-        return;
-      }
-      handleLoginUser(found);
-      setLoading(false);
-      return;
-    }
-
-    // 2. Try remote API login
+    // 1. Primary: Remote API authentication
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'https://rumilcar-taller.onrender.com/api';
       const response = await fetch(`${apiUrl}/auth/login`, {
@@ -139,20 +119,32 @@ export const LoginPage: React.FC = () => {
         handleLoginUser(data.user, data.token);
         setLoading(false);
         return;
+      } else {
+        const errData = await response.json().catch(() => ({ error: '' }));
+        setError(errData.error || 'Credenciales inválidas. Verifica tu correo y contraseña.');
+        setLoading(false);
+        return;
       }
     } catch {
-      // Remote call failed, allow demo fallback below
-    }
+      // Remote call failed (offline mode)
+      const found = users.find(
+        (u) => u.email.toLowerCase() === cleanEmail && u.password === password
+      );
 
-    // 3. Fallback demo access for testing
-    handleLoginUser({
-      id: 'usr-demo',
-      name: email.split('@')[0],
-      email: cleanEmail,
-      role: 'ADMIN',
-      phone: '',
-    });
-    setLoading(false);
+      if (found) {
+        if (!found.isActive) {
+          setError('Este usuario se encuentra inactivo. Contacte al administrador.');
+          setLoading(false);
+          return;
+        }
+        handleLoginUser(found);
+        setLoading(false);
+        return;
+      }
+
+      setError('No se pudo conectar con el servidor de autenticación. Verifica tu conexión a internet.');
+      setLoading(false);
+    }
   };
 
   const handleRegisterSubmit = async (e: React.FormEvent) => {
@@ -391,97 +383,7 @@ export const LoginPage: React.FC = () => {
               Iniciar Sesión
             </Button>
 
-            {/* Quick profile switcher for demo & testing permissions */}
-            <div
-              style={{
-                marginTop: '12px',
-                paddingTop: '12px',
-                borderTop: '1px solid var(--color-border)',
-              }}
-            >
-              <div
-                style={{
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  color: 'var(--color-text-muted)',
-                  marginBottom: '8px',
-                  textTransform: 'uppercase',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                }}
-              >
-                <ShieldCheck size={14} color="#3b82f6" /> Acceso Rápido por Rol (Prueba):
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setEmail('luarkpadilla@gmail.com');
-                  setPassword('a123789963');
-                  handleLoginUser({
-                    id: 'usr-superadmin',
-                    name: 'Luark Padilla',
-                    email: 'luarkpadilla@gmail.com',
-                    role: 'SUPERADMIN',
-                    phone: '04241550550',
-                    workshopId: 'ws-central-saas',
-                    workshopName: 'Rumilcar Central (SaaS)',
-                  });
-                }}
-                style={{
-                  width: '100%',
-                  padding: '7px 10px',
-                  marginBottom: '8px',
-                  borderRadius: '6px',
-                  border: '1px solid rgba(225, 29, 72, 0.3)',
-                  background: 'linear-gradient(135deg, rgba(225, 29, 72, 0.12), rgba(225, 29, 72, 0.04))',
-                  color: '#e11d48',
-                  cursor: 'pointer',
-                  fontSize: '11px',
-                  fontWeight: 800,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                }}
-              >
-                <span>👑 Super Administrador (Luark)</span>
-                <span style={{ fontSize: '10px', background: '#e11d48', color: '#fff', padding: '1px 6px', borderRadius: '4px' }}>
-                  SaaS Admin
-                </span>
-              </button>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-                {users.slice(0, 4).map((u) => (
-                  <button
-                    key={u.id}
-                    type="button"
-                    onClick={() => {
-                      setEmail(u.email);
-                      setPassword(u.password || '123456');
-                      handleLoginUser(u);
-                    }}
-                    style={{
-                      padding: '6px 8px',
-                      borderRadius: '6px',
-                      border: '1px solid var(--color-border)',
-                      background: 'var(--color-bg-surface)',
-                      color: 'var(--color-text-primary)',
-                      cursor: 'pointer',
-                      fontSize: '11px',
-                      textAlign: 'left',
-                      display: 'flex',
-                      flexDirection: 'column',
-                    }}
-                  >
-                    <strong style={{ fontSize: '11px' }}>{u.name.split(' ')[0]}</strong>
-                    <span style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>
-                      {u.role}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <p className="login-footer-text" style={{ marginTop: '8px' }}>
+            <p className="login-footer-text" style={{ marginTop: '16px' }}>
               ¿Nuevo taller?{' '}
               <button
                 type="button"
