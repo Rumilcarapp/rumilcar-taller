@@ -288,12 +288,22 @@ export const useCashStore = create<CashState>()(
     {
       name: 'rumilcar-cash-register-storage',
       onRehydrateStorage: () => (state) => {
-        if (state && Array.isArray(state.transactions)) {
-          state.transactions = state.transactions.filter(
-            (tx) =>
-              !tx.orderId ||
-              !['RMC-2026-1001', 'RMC-2026-1002', 'RMC-2026-1003', 'RMC-2026-1004'].includes(tx.orderId)
-          );
+        if (state) {
+          if (Array.isArray(state.transactions)) {
+            state.transactions = state.transactions.filter(
+              (tx) =>
+                (!tx.orderId ||
+                  !['RMC-2026-1001', 'RMC-2026-1002', 'RMC-2026-1003', 'RMC-2026-1004'].includes(tx.orderId)) &&
+                tx.montoUSD !== 144 &&
+                !tx.descripcion?.toLowerCase().includes('carlos martínez')
+            );
+          }
+          // Automatically update BCV rate on app load if in auto mode
+          if (state.autoRate) {
+            setTimeout(() => {
+              state.fetchAutoExchangeRate?.();
+            }, 500);
+          }
         }
       },
     }

@@ -100,11 +100,23 @@ export const usePayrollStore = create<PayrollState>()(
       onRehydrateStorage: () => (state) => {
         if (state) {
           if (Array.isArray(state.payments)) {
-            state.payments = state.payments.filter(p => p.id !== 'PAYROLL-2026-001');
+            state.payments = state.payments.filter(
+              (p) =>
+                p.id !== 'PAYROLL-2026-001' &&
+                p.montoDevengadoUSD !== 144 &&
+                p.montoPagadoUSD !== 144 &&
+                !p.mecanicoNombre?.toLowerCase().includes('carlos martínez') &&
+                !p.mecanicoNombre?.toLowerCase().includes('pedro rodríguez') &&
+                !p.mecanicoNombre?.toLowerCase().includes('luis garcía')
+            );
           }
           if (Array.isArray(state.configs)) {
             state.configs = state.configs.filter(
-              c => !['Carlos P.', 'Pedro R.', 'Luis G.'].includes(c.mecanicoId)
+              (c) =>
+                !['Carlos P.', 'Pedro R.', 'Luis G.'].includes(c.mecanicoId) &&
+                !c.mecanicoNombre?.toLowerCase().includes('carlos martínez') &&
+                !c.mecanicoNombre?.toLowerCase().includes('pedro rodríguez') &&
+                !c.mecanicoNombre?.toLowerCase().includes('luis garcía')
             );
           }
         }

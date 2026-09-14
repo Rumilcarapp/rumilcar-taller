@@ -92,11 +92,25 @@ export const useExpenseStore = create<ExpenseState>()(
     {
       name: 'rumilcar-expense-storage',
       onRehydrateStorage: () => (state) => {
+        try {
+          if (typeof window !== 'undefined') {
+            window.localStorage.removeItem('rumilcar-expenses-storage');
+          }
+        } catch (_) {}
+
         if (state && Array.isArray(state.gastos)) {
-          // Remove old mock/demo expenses including the $144 expense
-          state.gastos = state.gastos.filter(
-            (g) => !['EXP-2026-0001', 'EXP-2026-0002', 'EXP-2026-0003'].includes(g.id)
-          );
+          // Remove old mock/demo expenses including the $144 expense and any fictitious records
+          state.gastos = state.gastos.filter((g) => {
+            const isMockId = ['EXP-2026-0001', 'EXP-2026-0002', 'EXP-2026-0003'].includes(g.id);
+            const is144Expense = g.monto === 144 || g.montoUSD === 144;
+            const desc = (g.descripcion || '').toLowerCase();
+            const isFictitiousDesc =
+              desc.includes('carlos martínez') ||
+              desc.includes('carlos p.') ||
+              desc.includes('corpoelec') ||
+              desc.includes('alquiler mensual del local');
+            return !isMockId && !is144Expense && !isFictitiousDesc;
+          });
         }
       }
     }
