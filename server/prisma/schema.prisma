@@ -5,7 +5,6 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
 }
 
 // ========================
@@ -42,6 +41,12 @@ model Workshop {
   subscription             Subscription?
   subscriptionPayments     SubscriptionPayment[]
   supportTickets           SupportTicket[]
+  cashSessions             CashSession[]
+  cashMovements            CashMovement[]
+  expenses                 Expense[]
+  inventoryMovements       InventoryMovement[]
+  mechanicPayrolls         MechanicPayroll[]
+  auditLogs                AuditLog[]
 }
 
 model User {
@@ -74,6 +79,9 @@ model Mechanic {
   workshop     Workshop @relation(fields: [workshopId], references: [id])
   assignments  WorkOrderAssignment[]
   appointments Appointment[]
+  payrolls     MechanicPayroll[]
+
+  @@index([workshopId])
 }
 
 // ========================
@@ -90,6 +98,8 @@ model ExchangeRate {
   createdAt    DateTime @default(now())
 
   workshop     Workshop @relation(fields: [workshopId], references: [id])
+
+  @@index([workshopId, effectiveAt])
 }
 
 model ExchangeRateSnapshot {
@@ -175,6 +185,8 @@ model Client {
   vehicles   Vehicle[]
   workOrders WorkOrder[]
   appointments Appointment[]
+
+  @@index([workshopId])
 }
 
 model Vehicle {
@@ -194,6 +206,8 @@ model Vehicle {
   client       Client     @relation(fields: [clientId], references: [id])
   workOrders   WorkOrder[]
   appointments Appointment[]
+
+  @@index([clientId])
 }
 
 // ========================
@@ -217,15 +231,23 @@ model WorkOrder {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  workshop    Workshop @relation(fields: [workshopId], references: [id])
-  client      Client   @relation(fields: [clientId], references: [id])
-  vehicle     Vehicle  @relation(fields: [vehicleId], references: [id])
-  createdBy   User     @relation("CreatedBy", fields: [createdById], references: [id])
+  workshop           Workshop            @relation(fields: [workshopId], references: [id])
+  client             Client              @relation(fields: [clientId], references: [id])
+  vehicle            Vehicle             @relation(fields: [vehicleId], references: [id])
+  createdBy          User                @relation("CreatedBy", fields: [createdById], references: [id])
 
-  items       WorkOrderItem[]
-  photos      WorkOrderPhoto[]
-  payments    Payment[]
-  assignments WorkOrderAssignment[]
+  items              WorkOrderItem[]
+  photos             WorkOrderPhoto[]
+  payments           Payment[]
+  assignments        WorkOrderAssignment[]
+  cashMovements      CashMovement[]
+  inventoryMovements InventoryMovement[]
+
+  @@unique([workshopId, orderNumber])
+  @@index([workshopId])
+  @@index([clientId])
+  @@index([vehicleId])
+  @@index([status])
 }
 
 model WorkOrderPhoto {
@@ -296,8 +318,12 @@ model InventoryItem {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  workshop        Workshop        @relation(fields: [workshopId], references: [id])
+  workshop        Workshop            @relation(fields: [workshopId], references: [id])
   workOrderItems  WorkOrderItem[]
+  movements       InventoryMovement[]
+
+  @@unique([workshopId, sku])
+  @@index([workshopId])
 }
 
 // ========================
@@ -397,4 +423,166 @@ model SupportTicket {
 
   workshop        Workshop @relation(fields: [workshopId], references: [id], onDelete: Cascade)
 }
+
+// ==========================================
+// Venezuelan Workshop Cash & Financial Engine
+// ==========================================
+
+model CashSession {
+  id             String         @id @default(uuid())
+  workshopId     String
+  openedById     String
+  openedByName   String?
+  openedAt       DateTime       @default(now())
+  closedById     String?
+  closedByName   String?
+  closedAt       DateTime?
+  initialUSD     Float          @default(0)
+  initialVES     Float          @default(0)
+  expectedUSD    Float          @default(0)
+  expectedVES    Float          @default(0)
+  actualUSD      Float?
+  actualVES      Float?
+  differenceUSD  Float?
+  differenceVES  Float?
+  status         String         @default("OPEN") // OPEN, CLOSED
+  notes          String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  workshop       Workshop       @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+  movements      CashMovement[]
+
+  @@index([workshopId, status])
+}
+
+model CashMovement {
+  id               String        @id @default(uuid())
+  workshopId       String
+  sessionId        String?
+  type             String        // INCOME, EXPENSE
+  category         String        // WORK_ORDER, SPARE_PART, PETTY_CASH, UTILITIES, SALARY, OWNER_WITHDRAWAL, OTHER
+  description      String
+  amountUSD        Float
+  amountVES        Float         @default(0)
+  exchangeRate     Float         @default(0)
+  paymentMethod    String        // CASH_USD, CASH_VES, PAGO_MOVIL, BANK_TRANSFER, ZELLE, USDT_WALLET, POS_DEBIT
+  reference        String?
+  workOrderId      String?
+  expenseId        String?
+  registeredById   String?
+  registeredByName String?
+  createdAt        DateTime      @default(now())
+
+  workshop         Workshop      @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+  session          CashSession?  @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  workOrder        WorkOrder?    @relation(fields: [workOrderId], references: [id], onDelete: SetNull)
+  expense          Expense?      @relation(fields: [expenseId], references: [id], onDelete: SetNull)
+
+  @@index([workshopId, createdAt])
+  @@index([sessionId])
+}
+
+model Expense {
+  id             String         @id @default(uuid())
+  workshopId     String
+  category       String         // REPUESTOS, SERVICIOS, NOMINA, ALQUILER, HERRAMIENTAS, OTROS
+  description    String
+  amountUSD      Float
+  amountVES      Float          @default(0)
+  exchangeRate   Float          @default(0)
+  paymentMethod  String
+  reference      String?
+  supplierName   String?
+  supplierRif    String?
+  invoiceNumber  String?
+  date           DateTime       @default(now())
+  registeredById String?
+  notes          String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  workshop       Workshop       @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+  movements      CashMovement[]
+
+  @@index([workshopId, date])
+}
+
+// ==========================================
+// Kardex & Stock Auditing Engine
+// ==========================================
+
+model InventoryMovement {
+  id             String        @id @default(uuid())
+  workshopId     String
+  itemId         String
+  type           String        // IN_PURCHASE, OUT_SALE, OUT_ORDER, ADJUSTMENT_UP, ADJUSTMENT_DOWN, RETURN
+  quantity       Float
+  previousStock  Float
+  newStock       Float
+  costPriceUSD   Float?
+  workOrderId    String?
+  reason         String?
+  registeredById String?
+  createdAt      DateTime      @default(now())
+
+  workshop       Workshop      @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+  item           InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  workOrder      WorkOrder?    @relation(fields: [workOrderId], references: [id], onDelete: SetNull)
+
+  @@index([workshopId, itemId])
+  @@index([createdAt])
+}
+
+// ==========================================
+// Mechanic Payroll & Commissions Engine
+// ==========================================
+
+model MechanicPayroll {
+  id               String    @id @default(uuid())
+  workshopId       String
+  mechanicId       String
+  periodStart      DateTime
+  periodEnd        DateTime
+  baseSalaryUSD    Float     @default(0)
+  commissionRate   Float     @default(0)
+  commissionUSD    Float     @default(0)
+  bonusesUSD       Float     @default(0)
+  deductionsUSD    Float     @default(0)
+  totalUSD         Float
+  totalVES         Float     @default(0)
+  status           String    @default("PENDING") // PENDING, PAID, CANCELLED
+  paidAt           DateTime?
+  paymentMethod    String?
+  paymentReference String?
+  notes            String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  workshop         Workshop  @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+  mechanic         Mechanic  @relation(fields: [mechanicId], references: [id], onDelete: Cascade)
+
+  @@index([workshopId, mechanicId])
+}
+
+// ==========================================
+// Security & Compliance Audit Log
+// ==========================================
+
+model AuditLog {
+  id         String    @id @default(uuid())
+  workshopId String?
+  userId     String?
+  action     String    // LOGIN, LOGOUT, CREATE, UPDATE, DELETE, PAYMENT_REPORT, etc.
+  entity     String    // WORK_ORDER, INVENTORY, CLIENT, CASH, USER, etc.
+  entityId   String?
+  ipAddress  String?
+  details    String?
+  createdAt  DateTime  @default(now())
+
+  workshop   Workshop? @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+
+  @@index([workshopId, createdAt])
+}
+
 
