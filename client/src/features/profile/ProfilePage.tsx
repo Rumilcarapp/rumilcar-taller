@@ -6,41 +6,24 @@ import { useAuthStore } from '../../stores/authStore';
 import { useCashStore } from '../../store/useCashStore';
 import { usePersonnelStore, PersonnelMember } from '../../store/usePersonnelStore';
 import { usePayrollStore } from '../../store/usePayrollStore';
+import { useWorkshopStore } from '../../store/useWorkshopStore';
 import {
   Sun, Moon, Palette, Building2, User, Globe, Phone, Mail, MapPin, FileText,
   Plus, Edit, UserCheck, UserX, Trash2,
   RefreshCw, DollarSign, Percent, CreditCard, Calendar,
-  LogIn, Wrench, LogOut, CheckCircle2, AlertCircle
+  LogIn, Wrench, LogOut, CheckCircle2, AlertCircle, Home, Check
 } from 'lucide-react';
 import './ProfilePage.css';
 
-const paymentMethods = [
-  { key: 'CASH_USD', label: 'Efectivo USD', enabled: true },
-  { key: 'CASH_VES', label: 'Efectivo VES', enabled: true },
-  { key: 'PAGO_MOVIL', label: 'Pago Móvil', enabled: true },
-  { key: 'BANK_TRANSFER', label: 'Transferencia bancaria', enabled: true },
-  { key: 'ZELLE', label: 'Zelle', enabled: true },
-  { key: 'USDT_WALLET', label: 'USDT / Binance Pay', enabled: true },
-  { key: 'POS', label: 'Punto de venta (POS)', enabled: false },
-];
-
 export const ProfilePage: React.FC = () => {
-  const [workshop, setWorkshop] = useState({
-    name: 'Taller Don Pedro',
-    legalName: 'Inversiones Don Pedro C.A.',
-    taxId: 'J-12345678-9',
-    address: 'Av. Principal, Centro Comercial El Mecánico, Local 5, Caracas',
-    website: 'www.tallerdonpedro.com',
-    ownerName: 'Pedro Rodríguez',
-    email: 'contacto@tallerdonpedro.com',
-    phone: '0212-5551234',
-    anchorCurrency: 'USD',
-    usdtSpread: '2',
-    createdAt: '15 de marzo de 2024',
-    lastLogin: 'Hoy, 10:45 AM',
-  });
-
-  const [methods, setMethods] = useState(paymentMethods);
+  // Workshop Profile Store (100% auto-persisted in real-time)
+  const {
+    workshop,
+    updateWorkshop,
+    paymentMethods,
+    togglePaymentMethod,
+    lastSavedAt
+  } = useWorkshopStore();
 
   // CashStore currency and automatic exchange rate state
   const {
@@ -55,6 +38,7 @@ export const ProfilePage: React.FC = () => {
   } = useCashStore();
 
   const [manualRateInput, setManualRateInput] = useState(exchangeRateVES.toString());
+  const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
 
   // Personnel Store
   const {
@@ -86,8 +70,17 @@ export const ProfilePage: React.FC = () => {
     montoFijo: 200
   });
 
-  // Profile completeness
-  const fields = [workshop.name, workshop.legalName, workshop.taxId, workshop.address, workshop.ownerName, workshop.email, workshop.phone, exchangeRateVES];
+  // Profile completeness calculation
+  const fields = [
+    workshop.name,
+    workshop.legalName,
+    workshop.taxId,
+    workshop.address,
+    workshop.ownerName,
+    workshop.email,
+    workshop.phone,
+    exchangeRateVES
+  ];
   const filled = fields.filter(Boolean).length;
   const completeness = Math.round((filled / fields.length) * 100);
 
@@ -111,8 +104,9 @@ export const ProfilePage: React.FC = () => {
     navigate('/login', { replace: true });
   };
 
-  const toggleMethod = (key: string) => {
-    setMethods(methods.map(m => m.key === key ? { ...m, enabled: !m.enabled } : m));
+  const triggerSaveFeedback = (msg = '¡Datos guardados con éxito!') => {
+    setSaveSuccessMsg(msg);
+    setTimeout(() => setSaveSuccessMsg(null), 3000);
   };
 
   // Personnel Handlers
@@ -154,6 +148,7 @@ export const ProfilePage: React.FC = () => {
         setShowPersonnelModal(false);
         setEditingMember(null);
       }
+      triggerSaveFeedback(`Personal "${member.name}" eliminado`);
     }
   };
 
@@ -187,6 +182,7 @@ export const ProfilePage: React.FC = () => {
         porcentajeServicios: Number(personnelForm.porcentajeServicios) || 0,
         montoFijo: Number(personnelForm.montoFijo) || 0
       });
+      triggerSaveFeedback('Datos de personal actualizados');
     } else {
       const created = addPersonnel({
         name: personnelForm.name.trim(),
@@ -206,6 +202,7 @@ export const ProfilePage: React.FC = () => {
         porcentajeServicios: Number(personnelForm.porcentajeServicios) || 0,
         montoFijo: Number(personnelForm.montoFijo) || 0
       });
+      triggerSaveFeedback('Nuevo personal registrado');
     }
 
     setShowPersonnelModal(false);
@@ -214,6 +211,28 @@ export const ProfilePage: React.FC = () => {
 
   return (
     <div className="profile-page page-enter">
+      {/* Toast de Guardado Automático */}
+      {saveSuccessMsg && (
+        <div style={{
+          position: 'fixed',
+          bottom: '24px',
+          right: '24px',
+          background: '#10b981',
+          color: '#ffffff',
+          padding: '12px 20px',
+          borderRadius: '10px',
+          fontWeight: 700,
+          boxShadow: '0 8px 24px rgba(16, 185, 129, 0.4)',
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          animation: 'fadeIn 0.2s ease-in-out'
+        }}>
+          <CheckCircle2 size={18} /> {saveSuccessMsg}
+        </div>
+      )}
+
       {/* ===== HEADER ===== */}
       <div className="profile-header-card">
         <div className="profile-header-left">
@@ -221,20 +240,57 @@ export const ProfilePage: React.FC = () => {
             <img src="/logo-tight.png" alt="Logo Taller" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
           </div>
           <div className="profile-header-info">
-            <h1 className="profile-workshop-name">{workshop.name}</h1>
-            <p className="profile-tax-id">RIF: {workshop.taxId}</p>
+            <h1 className="profile-workshop-name">{workshop.name || 'Mi Taller Mecánico'}</h1>
+            <p className="profile-tax-id">RIF: {workshop.taxId || 'Sin RIF'}</p>
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+          {/* Indicador de Guardado Automático */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            fontSize: '12px',
+            color: '#10b981',
+            background: 'rgba(16, 185, 129, 0.1)',
+            border: '1px solid rgba(16, 185, 129, 0.25)',
+            padding: '5px 12px',
+            borderRadius: '20px',
+            fontWeight: 600
+          }} title="Todos los campos se guardan automáticamente al escribir o cambiar opciones">
+            <CheckCircle2 size={15} />
+            <span>Guardado automáticamente{lastSavedAt ? ` (${new Date(lastSavedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})` : ''}</span>
+          </div>
+
           <div className="profile-completeness">
             <div className="completeness-info">
-              <span className="completeness-label">Perfil completo</span>
+              <span className="completeness-label">Perfil</span>
               <span className="completeness-value">{completeness}%</span>
             </div>
             <div className="completeness-bar">
               <div className="completeness-fill" style={{ width: `${completeness}%` }} />
             </div>
           </div>
+
+          {/* BOTÓN: LISTO, VOLVER AL INICIO */}
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => navigate('/')}
+            icon={<CheckCircle2 size={16} />}
+            style={{
+              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+              border: 'none',
+              color: '#ffffff',
+              fontWeight: 700,
+              boxShadow: '0 2px 10px rgba(16, 185, 129, 0.3)',
+            }}
+            title="Guardar cambios y volver al panel principal de inicio"
+          >
+            Listo, Volver al Inicio
+          </Button>
+
           <Button
             variant="danger"
             size="sm"
@@ -249,34 +305,99 @@ export const ProfilePage: React.FC = () => {
 
       <div className="profile-grid">
         {/* ===== CARD B: DATOS DE LA EMPRESA ===== */}
-        <Card title="Datos de la Empresa" action={<Button variant="secondary" size="sm">Guardar</Button>}>
+        <Card
+          title="Datos de la Empresa"
+          action={
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={<Check size={14} />}
+              onClick={() => triggerSaveFeedback('¡Datos de la empresa guardados con éxito!')}
+            >
+              Guardado Auto
+            </Button>
+          }
+        >
           <div className="form-grid">
-            <Input label="Nombre de la empresa" value={workshop.name} icon={<Building2 size={16} />}
-              onChange={e => setWorkshop({...workshop, name: e.target.value})} />
-            <Input label="Razón social" value={workshop.legalName}
-              onChange={e => setWorkshop({...workshop, legalName: e.target.value})} />
-            <Input label="RIF" value={workshop.taxId} icon={<FileText size={16} />} placeholder="J-00000000-0"
-              onChange={e => setWorkshop({...workshop, taxId: e.target.value})} />
-            <Input label="Dirección" value={workshop.address} icon={<MapPin size={16} />}
-              onChange={e => setWorkshop({...workshop, address: e.target.value})} />
-            <Input label="Sitio web" value={workshop.website} icon={<Globe size={16} />} placeholder="www.ejemplo.com"
-              onChange={e => setWorkshop({...workshop, website: e.target.value})} />
+            <Input
+              label="Nombre comercial del taller"
+              value={workshop.name}
+              icon={<Building2 size={16} />}
+              placeholder="Ej: Taller Rumilcar Motors"
+              hint="Se mostrará en la cabecera, presupuestos y órdenes impresas."
+              onChange={e => updateWorkshop({ name: e.target.value })}
+            />
+            <Input
+              label="Razón social fiscal"
+              value={workshop.legalName}
+              placeholder="Ej: Inversiones Rumilcar C.A."
+              onChange={e => updateWorkshop({ legalName: e.target.value })}
+            />
+            <Input
+              label="Número de Identificación Fiscal (RIF / CUIT / RFC)"
+              value={workshop.taxId}
+              icon={<FileText size={16} />}
+              placeholder="J-00000000-0"
+              onChange={e => updateWorkshop({ taxId: e.target.value })}
+            />
+            <Input
+              label="Dirección física del taller"
+              value={workshop.address}
+              icon={<MapPin size={16} />}
+              placeholder="Av. Principal, Galpón #5..."
+              onChange={e => updateWorkshop({ address: e.target.value })}
+            />
+            <Input
+              label="Sitio web o enlace a redes sociales"
+              value={workshop.website}
+              icon={<Globe size={16} />}
+              placeholder="www.mitaller.com o instagram.com/mitaller"
+              onChange={e => updateWorkshop({ website: e.target.value })}
+            />
           </div>
         </Card>
 
         {/* ===== CARD C: DATOS DEL RESPONSABLE ===== */}
-        <Card title="Datos del Responsable" action={<Button variant="secondary" size="sm">Guardar</Button>}>
+        <Card
+          title="Datos del Responsable"
+          action={
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={<Check size={14} />}
+              onClick={() => triggerSaveFeedback('¡Datos del responsable guardados con éxito!')}
+            >
+              Guardado Auto
+            </Button>
+          }
+        >
           <div className="form-grid">
-            <Input label="Nombre del responsable" value={workshop.ownerName} icon={<User size={16} />}
-              onChange={e => setWorkshop({...workshop, ownerName: e.target.value})} />
-            <Input label="Email" value={workshop.email} icon={<Mail size={16} />} type="email"
-              onChange={e => setWorkshop({...workshop, email: e.target.value})} />
+            <Input
+              label="Nombre del responsable o gerente"
+              value={workshop.ownerName}
+              icon={<User size={16} />}
+              placeholder="Ej: Pedro Rodríguez"
+              onChange={e => updateWorkshop({ ownerName: e.target.value })}
+            />
+            <Input
+              label="Correo electrónico de contacto"
+              value={workshop.email}
+              icon={<Mail size={16} />}
+              type="email"
+              placeholder="contacto@taller.com"
+              onChange={e => updateWorkshop({ email: e.target.value })}
+            />
             <div className="phone-input-group">
               <div className="phone-prefix">
                 <span>+58</span>
               </div>
-              <Input label="Teléfono" value={workshop.phone} icon={<Phone size={16} />}
-                onChange={e => setWorkshop({...workshop, phone: e.target.value})} />
+              <Input
+                label="Teléfono principal del taller"
+                value={workshop.phone}
+                icon={<Phone size={16} />}
+                placeholder="0212-5551234 o 0414-1234567"
+                onChange={e => updateWorkshop({ phone: e.target.value })}
+              />
             </div>
           </div>
         </Card>
@@ -287,8 +408,11 @@ export const ProfilePage: React.FC = () => {
             <div className="form-grid">
               <div className="input-group">
                 <label className="input-label">Moneda ancla</label>
-                <select className="input-field" value={workshop.anchorCurrency}
-                  onChange={e => setWorkshop({...workshop, anchorCurrency: e.target.value})}>
+                <select
+                  className="input-field"
+                  value={workshop.anchorCurrency}
+                  onChange={e => updateWorkshop({ anchorCurrency: e.target.value as any })}
+                >
                   <option value="USD">USD - Dólar estadounidense</option>
                   <option value="VES">VES - Bolívar</option>
                 </select>
@@ -365,20 +489,29 @@ export const ProfilePage: React.FC = () => {
                 </div>
               )}
 
-              <Input label="Spread USDT" value={workshop.usdtSpread} type="number" step="0.1"
+              <Input
+                label="Spread USDT"
+                value={workshop.usdtSpread}
+                type="number"
+                step="0.1"
                 icon={<Percent size={16} />}
                 hint="Comisión adicional al cobrar en USDT. 0% = igual que USD."
-                onChange={e => setWorkshop({...workshop, usdtSpread: e.target.value})} />
+                onChange={e => updateWorkshop({ usdtSpread: e.target.value })}
+              />
             </div>
 
             <div className="payment-methods-section">
               <h4 className="methods-title">
-                <CreditCard size={16} /> Métodos de pago habilitados
+                <CreditCard size={16} /> Métodos de pago habilitados (Se guardan automáticamente)
               </h4>
               <div className="methods-grid">
-                {methods.map(m => (
+                {paymentMethods.map(m => (
                   <label key={m.key} className={`method-item ${m.enabled ? 'method-enabled' : ''}`}>
-                    <input type="checkbox" checked={m.enabled} onChange={() => toggleMethod(m.key)} />
+                    <input
+                      type="checkbox"
+                      checked={m.enabled}
+                      onChange={() => togglePaymentMethod(m.key)}
+                    />
                     <span className="method-check" />
                     <span>{m.label}</span>
                   </label>
@@ -566,6 +699,71 @@ export const ProfilePage: React.FC = () => {
             </div>
           </div>
         </Card>
+      </div>
+
+      {/* ===== BANNER INFERIOR: LISTO PARA VOLVER AL INICIO ===== */}
+      <div style={{
+        marginTop: '28px',
+        padding: '20px 24px',
+        borderRadius: '12px',
+        background: 'var(--color-bg-surface, #1e1e1e)',
+        border: '1px solid var(--color-border)',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: '16px',
+        boxShadow: '0 4px 20px rgba(0,0,0,0.08)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div style={{
+            width: '42px',
+            height: '42px',
+            borderRadius: '50%',
+            background: 'rgba(16, 185, 129, 0.15)',
+            color: '#10b981',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0
+          }}>
+            <CheckCircle2 size={24} />
+          </div>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: '15px' }}>
+              ¡Perfil y configuración listos!
+            </div>
+            <div style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginTop: '2px' }}>
+              Todos los datos de tu taller se guardan automáticamente en tiempo real.
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <Button
+            variant="outline"
+            size="md"
+            onClick={() => navigate('/trabajos')}
+          >
+            Ir a Órdenes de Trabajo
+          </Button>
+
+          <Button
+            variant="primary"
+            size="md"
+            onClick={() => navigate('/')}
+            icon={<Home size={18} />}
+            style={{
+              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+              border: 'none',
+              fontWeight: 700,
+              padding: '10px 22px',
+              boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)'
+            }}
+          >
+            Listo, Volver al Inicio
+          </Button>
+        </div>
       </div>
 
       {/* Modal para Agregar / Editar Personal */}

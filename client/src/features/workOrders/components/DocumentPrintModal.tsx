@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Modal, Button } from '../../../components/ui';
 import { WorkOrder } from '../../../store/useWorkOrderStore';
 import { useCashStore } from '../../../store/useCashStore';
+import { useWorkshopStore } from '../../../store/useWorkshopStore';
 import { Printer, Send, Link, FileText, Receipt, Check } from 'lucide-react';
 import { normalizePhoneNumber, openWhatsApp } from '../../../lib/whatsapp';
 import './DocumentPrint.css';
@@ -20,6 +21,7 @@ export const DocumentPrintModal: React.FC<DocumentPrintModalProps> = ({
   documentType = 'ORDEN',
 }) => {
   const { exchangeRateVES } = useCashStore();
+  const { workshop } = useWorkshopStore();
   const [format, setFormat] = useState<'LETTER' | 'TICKET'>('LETTER');
   const [copied, setCopied] = useState(false);
 
@@ -154,14 +156,16 @@ export const DocumentPrintModal: React.FC<DocumentPrintModalProps> = ({
               <div className="doc-brand-logo">
                 <img src="/logo-tight.png" alt="Logo" className="doc-brand-img" />
                 <div>
-                  <div className="doc-brand-name">RUMILCAR</div>
-                  <div className="doc-brand-sub">TALLER MECÁNICO Y SERVICIOS AUTOMOTRICES</div>
+                  <div className="doc-brand-name">{workshop.name ? workshop.name.toUpperCase() : 'RUMILCAR TALLER'}</div>
+                  <div className="doc-brand-sub">{workshop.legalName ? workshop.legalName.toUpperCase() : 'SERVICIOS AUTOMOTRICES'}</div>
                   <div style={{ fontSize: '11px', color: '#4b5563', marginTop: '2px' }}>
-                    RIF: J-50123456-7 • Tel: (0414) 123-4567 • info@rumilcar.com
+                    RIF: {workshop.taxId || 'J-50123456-7'} • Tel: {workshop.phone || '(0414) 123-4567'} • {workshop.email || 'info@rumilcar.com'}
                   </div>
-                  <div style={{ fontSize: '11px', color: '#4b5563' }}>
-                    Av. Principal Los Talleres, Galpón #14, Valencia, Carabobo
-                  </div>
+                  {workshop.address && (
+                    <div style={{ fontSize: '11px', color: '#4b5563' }}>
+                      {workshop.address}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -292,9 +296,9 @@ export const DocumentPrintModal: React.FC<DocumentPrintModalProps> = ({
           <div className="doc-paper-ticket">
             <div style={{ textAlign: 'center', borderBottom: '1px dashed #000', paddingBottom: '8px', marginBottom: '8px' }}>
               <img src="/logo-tight.png" alt="Logo" style={{ width: '32px', height: '32px', objectFit: 'contain', margin: '0 auto 4px', display: 'block' }} />
-              <div style={{ fontWeight: 800, fontSize: '15px' }}>RUMILCAR TALLER</div>
-              <div>RIF: J-50123456-7</div>
-              <div>Tel: 0414-1234567</div>
+              <div style={{ fontWeight: 800, fontSize: '15px' }}>{(workshop.name || 'RUMILCAR TALLER').toUpperCase()}</div>
+              <div>RIF: {workshop.taxId || 'J-50123456-7'}</div>
+              <div>Tel: {workshop.phone || '0414-1234567'}</div>
               <div style={{ fontWeight: 700, marginTop: '4px' }}>{typeLabels[documentType]}</div>
               <div style={{ fontSize: '14px', fontWeight: 800 }}>#{order.id}</div>
               <div>Fecha: {new Date(order.date).toLocaleDateString()}</div>
