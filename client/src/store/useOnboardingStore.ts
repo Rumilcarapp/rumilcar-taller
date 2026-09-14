@@ -6,6 +6,10 @@ import { useVehicleStore } from './useVehicleStore';
 import { useInventoryStore } from './useInventoryStore';
 import { useCashStore } from './useCashStore';
 import { useDiagnosticStore } from './useDiagnosticStore';
+import { useExpenseStore } from './useExpenseStore';
+import { usePayrollStore } from './usePayrollStore';
+import { usePersonnelStore } from './usePersonnelStore';
+import { useWorkshopStore } from './useWorkshopStore';
 
 export interface OnboardingStep {
   id: string;
@@ -63,6 +67,10 @@ export const useOnboardingStore = create<OnboardingState>()(
         useInventoryStore.setState({ items: [] });
         useCashStore.setState({ transactions: [], closureHistory: [], currentBalanceUSD: 0, openingBalanceUSD: 0 });
         useDiagnosticStore.setState({ diagnostics: [] });
+        useExpenseStore.getState().clearGastos();
+        usePayrollStore.getState().clearPayroll();
+        usePersonnelStore.getState().clearPersonnel();
+        useWorkshopStore.getState().resetToCleanProfile('Multiservicios Rumilcar');
 
         set({
           isCleanSlate: true,

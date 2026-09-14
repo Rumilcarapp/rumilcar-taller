@@ -30,21 +30,22 @@ interface WorkshopState {
   updateWorkshop: (updates: Partial<WorkshopProfile>) => void;
   togglePaymentMethod: (key: string) => void;
   setPaymentMethods: (methods: PaymentMethodConfig[]) => void;
+  resetToCleanProfile: (customName?: string) => void;
 }
 
 const DEFAULT_WORKSHOP: WorkshopProfile = {
-  name: 'Taller Don Pedro',
-  legalName: 'Inversiones Don Pedro C.A.',
-  taxId: 'J-12345678-9',
-  address: 'Av. Principal, Centro Comercial El Mecánico, Local 5, Caracas',
-  website: 'www.tallerdonpedro.com',
-  ownerName: 'Pedro Rodríguez',
-  email: 'contacto@tallerdonpedro.com',
-  phone: '0212-5551234',
+  name: 'Multiservicios Rumilcar',
+  legalName: '',
+  taxId: '',
+  address: '',
+  website: '',
+  ownerName: '',
+  email: '',
+  phone: '',
   anchorCurrency: 'USD',
-  usdtSpread: '2',
-  createdAt: '15 de marzo de 2024',
-  lastLogin: 'Hoy, 10:45 AM',
+  usdtSpread: '0',
+  createdAt: new Date().toLocaleDateString('es-VE'),
+  lastLogin: 'Hoy',
 };
 
 const DEFAULT_PAYMENT_METHODS: PaymentMethodConfig[] = [
@@ -80,9 +81,46 @@ export const useWorkshopStore = create<WorkshopState>()(
       setPaymentMethods: (methods) => {
         set({ paymentMethods: methods, lastSavedAt: new Date().toISOString() });
       },
+      resetToCleanProfile: (customName) => {
+        set({
+          workshop: {
+            ...DEFAULT_WORKSHOP,
+            name: customName || 'Multiservicios Rumilcar',
+          },
+          lastSavedAt: new Date().toISOString(),
+        });
+      },
     }),
     {
       name: 'rumilcar-workshop-profile-storage',
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          const w = state.workshop;
+          const isFictitious =
+            !w ||
+            w.name === 'Taller Don Pedro' ||
+            w.taxId === 'J-12345678-9' ||
+            w.email === 'contacto@tallerdonpedro.com' ||
+            w.ownerName === 'Pedro Rodríguez';
+
+          if (isFictitious) {
+            state.workshop = {
+              name: 'Multiservicios Rumilcar',
+              legalName: '',
+              taxId: '',
+              address: '',
+              website: '',
+              ownerName: '',
+              email: '',
+              phone: '',
+              anchorCurrency: 'USD',
+              usdtSpread: '0',
+              createdAt: new Date().toLocaleDateString('es-VE'),
+              lastLogin: 'Hoy',
+            };
+          }
+        }
+      },
     }
   )
 );

@@ -239,19 +239,12 @@ export const CashRegisterPage: React.FC = () => {
   // PAYROLL COMPUTATION LOGIC
   // -------------------------------------------------------------
   // Mechanics list (dynamically from personnel store, matching work orders and configs)
-  const mechanicsList = personnel.length > 0
-    ? personnel.map(p => ({
-        id: p.name,
-        nombre: `${p.name} (${p.specialty})`,
-        specialty: p.specialty,
-        raw: p
-      }))
-    : [
-        { id: 'Carlos P.', nombre: 'Carlos Martínez (Carlos P.)', specialty: 'Mecánica general', raw: null },
-        { id: 'Pedro R.', nombre: 'Pedro Rodríguez (Pedro R.)', specialty: 'Electricidad', raw: null },
-        { id: 'Luis G.', nombre: 'Luis García (Luis G.)', specialty: 'Frenos', raw: null },
-        { id: 'José H.', nombre: 'José Hernández (José H.)', specialty: 'A/A', raw: null }
-      ];
+  const mechanicsList = personnel.map(p => ({
+    id: p.name,
+    nombre: `${p.name} (${p.specialty})`,
+    specialty: p.specialty,
+    raw: p
+  }));
 
   const payrollSummaryList = mechanicsList.map(mech => {
     const config = configs.find(c => c.mecanicoId === mech.id || c.mecanicoNombre === mech.id || (mech.raw && c.mecanicoNombre === mech.raw.name)) || {
@@ -356,8 +349,8 @@ export const CashRegisterPage: React.FC = () => {
       metodoPago: expMetodo,
       fecha: new Date().toISOString(),
       esRecurrente: expEsRecurrente,
-      frecuenciaRecurrencia: expEsRecurrente ? expFrecuencia : null,
-      proximoVencimiento: expEsRecurrente && expVencimiento ? expVencimiento : null,
+      frecuenciaRecurrencia: expEsRecurrente ? expFrecuencia : undefined,
+      proximoVencimiento: expEsRecurrente && expVencimiento ? expVencimiento : undefined,
       notas: expNotas
     });
 

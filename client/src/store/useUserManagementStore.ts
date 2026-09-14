@@ -254,7 +254,7 @@ const DEFAULT_USERS: ManagedUser[] = [
   },
   {
     id: 'usr-1',
-    name: 'Don Pedro (Dueño)',
+    name: 'Administrador (Dueño)',
     email: 'admin@taller.com',
     password: 'admin',
     phone: '0414-1112233',
@@ -313,7 +313,7 @@ const DEFAULT_AUDIT_LOGS: AuditLog[] = [
   {
     id: 'log-1',
     userId: 'usr-1',
-    userName: 'Don Pedro (Dueño)',
+    userName: 'Administrador (Dueño)',
     userRole: 'OWNER',
     action: 'Inicio de Sesión',
     module: 'auth',
@@ -428,6 +428,24 @@ export const useUserManagementStore = create<UserManagementState>()(
     }),
     {
       name: 'rumilcar-users-storage',
+      onRehydrateStorage: () => (state) => {
+        if (state && Array.isArray(state.users)) {
+          state.users = state.users.map((u) => {
+            if (u.name.includes('Don Pedro')) {
+              return { ...u, name: 'Administrador (Dueño)' };
+            }
+            return u;
+          });
+        }
+        if (state && Array.isArray(state.auditLogs)) {
+          state.auditLogs = state.auditLogs.map((l) => {
+            if (l.userName.includes('Don Pedro')) {
+              return { ...l, userName: 'Administrador (Dueño)' };
+            }
+            return l;
+          });
+        }
+      },
     }
   )
 );

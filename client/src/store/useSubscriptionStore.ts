@@ -476,10 +476,10 @@ export const useSubscriptionStore = create<SubscriptionState>()(
         const localList: AdminWorkshopItem[] = [
           {
             workshopId: sub?.workshopId || 'ws-1',
-            workshopName: 'Taller Don Pedro',
-            email: 'admin@taller.com',
+            workshopName: 'Multiservicios Rumilcar',
+            email: 'admin@rumilcar.com',
             phone: '0414-1112233',
-            ownerName: 'Don Pedro (Dueño)',
+            ownerName: 'Administrador (Dueño)',
             createdAt: sub?.trialStartedAt || new Date().toISOString(),
             plan: sub?.plan || 'TRIAL',
             status: sub?.status || 'TRIALING',
@@ -618,7 +618,7 @@ export const useSubscriptionStore = create<SubscriptionState>()(
             },
             {
               id: 'p-demo-2',
-              workshopName: 'Taller Don Pedro',
+              workshopName: 'Multiservicios Rumilcar',
               amountUSD: 39,
               amountVES: 1560,
               paymentMethod: 'USDT_BINANCE',

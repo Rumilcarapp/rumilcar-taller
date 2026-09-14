@@ -3,11 +3,17 @@ import { persist } from 'zustand/middleware';
 import { PaymentMethod, useCashStore } from './useCashStore';
 
 export type ExpenseCategory = 
-  | 'Electricidad' | 'Agua' | 'Internet' | 'Teléfono'
-  | 'Alquiler' | 'Mantenimiento Local'
-  | 'Compras Inventario' | 'Herramientas' | 'Combustible' | 'Limpieza'
-  | 'Publicidad' | 'Comisiones'
-  | 'Nómina' | 'Otros';
+  | 'Repuestos & Insumos' 
+  | 'Nómina' 
+  | 'Alquiler' 
+  | 'Electricidad' 
+  | 'Agua / Aseo' 
+  | 'Internet & Comunicaciones' 
+  | 'Herramientas & Equipos' 
+  | 'Mantenimiento Local' 
+  | 'Impuestos & Tasas' 
+  | 'Servicios Básico' 
+  | 'Otros';
 
 export interface Gasto {
   id: string; // EXP-2026-0001
@@ -15,14 +21,14 @@ export interface Gasto {
   descripcion: string;
   monto: number;
   moneda: 'USD' | 'VES' | 'USDT';
-  tasaAplicada: number; // Snapshot of exchange rate at registration
+  tasaAplicada: number;
   montoUSD: number;
   metodoPago: PaymentMethod;
   fecha: string;
-  esRecurrente: boolean;
-  frecuenciaRecurrencia?: 'semanal' | 'quincenal' | 'mensual' | 'anual' | null;
-  proximoVencimiento?: string | null;
-  comprobanteUrl?: string | null;
+  esRecurrente?: boolean;
+  frecuenciaRecurrencia?: 'semanal' | 'quincenal' | 'mensual' | 'anual';
+  proximoVencimiento?: string;
+  comprobanteUrl?: string;
   notas?: string;
   isPayrollAuto?: boolean;
   createdAt: string;
@@ -35,65 +41,15 @@ interface ExpenseState {
   updateGasto: (id: string, gasto: Partial<Gasto>) => void;
   deleteGasto: (id: string) => void;
   addCustomCategory: (cat: string) => void;
+  clearGastos: () => void;
 }
-
-const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-const fifteenDaysAgo = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString();
-const fiveDaysAgo = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString();
-const inTwoDays = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString();
 
 export const useExpenseStore = create<ExpenseState>()(
   persist(
     (set, get) => ({
-      gastos: [
-        {
-          id: 'EXP-2026-0001',
-          categoria: 'Alquiler',
-          descripcion: 'Alquiler mensual del local del taller',
-          monto: 150.00,
-          moneda: 'USD',
-          tasaAplicada: 40.00,
-          montoUSD: 150.00,
-          metodoPago: 'Zelle',
-          fecha: thirtyDaysAgo,
-          esRecurrente: true,
-          frecuenciaRecurrencia: 'mensual',
-          proximoVencimiento: inTwoDays,
-          createdAt: thirtyDaysAgo
-        },
-        {
-          id: 'EXP-2026-0002',
-          categoria: 'Electricidad',
-          descripcion: 'Factura Corpoelec Agosto',
-          monto: 180.00,
-          moneda: 'USD',
-          tasaAplicada: 40.00,
-          montoUSD: 180.00,
-          metodoPago: 'Pago Movil',
-          fecha: fifteenDaysAgo,
-          esRecurrente: true,
-          frecuenciaRecurrencia: 'mensual',
-          proximoVencimiento: inTwoDays,
-          createdAt: fifteenDaysAgo
-        },
-        {
-          id: 'EXP-2026-0003',
-          categoria: 'Nómina',
-          descripcion: 'Pago quincenal mecánico Carlos Martínez',
-          monto: 144.00,
-          moneda: 'USD',
-          tasaAplicada: 40.00,
-          montoUSD: 144.00,
-          metodoPago: 'Efectivo',
-          fecha: fiveDaysAgo,
-          esRecurrente: false,
-          isPayrollAuto: true,
-          createdAt: fiveDaysAgo
-        }
-      ],
-      customCategories: ['Publicidad RRSS', 'Catering Taller'],
+      gastos: [],
+      customCategories: [],
       addGasto: (gastoData) => {
-        const state = get();
         const id = 'EXP-2026-' + Math.floor(1000 + Math.random() * 9000).toString();
         const newGasto: Gasto = {
           ...gastoData,
@@ -116,20 +72,33 @@ export const useExpenseStore = create<ExpenseState>()(
           );
         }
 
-        set({ gastos: [newGasto, ...state.gastos] });
+        set((state) => ({
+          gastos: [newGasto, ...state.gastos]
+        }));
       },
-      updateGasto: (id, data) => set((state) => ({
-        gastos: state.gastos.map(g => g.id === id ? { ...g, ...data } : g)
+      updateGasto: (id, gastoData) => set((state) => ({
+        gastos: state.gastos.map(g => g.id === id ? { ...g, ...gastoData } : g)
       })),
       deleteGasto: (id) => set((state) => ({
         gastos: state.gastos.filter(g => g.id !== id)
       })),
       addCustomCategory: (cat) => set((state) => ({
-        customCategories: [...new Set([...state.customCategories, cat])]
-      }))
+        customCategories: state.customCategories.includes(cat) 
+          ? state.customCategories 
+          : [...state.customCategories, cat]
+      })),
+      clearGastos: () => set({ gastos: [] })
     }),
     {
-      name: 'rumilcar-expenses-storage'
+      name: 'rumilcar-expense-storage',
+      onRehydrateStorage: () => (state) => {
+        if (state && Array.isArray(state.gastos)) {
+          // Remove old mock/demo expenses including the $144 expense
+          state.gastos = state.gastos.filter(
+            (g) => !['EXP-2026-0001', 'EXP-2026-0002', 'EXP-2026-0003'].includes(g.id)
+          );
+        }
+      }
     }
   )
 );

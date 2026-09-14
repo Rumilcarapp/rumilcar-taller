@@ -376,7 +376,7 @@ export const ProfilePage: React.FC = () => {
               label="Nombre del responsable o gerente"
               value={workshop.ownerName}
               icon={<User size={16} />}
-              placeholder="Ej: Pedro Rodríguez"
+              placeholder="Ej: Ing. Juan Pérez"
               onChange={e => updateWorkshop({ ownerName: e.target.value })}
             />
             <Input

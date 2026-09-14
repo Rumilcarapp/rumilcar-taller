@@ -22,63 +22,10 @@ interface PersonnelState {
   updatePersonnel: (id: string, updates: Partial<PersonnelMember>) => void;
   deletePersonnel: (id: string) => void;
   togglePersonnelStatus: (id: string) => void;
+  clearPersonnel: () => void;
 }
 
-const DEFAULT_PERSONNEL: PersonnelMember[] = [
-  {
-    id: 'mech-1',
-    name: 'Carlos Martínez (Carlos P.)',
-    specialty: 'Mecánica general',
-    phone: '0412-5551234',
-    isActive: true,
-    activeOrders: 3,
-    completedOrders: 47,
-    avgTime: '2.5 días',
-    esquema: 'porcentaje',
-    porcentajeServicios: 30,
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: 'mech-2',
-    name: 'Pedro Rodríguez (Pedro R.)',
-    specialty: 'Electricidad automotriz',
-    phone: '0414-5554567',
-    isActive: true,
-    activeOrders: 2,
-    completedOrders: 35,
-    avgTime: '1.8 días',
-    esquema: 'fijo',
-    montoFijo: 200,
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: 'mech-3',
-    name: 'Luis García (Luis G.)',
-    specialty: 'Frenos y suspensión',
-    phone: '0424-5557890',
-    isActive: true,
-    activeOrders: 1,
-    completedOrders: 52,
-    avgTime: '1.2 días',
-    esquema: 'mixto',
-    montoFijo: 100,
-    porcentajeServicios: 15,
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: 'mech-4',
-    name: 'José Hernández (José H.)',
-    specialty: 'Aire acondicionado',
-    phone: '0416-5550123',
-    isActive: false,
-    activeOrders: 0,
-    completedOrders: 28,
-    avgTime: '3.1 días',
-    esquema: 'porcentaje',
-    porcentajeServicios: 25,
-    createdAt: new Date().toISOString()
-  },
-];
+const DEFAULT_PERSONNEL: PersonnelMember[] = [];
 
 export const usePersonnelStore = create<PersonnelState>()(
   persist(
@@ -110,10 +57,21 @@ export const usePersonnelStore = create<PersonnelState>()(
         set(state => ({
           personnel: state.personnel.map(p => p.id === id ? { ...p, isActive: !p.isActive } : p)
         }));
+      },
+      clearPersonnel: () => {
+        set({ personnel: [] });
       }
     }),
     {
-      name: 'rumilcar-personnel-storage'
+      name: 'rumilcar-personnel-storage',
+      onRehydrateStorage: () => (state) => {
+        if (state && Array.isArray(state.personnel)) {
+          // Remove old fictitious seed mechanics (mech-1, mech-2, mech-3, mech-4)
+          state.personnel = state.personnel.filter(
+            (p) => !['mech-1', 'mech-2', 'mech-3', 'mech-4'].includes(p.id)
+          );
+        }
+      }
     }
   )
 );

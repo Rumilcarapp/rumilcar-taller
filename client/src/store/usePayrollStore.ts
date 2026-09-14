@@ -40,52 +40,14 @@ interface PayrollState {
   saveMechanicConfig: (config: ConfigNominaMecanico) => void;
   addPayrollPayment: (payment: Omit<PagoMecanico, 'id' | 'createdAt'>) => void;
   deletePayrollPayment: (id: string) => void;
+  clearPayroll: () => void;
 }
 
 export const usePayrollStore = create<PayrollState>()(
   persist(
     (set, get) => ({
-      configs: [
-        {
-          mecanicoId: 'Carlos P.',
-          mecanicoNombre: 'Carlos Martínez (Carlos P.)',
-          esquema: 'porcentaje',
-          porcentajeServicios: 30
-        },
-        {
-          mecanicoId: 'Pedro R.',
-          mecanicoNombre: 'Pedro Rodríguez (Pedro R.)',
-          esquema: 'fijo',
-          montoFijo: 200,
-          monedaFijo: 'USD',
-          frecuenciaFijo: 'quincenal'
-        },
-        {
-          mecanicoId: 'Luis G.',
-          mecanicoNombre: 'Luis García (Luis G.)',
-          esquema: 'mixto',
-          montoBaseMixto: 100,
-          porcentajeMixtoServicios: 15
-        }
-      ],
-      payments: [
-        {
-          id: 'PAYROLL-2026-001',
-          mecanicoId: 'Carlos P.',
-          mecanicoNombre: 'Carlos Martínez (Carlos P.)',
-          periodoInicio: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-          periodoFin: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
-          montoDevengadoUSD: 144.00,
-          montoPagadoUSD: 100.00,
-          moneda: 'USD',
-          tasaAplicada: 40.00,
-          metodoPago: 'Efectivo',
-          fechaPago: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
-          notas: 'Abono parcial quincena',
-          gastoId: 'EXP-2026-0003',
-          createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString()
-        }
-      ],
+      configs: [],
+      payments: [],
       saveMechanicConfig: (configData) => set((state) => ({
         configs: [
           ...state.configs.filter(c => c.mecanicoId !== configData.mecanicoId),
@@ -130,10 +92,23 @@ export const usePayrollStore = create<PayrollState>()(
       },
       deletePayrollPayment: (id) => set((state) => ({
         payments: state.payments.filter(p => p.id !== id)
-      }))
+      })),
+      clearPayroll: () => set({ configs: [], payments: [] })
     }),
     {
-      name: 'rumilcar-payroll-storage'
+      name: 'rumilcar-payroll-storage',
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          if (Array.isArray(state.payments)) {
+            state.payments = state.payments.filter(p => p.id !== 'PAYROLL-2026-001');
+          }
+          if (Array.isArray(state.configs)) {
+            state.configs = state.configs.filter(
+              c => !['Carlos P.', 'Pedro R.', 'Luis G.'].includes(c.mecanicoId)
+            );
+          }
+        }
+      }
     }
   )
 );

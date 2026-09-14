@@ -4,6 +4,7 @@ import { Button, Input } from '../../components/ui';
 import { useAuthStore } from '../../stores/authStore';
 import { useUserManagementStore } from '../../store/useUserManagementStore';
 import { useThemeStore } from '../../store/themeStore';
+import { useWorkshopStore } from '../../store/useWorkshopStore';
 import {
   Mail,
   Lock,
@@ -50,7 +51,15 @@ export const LoginPage: React.FC = () => {
   const [successMsg, setSuccessMsg] = useState('');
 
   const handleLoginUser = (userToLogin: any, token?: string) => {
-    const userWorkshop = userToLogin.workshopName || 'Rumilcar Taller Mecánico';
+    const userWorkshop = userToLogin.workshopName || 'Multiservicios Rumilcar';
+    if (userToLogin.workshopName && userToLogin.workshopName !== 'Rumilcar Central (SaaS)') {
+      useWorkshopStore.getState().updateWorkshop({
+        name: userToLogin.workshopName,
+        ownerName: userToLogin.name || '',
+        email: userToLogin.email || '',
+        phone: userToLogin.phone || '',
+      });
+    }
     login(
       {
         id: userToLogin.id,
@@ -210,6 +219,14 @@ export const LoginPage: React.FC = () => {
           isActive: true,
         });
 
+        // Reset workshop profile store to a clean state for this new workshop
+        useWorkshopStore.getState().resetToCleanProfile(workshopName.trim());
+        useWorkshopStore.getState().updateWorkshop({
+          ownerName: ownerName.trim(),
+          email: regEmail.trim().toLowerCase(),
+          phone: regPhone.trim(),
+        });
+
         setTimeout(() => {
           handleLoginUser(
             {
@@ -247,6 +264,14 @@ export const LoginPage: React.FC = () => {
       phone: regPhone.trim(),
       role: 'OWNER',
       isActive: true,
+    });
+
+    // Reset workshop profile store to a clean state for this new workshop
+    useWorkshopStore.getState().resetToCleanProfile(workshopName.trim());
+    useWorkshopStore.getState().updateWorkshop({
+      ownerName: ownerName.trim(),
+      email: regEmail.trim().toLowerCase(),
+      phone: regPhone.trim(),
     });
 
     setTimeout(() => {

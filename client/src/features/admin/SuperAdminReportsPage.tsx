@@ -141,7 +141,7 @@ export const SuperAdminReportsPage: React.FC = () => {
     },
     {
       id: 'p-demo-2',
-      workshopName: 'Taller Don Pedro',
+      workshopName: 'Multiservicios Rumilcar',
       amountUSD: 39,
       amountVES: 39 * rate,
       paymentMethod: 'USDT_BINANCE',
