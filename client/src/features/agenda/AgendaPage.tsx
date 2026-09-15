@@ -1,49 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CalendarPanel } from './components/CalendarPanel';
 import { AppointmentsList } from './components/AppointmentsList';
 import { AppointmentModal } from './components/AppointmentModal';
 import { Button } from '../../components/ui';
 import { Plus } from 'lucide-react';
+import { useAppointmentStore, AppointmentItem } from '../../store/useAppointmentStore';
 import './AgendaPage.css';
 
 export const AgendaPage: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [showModal, setShowModal] = useState(false);
-  const [editingApt, setEditingApt] = useState<any>(null);
+  const [editingApt, setEditingApt] = useState<AppointmentItem | null>(null);
 
-  // Mock appointments for demo reactivity
-  const [appointments, setAppointments] = useState<any[]>([
-    { 
-      id: '1', 
-      date: new Date().toISOString().split('T')[0], 
-      startAt: `${new Date().toISOString().split('T')[0]}T10:00:00Z`,
-      endAt: `${new Date().toISOString().split('T')[0]}T11:00:00Z`,
-      startTime: '10:00 AM', 
-      endTime: '11:00 AM',
-      clientName: 'Juan Perez', 
-      vehicleDesc: 'Toyota Corolla - ABC-123', 
-      mechanic: 'Carlos M.', 
-      service: 'Rev. frenos', 
-      modality: 'TALLER',
-      internalNotes: 'Cliente frecuente.',
-      status: 'PENDING' 
-    },
-    { 
-      id: '2', 
-      date: new Date().toISOString().split('T')[0], 
-      startAt: `${new Date().toISOString().split('T')[0]}T11:30:00Z`,
-      endAt: `${new Date().toISOString().split('T')[0]}T12:30:00Z`,
-      startTime: '11:30 AM', 
-      endTime: '12:30 PM',
-      clientName: 'Maria Gomez', 
-      vehicleDesc: 'Ford Fiesta - XYZ-789', 
-      mechanic: null, 
-      service: 'Cambio de aceite',
-      modality: 'DOMICILIO',
-      internalNotes: '',
-      status: 'CONFIRMED' 
-    }
-  ]);
+  const { appointments, fetchAppointments, addAppointment, updateAppointment } = useAppointmentStore();
+
+  useEffect(() => {
+    fetchAppointments().catch(() => {});
+  }, [fetchAppointments]);
 
   const handleCreateClick = () => {
     setEditingApt(null);
@@ -57,16 +30,16 @@ export const AgendaPage: React.FC = () => {
 
   const handleSaveAppointment = (savedApt: any) => {
     if (editingApt) {
-      setAppointments(appointments.map(a => a.id === savedApt.id ? savedApt : a));
+      updateAppointment(savedApt.id, savedApt);
     } else {
-      setAppointments([...appointments, savedApt]);
+      addAppointment(savedApt);
     }
     setShowModal(false);
     setEditingApt(null);
   };
 
   const handleUpdateStatus = (id: string, newStatus: string) => {
-    setAppointments(appointments.map(a => a.id === id ? { ...a, status: newStatus } : a));
+    updateAppointment(id, { status: newStatus as any });
   };
 
   // Only consider active appointments for the calendar dots

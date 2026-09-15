@@ -8,6 +8,7 @@ import { useWorkOrderStore } from './store/useWorkOrderStore';
 import { usePersonnelStore } from './store/usePersonnelStore';
 import { useWorkshopStore } from './store/useWorkshopStore';
 import { useInventoryStore } from './store/useInventoryStore';
+import { useAppointmentStore } from './store/useAppointmentStore';
 import { getAuthToken } from './services/api';
 
 const App: React.FC = () => {
@@ -42,6 +43,7 @@ const App: React.FC = () => {
       useWorkOrderStore.getState().fetchWorkOrders().catch(() => {});
       useInventoryStore.getState().fetchInventory().catch(() => {});
       useCashStore.getState().fetchCashSession().catch(() => {});
+      useAppointmentStore.getState().fetchAppointments().catch(() => {});
     }
 
     return () => clearInterval(interval);

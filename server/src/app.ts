@@ -11,6 +11,7 @@ import { workOrdersRouter } from './modules/work-orders/workOrders.routes';
 import { subscriptionsRouter } from './modules/subscriptions/subscriptions.routes';
 import { cashRouter } from './modules/cash/cash.routes';
 import { expensesRouter } from './modules/expenses/expenses.routes';
+import { appointmentsRouter } from './modules/appointments/appointments.routes';
 
 import { apiRateLimiter } from './middleware/auth';
 
@@ -72,6 +73,7 @@ app.use('/api/work-orders', workOrdersRouter);
 app.use('/api/subscriptions', subscriptionsRouter);
 app.use('/api/cash', cashRouter);
 app.use('/api/expenses', expensesRouter);
+app.use('/api/appointments', appointmentsRouter);
 
 // Global Error handler
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
