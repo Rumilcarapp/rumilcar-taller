@@ -41,6 +41,7 @@ const App: React.FC = () => {
       useVehicleStore.getState().fetchVehicles().catch(() => {});
       useWorkOrderStore.getState().fetchWorkOrders().catch(() => {});
       useInventoryStore.getState().fetchInventory().catch(() => {});
+      useCashStore.getState().fetchCashSession().catch(() => {});
     }
 
     return () => clearInterval(interval);

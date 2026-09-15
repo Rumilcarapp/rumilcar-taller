@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { api } from '../services/api';
 
 export type PaymentMethod = 'Efectivo' | 'Pago Movil' | 'Transferencia' | 'Zelle' | 'USDT' | 'Punto de Venta';
 
@@ -55,6 +56,7 @@ interface CashState {
   setExchangeRateVES: (rate: number) => void;
   setAutoRate: (auto: boolean) => void;
   fetchAutoExchangeRate: () => Promise<number | null>;
+  fetchCashSession: () => Promise<void>;
   openBox: (initialBalance: number) => void;
   closeBox: () => void;
   closeBoxWithAudit: (reportedBalances: Record<PaymentMethod, number>, notes?: string) => CierreCajaRegistro;
@@ -146,29 +148,71 @@ export const useCashStore = create<CashState>()(
           return null;
         }
       },
-      openBox: (initialBalance) => set({
-        isOpened: true,
-        openedAt: new Date().toISOString(),
-        openingBalanceUSD: initialBalance,
-        currentBalanceUSD: initialBalance,
-        transactions: [
-          {
-            id: 'TX-' + Date.now().toString().slice(-6),
-            tipo: 'ingreso',
-            montoUSD: initialBalance,
-            metodo: 'Efectivo',
-            descripcion: 'Apertura de caja registradora inicial (Efectivo en gaveta)',
-            fecha: new Date().toISOString()
+      fetchCashSession: async () => {
+        try {
+          const res = await api.get('/cash/session/current');
+          if (res && res.session) {
+            const mappedTx: CashTransaction[] = (res.session.movements || []).map((m: any) => ({
+              id: m.id,
+              tipo: m.type === 'INCOME' ? 'ingreso' : 'egreso',
+              montoUSD: m.amountUSD,
+              montoVES: m.amountVES,
+              tasaCambio: m.exchangeRate,
+              metodo: m.paymentMethod,
+              referencia: m.reference || undefined,
+              descripcion: m.description,
+              fecha: m.createdAt,
+              orderId: m.workOrderId || undefined,
+            }));
+            set({
+              isOpened: true,
+              openedAt: res.session.openedAt,
+              openingBalanceUSD: res.session.initialUSD,
+              currentBalanceUSD: res.session.expectedUSD,
+              transactions: mappedTx,
+            });
           }
-        ]
-      }),
-      closeBox: () => set(() => ({
-        isOpened: false,
-        openedAt: null,
-        openingBalanceUSD: 0,
-        currentBalanceUSD: 0,
-        transactions: []
-      })),
+        } catch {
+          // offline fallback
+        }
+      },
+      openBox: (initialBalance) => {
+        set({
+          isOpened: true,
+          openedAt: new Date().toISOString(),
+          openingBalanceUSD: initialBalance,
+          currentBalanceUSD: initialBalance,
+          transactions: [
+            {
+              id: 'TX-' + Date.now().toString().slice(-6),
+              tipo: 'ingreso',
+              montoUSD: initialBalance,
+              metodo: 'Efectivo',
+              descripcion: 'Apertura de caja registradora inicial (Efectivo en gaveta)',
+              fecha: new Date().toISOString()
+            }
+          ]
+        });
+
+        api.post('/cash/session/open', {
+          initialUSD: initialBalance,
+          initialVES: 0,
+        }).catch(() => {});
+      },
+      closeBox: () => {
+        set(() => ({
+          isOpened: false,
+          openedAt: null,
+          openingBalanceUSD: 0,
+          currentBalanceUSD: 0,
+          transactions: []
+        }));
+
+        api.post('/cash/session/close', {
+          actualUSD: 0,
+          actualVES: 0,
+        }).catch(() => {});
+      },
       closeBoxWithAudit: (reportedBalances, notes) => {
         const state = get();
         const expected = state.getBalances();
@@ -206,11 +250,18 @@ export const useCashStore = create<CashState>()(
           closureHistory: [closureRecord, ...state.closureHistory]
         });
 
+        api.post('/cash/session/close', {
+          actualUSD: reportedBalances['Efectivo'] !== undefined ? reportedBalances['Efectivo'] : expected.totalUSD,
+          actualVES: (reportedBalances['Pago Movil'] || 0) * (state.exchangeRateVES || 1),
+          notes: notes || undefined,
+        }).catch(() => {});
+
         return closureRecord;
       },
-      addTransaction: (tipo, montoUSD, metodo, descripcion, options = {}) => set((state) => {
+      addTransaction: (tipo, montoUSD, metodo, descripcion, options = {}) => {
+        const state = get();
         if (!state.isOpened) {
-          return state;
+          return;
         }
         const delta = tipo === 'ingreso' ? montoUSD : -montoUSD;
         const newTx: CashTransaction = {
@@ -225,11 +276,26 @@ export const useCashStore = create<CashState>()(
           fecha: new Date().toISOString(),
           orderId: options.orderId
         };
-        return {
+
+        set({
           currentBalanceUSD: Math.max(0, state.currentBalanceUSD + delta),
           transactions: [newTx, ...state.transactions]
-        };
-      }),
+        });
+
+        const movementCategory = options.orderId ? 'COBRO_ORDEN' : (tipo === 'ingreso' ? 'INGRESO_OPERATIVO' : 'EGRESO_OPERATIVO');
+
+        api.post('/cash/movement', {
+          type: tipo === 'ingreso' ? 'INCOME' : 'EXPENSE',
+          category: movementCategory,
+          description: descripcion,
+          amountUSD: montoUSD,
+          amountVES: options.montoVES || (montoUSD * (options.tasaCambio || state.exchangeRateVES)),
+          exchangeRate: options.tasaCambio || state.exchangeRateVES,
+          paymentMethod: metodo,
+          reference: options.referencia || null,
+          workOrderId: options.orderId || null,
+        }).catch(() => {});
+      },
       getBalances: () => {
         const state = get();
         let efectivoUSD = 0;
