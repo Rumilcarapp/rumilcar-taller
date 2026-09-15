@@ -1,5 +1,6 @@
-﻿import { create } from 'zustand';
+import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { api } from '../services/api';
 
 export interface InventoryItem {
   id: string;
@@ -19,94 +20,119 @@ export interface InventoryItem {
 
 interface InventoryState {
   items: InventoryItem[];
+  fetchInventory: () => Promise<void>;
   addItem: (item: InventoryItem) => void;
   updateItem: (id: string, updated: Partial<InventoryItem>) => void;
   deleteItem: (id: string) => void;
-  adjustStock: (id: string, quantity: number) => void;
+  adjustStock: (id: string, quantity: number, reason?: string) => void;
 }
 
 export const useInventoryStore = create<InventoryState>()(
   persist(
-    (set) => ({
-      items: [
-        {
-          id: 'INV-001',
-          codigo: '759123456789',
-          tipo: 'PRODUCTO',
-          nombre: 'Filtro de Aceite Purolator L14670',
-          descripcion: 'Filtro de aceite roscado para motores Toyota/Ford.',
-          marca: 'Purolator',
-          costo: 4,
-          precio: 8,
-          currency: 'USD',
-          stock: 12,
-          stockMinimo: 3,
-          categoria: 'Filtros',
-          isActive: true
-        },
-        {
-          id: 'INV-002',
-          codigo: '759987654321',
-          tipo: 'PRODUCTO',
-          nombre: 'Pastillas de Freno Delanteras Toyota Corolla',
-          descripcion: 'Juego de pastillas de cerámica delanteras.',
-          marca: 'Shimano / Kross',
-          costo: 15,
-          precio: 30,
-          currency: 'USD',
-          stock: 6,
-          stockMinimo: 2,
-          categoria: 'Frenos',
-          isActive: true
-        },
-        {
-          id: 'INV-003',
-          tipo: 'SERVICIO',
-          nombre: 'Alineación y Balanceo de Ruedas',
-          descripcion: 'Alineación del tren delantero e inspección de suspensión.',
-          costo: 10,
-          precio: 25,
-          currency: 'USD',
-          stock: Infinity,
-          categoria: 'Tren Delantero',
-          isActive: true
-        },
-        {
-          id: 'INV-004',
-          tipo: 'SERVICIO',
-          nombre: 'Cambio de Aceite y Filtro de Motor',
-          descripcion: 'Servicio express de reemplazo de lubricante.',
-          costo: 5,
-          precio: 15,
-          currency: 'USD',
-          stock: Infinity,
-          categoria: 'Mantenimiento',
-          isActive: true
+    (set, get) => ({
+      items: [],
+      fetchInventory: async () => {
+        try {
+          const data = await api.get('/inventory');
+          if (Array.isArray(data)) {
+            const mapped: InventoryItem[] = data.map((item: any) => {
+              const isService = item.unit === 'servicio' || item.category?.toUpperCase() === 'SERVICIO';
+              return {
+                id: item.id,
+                codigo: item.sku || '',
+                tipo: isService ? 'SERVICIO' : 'PRODUCTO',
+                nombre: item.name,
+                descripcion: item.description || '',
+                marca: '',
+                costo: item.costPriceAnchor || 0,
+                precio: item.unitPriceAnchor || 0,
+                currency: 'USD',
+                stock: isService ? Infinity : (item.currentStock ?? 0),
+                stockMinimo: item.minStock || 0,
+                categoria: item.category || 'General',
+                isActive: true,
+              };
+            });
+            set({ items: mapped });
+          }
+        } catch {
+          // Keep local state if offline
         }
-      ],
-      addItem: (item) => set((state) => {
-        if (item.codigo && state.items.some(i => i.codigo === item.codigo)) {
+      },
+      addItem: (item) => {
+        if (item.codigo && get().items.some(i => i.codigo === item.codigo)) {
           alert('El código de barras ya está registrado.');
-          return state;
+          return;
         }
-        return { items: [item, ...state.items] };
-      }),
-      updateItem: (id, updated) => set((state) => ({
-        items: state.items.map(i => i.id === id ? { ...i, ...updated } : i)
-      })),
-      deleteItem: (id) => set((state) => ({
-        items: state.items.filter(i => i.id !== id)
-      })),
-      adjustStock: (id, quantity) => set((state) => ({
-        items: state.items.map(i => {
-          if (i.id !== id || i.tipo === 'SERVICIO') return i;
-          const newStock = Math.max(0, i.stock + quantity);
-          return { ...i, stock: newStock };
-        })
-      }))
+
+        set((state) => ({ items: [item, ...state.items] }));
+
+        api.post('/inventory', {
+          sku: item.codigo || null,
+          name: item.nombre,
+          description: item.descripcion || null,
+          category: item.categoria || null,
+          unitPriceAnchor: item.precio,
+          costPriceAnchor: item.costo,
+          currentStock: item.tipo === 'SERVICIO' ? 0 : item.stock,
+          minStock: item.stockMinimo || 0,
+          unit: item.tipo === 'SERVICIO' ? 'servicio' : 'unidad',
+        }).then((saved) => {
+          if (saved && saved.id) {
+            set((state) => ({
+              items: state.items.map((i) => (i.id === item.id ? { ...i, id: saved.id } : i)),
+            }));
+          }
+        }).catch(() => {});
+      },
+      updateItem: (id, updated) => {
+        set((state) => ({
+          items: state.items.map(i => i.id === id ? { ...i, ...updated } : i)
+        }));
+
+        api.put(`/inventory/${id}`, {
+          ...(updated.codigo !== undefined && { sku: updated.codigo || null }),
+          ...(updated.nombre !== undefined && { name: updated.nombre }),
+          ...(updated.descripcion !== undefined && { description: updated.descripcion }),
+          ...(updated.categoria !== undefined && { category: updated.categoria }),
+          ...(updated.precio !== undefined && { unitPriceAnchor: updated.precio }),
+          ...(updated.costo !== undefined && { costPriceAnchor: updated.costo }),
+          ...(updated.stock !== undefined && { currentStock: updated.stock === Infinity ? 0 : updated.stock }),
+          ...(updated.stockMinimo !== undefined && { minStock: updated.stockMinimo }),
+          ...(updated.tipo !== undefined && { unit: updated.tipo === 'SERVICIO' ? 'servicio' : 'unidad' }),
+        }).catch(() => {});
+      },
+      deleteItem: (id) => {
+        set((state) => ({
+          items: state.items.filter(i => i.id !== id)
+        }));
+
+        api.delete(`/inventory/${id}`).catch(() => {});
+      },
+      adjustStock: (id, quantity, reason) => {
+        set((state) => ({
+          items: state.items.map(i => {
+            if (i.id !== id || i.tipo === 'SERVICIO') return i;
+            const newStock = Math.max(0, i.stock + quantity);
+            return { ...i, stock: newStock };
+          })
+        }));
+
+        api.post(`/inventory/${id}/adjust`, {
+          quantity,
+          reason: reason || (quantity >= 0 ? 'Ajuste de inventario (+)' : 'Ajuste de inventario (-)'),
+        }).catch(() => {});
+      }
     }),
     {
-      name: 'rumilcar-inventory-storage'
+      name: 'rumilcar-inventory-storage',
+      onRehydrateStorage: () => (state) => {
+        if (state && Array.isArray(state.items)) {
+          state.items = state.items.filter(
+            (i) => !['INV-001', 'INV-002', 'INV-003', 'INV-004'].includes(i.id)
+          );
+        }
+      },
     }
   )
 );

@@ -230,3 +230,105 @@ inventoryRouter.delete('/:id', requireRole('OWNER', 'ADMIN'), async (req: AuthRe
     res.status(500).json({ error: 'Error al eliminar el artículo de inventario' });
   }
 });
+
+// GET /api/inventory/movements/list - Get Kardex movements for the workshop
+inventoryRouter.get('/movements/list', async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const workshopId = req.workshopId!;
+    const itemId = req.query.itemId as string | undefined;
+
+    const movements = await prisma.inventoryMovement.findMany({
+      where: {
+        workshopId,
+        ...(itemId ? { itemId } : {}),
+      },
+      include: {
+        item: {
+          select: { name: true, sku: true, category: true },
+        },
+        workOrder: {
+          select: { orderNumber: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    });
+
+    res.json(movements);
+  } catch (error: any) {
+    console.error('Error fetching inventory movements:', error);
+    res.status(500).json({ error: 'Error al consultar movimientos de inventario' });
+  }
+});
+
+// POST /api/inventory/:id/adjust - Adjust stock with atomic Kardex movement recording
+const adjustStockSchema = z.object({
+  quantity: z.number(), // positive to increase, negative to decrease
+  type: z.enum(['IN_PURCHASE', 'OUT_SALE', 'OUT_ORDER', 'ADJUSTMENT_UP', 'ADJUSTMENT_DOWN', 'RETURN']).optional(),
+  reason: z.string().optional().nullable(),
+  workOrderId: z.string().optional().nullable(),
+});
+
+inventoryRouter.post('/:id/adjust', requireRole('OWNER', 'ADMIN', 'INVENTORY'), async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const workshopId = req.workshopId!;
+    const id = req.params.id as string;
+
+    const parseResult = adjustStockSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      res.status(400).json({ error: parseResult.error.errors[0].message });
+      return;
+    }
+
+    const { quantity, reason, workOrderId } = parseResult.data;
+    let movementType = parseResult.data.type;
+    if (!movementType) {
+      movementType = quantity >= 0 ? 'ADJUSTMENT_UP' : 'ADJUSTMENT_DOWN';
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      const item = await tx.inventoryItem.findFirst({
+        where: { id, workshopId },
+      });
+
+      if (!item) {
+        throw new Error('NOT_FOUND');
+      }
+
+      const previousStock = item.currentStock;
+      const newStock = Math.max(0, previousStock + quantity);
+
+      const updatedItem = await tx.inventoryItem.update({
+        where: { id },
+        data: { currentStock: newStock },
+      });
+
+      const movement = await tx.inventoryMovement.create({
+        data: {
+          workshopId,
+          itemId: id,
+          type: movementType,
+          quantity: Math.abs(quantity),
+          previousStock,
+          newStock,
+          costPriceUSD: item.costPriceAnchor,
+          workOrderId: workOrderId || null,
+          reason: reason || (quantity >= 0 ? 'Ajuste manual de entrada' : 'Ajuste manual de salida'),
+          registeredById: req.userId,
+        },
+      });
+
+      return { updatedItem, movement };
+    });
+
+    res.json(result);
+  } catch (error: any) {
+    if (error.message === 'NOT_FOUND') {
+      res.status(404).json({ error: 'Artículo de inventario no encontrado en tu taller' });
+      return;
+    }
+    console.error('Error adjusting inventory stock:', error);
+    res.status(500).json({ error: 'Error al registrar ajuste de inventario' });
+  }
+});
+
