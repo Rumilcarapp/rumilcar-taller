@@ -1,4 +1,4 @@
-﻿import { create } from 'zustand';
+import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 export type PipelineStage = 
@@ -197,64 +197,8 @@ const DEFAULT_MAINTENANCE_RULES: MaintenanceRule[] = [
 export const useCRMStore = create<CRMState>()(
   persist(
     (set) => ({
-      opportunities: [
-        {
-          id: 'opp-1',
-          clientId: 'CLI-001',
-          clientName: 'Luis Perez',
-          clientPhone: '04141234567',
-          vehiclePlate: 'ABC-123',
-          vehicleModel: 'Toyota Corolla 2018',
-          title: 'Cambio de amortiguadores delanteros',
-          serviceType: 'Suspensión',
-          stage: 'CONTACTADO',
-          estimatedValueUSD: 240,
-          priority: 'ALTA',
-          notes: 'Se le envió presupuesto por WhatsApp. Esperando confirmación para el viernes.',
-          lastContactDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-          createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-        },
-        {
-          id: 'opp-2',
-          clientId: 'CLI-002',
-          clientName: 'Ana Gomez',
-          clientPhone: '04247654321',
-          vehiclePlate: 'XYZ-789',
-          vehicleModel: 'Ford Fiesta 2015',
-          title: 'Mantenimiento Preventivo 50.000 KM',
-          serviceType: 'Mantenimiento General',
-          stage: 'NEGOCIACION',
-          estimatedValueUSD: 180,
-          priority: 'MEDIA',
-          notes: 'Consultó por cambio de correa y afinación. Interesada en agendar el lunes.',
-          lastContactDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-          createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-        },
-      ],
-      interactions: [
-        {
-          id: 'int-1',
-          clientId: 'CLI-001',
-          clientName: 'Luis Perez',
-          type: 'WHATSAPP',
-          summary: 'Envío de recordatorio de servicio de suspensión',
-          details: 'Se contactó para recordarle revisión de amortiguadores presupuestados.',
-          sentiment: 'POSITIVO',
-          date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-          user: 'Asesor Técnico',
-        },
-        {
-          id: 'int-2',
-          clientId: 'CLI-002',
-          clientName: 'Ana Gomez',
-          type: 'LLAMADA',
-          summary: 'Consulta sobre costo de mano de obra para frenos',
-          details: 'La clienta llamó preguntando por disponibilidad de turnos en las mañanas.',
-          sentiment: 'POSITIVO',
-          date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-          user: 'Recepción',
-        },
-      ],
+      opportunities: [],
+      interactions: [],
       templates: DEFAULT_TEMPLATES,
       maintenanceRules: DEFAULT_MAINTENANCE_RULES,
 
@@ -319,6 +263,16 @@ export const useCRMStore = create<CRMState>()(
     }),
     {
       name: 'rumilcar-crm-storage',
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          if (Array.isArray(state.opportunities)) {
+            state.opportunities = state.opportunities.filter(o => !['opp-1', 'opp-2'].includes(o.id));
+          }
+          if (Array.isArray(state.interactions)) {
+            state.interactions = state.interactions.filter(i => !['int-1', 'int-2'].includes(i.id));
+          }
+        }
+      },
     }
   )
 );

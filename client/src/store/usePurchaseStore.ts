@@ -59,90 +59,8 @@ interface PurchaseState {
 export const usePurchaseStore = create<PurchaseState>()(
   persist(
     (set, get) => ({
-      suppliers: [
-        {
-          id: 'SUP-001',
-          nombre: 'Distribuidora Automotriz Caracas C.A.',
-          rif: 'J-30123456-7',
-          telefono: '04149998877',
-          direccion: 'Av. Las Acacias, Los Chaguaramos, Caracas',
-          categorias: ['Repuestos', 'Frenos', 'Filtros'],
-          notas: 'Crédito a 15 días. Entrega en taller sin costo adicional.',
-          isActive: true,
-          createdAt: new Date().toISOString()
-        },
-        {
-          id: 'SUP-002',
-          nombre: 'Lubricantes y Fluidos VZLA S.A.',
-          rif: 'J-40987654-3',
-          telefono: '04245551234',
-          direccion: 'Zona Industrial La Yaguara',
-          categorias: ['Lubricantes', 'Fluidos'],
-          notas: 'Descuento del 5% por pago de contado en USDT o Efectivo.',
-          isActive: true,
-          createdAt: new Date().toISOString()
-        }
-      ],
-      purchaseOrders: [
-        {
-          id: 'OC-2026-001',
-          supplierId: 'SUP-001',
-          supplierName: 'Distribuidora Automotriz Caracas C.A.',
-          supplierRif: 'J-30123456-7',
-          date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-          estimatedArrivalDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-          items: [
-            {
-              id: 'pi-1',
-              nombre: 'Filtro de Aceite Purolator',
-              cantidad: 20,
-              cantidadRecibida: 20,
-              costoUnitarioUSD: 8.50,
-              currency: 'USD',
-              subtotalUSD: 170.00
-            },
-            {
-              id: 'pi-2',
-              nombre: 'Pastillas de Freno Delanteras Toyota',
-              cantidad: 10,
-              cantidadRecibida: 10,
-              costoUnitarioUSD: 22.00,
-              currency: 'USD',
-              subtotalUSD: 220.00
-            }
-          ],
-          applyIva: true,
-          subtotalUSD: 390.00,
-          ivaUSD: 62.40,
-          totalUSD: 452.40,
-          status: 'Recibida',
-          receivedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
-        },
-        {
-          id: 'OC-2026-002',
-          supplierId: 'SUP-002',
-          supplierName: 'Lubricantes y Fluidos VZLA S.A.',
-          supplierRif: 'J-40987654-3',
-          date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-          estimatedArrivalDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
-          items: [
-            {
-              id: 'pi-3',
-              nombre: 'Aceite 20W50 Mineral Shell Helix (Tambor)',
-              cantidad: 2,
-              cantidadRecibida: 0,
-              costoUnitarioUSD: 120.00,
-              currency: 'USD',
-              subtotalUSD: 240.00
-            }
-          ],
-          applyIva: false,
-          subtotalUSD: 240.00,
-          ivaUSD: 0,
-          totalUSD: 240.00,
-          status: 'Pendiente'
-        }
-      ],
+      suppliers: [],
+      purchaseOrders: [],
       addSupplier: (supplier) => set((state) => ({ suppliers: [supplier, ...state.suppliers] })),
       updateSupplier: (id, supplier) => set((state) => ({ suppliers: state.suppliers.map(s => s.id === id ? { ...s, ...supplier } : s) })),
       deleteSupplier: (id) => set((state) => ({ suppliers: state.suppliers.filter(s => s.id !== id) })),
@@ -222,7 +140,17 @@ export const usePurchaseStore = create<PurchaseState>()(
       }))
     }),
     {
-      name: 'rumilcar-purchases-storage'
+      name: 'rumilcar-purchases-storage',
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          if (Array.isArray(state.suppliers)) {
+            state.suppliers = state.suppliers.filter(s => !['SUP-001', 'SUP-002'].includes(s.id));
+          }
+          if (Array.isArray(state.purchaseOrders)) {
+            state.purchaseOrders = state.purchaseOrders.filter(po => !['OC-2026-001', 'OC-2026-002'].includes(po.id));
+          }
+        }
+      },
     }
   )
 );
