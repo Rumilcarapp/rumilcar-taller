@@ -18,10 +18,22 @@ const workOrderItemSchema = z.object({
   inventoryItemId: z.string().optional().nullable(),
 });
 
+const statusEnum = z.preprocess((val) => {
+  const map: Record<string, string> = {
+    'Presupuesto': 'RECEIVED',
+    'Recibido': 'RECEIVED',
+    'En Proceso': 'IN_PROGRESS',
+    'Listo': 'READY',
+    'Finalizado': 'DELIVERED',
+    'Rechazado': 'CANCELLED',
+  };
+  return (typeof val === 'string' && map[val]) || val;
+}, z.enum(['RECEIVED', 'IN_PROGRESS', 'READY', 'DELIVERED', 'CANCELLED']));
+
 const createWorkOrderSchema = z.object({
   clientId: z.string().min(1, 'El cliente es requerido'),
   vehicleId: z.string().min(1, 'El vehículo es requerido'),
-  status: z.enum(['RECEIVED', 'IN_PROGRESS', 'READY', 'DELIVERED', 'CANCELLED']).default('RECEIVED'),
+  status: statusEnum.default('RECEIVED'),
   notes: z.string().optional().nullable(),
   inspectionNotes: z.string().optional().nullable(),
   totalAnchor: z.union([z.number(), z.string()]).optional().default(0),
@@ -29,7 +41,7 @@ const createWorkOrderSchema = z.object({
 });
 
 const updateWorkOrderSchema = z.object({
-  status: z.enum(['RECEIVED', 'IN_PROGRESS', 'READY', 'DELIVERED', 'CANCELLED']).optional(),
+  status: statusEnum.optional(),
   notes: z.string().optional().nullable(),
   inspectionNotes: z.string().optional().nullable(),
   totalAnchor: z.union([z.number(), z.string()]).optional(),

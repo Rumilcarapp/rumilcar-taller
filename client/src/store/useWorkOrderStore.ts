@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { useInventoryStore } from './useInventoryStore';
 import { useCashStore, PaymentMethod } from './useCashStore';
 import { persist } from 'zustand/middleware';
+import { api } from '../services/api';
 
 export type OrderStatus = 'Presupuesto' | 'Rechazado' | 'Recibido' | 'En Proceso' | 'Listo' | 'Finalizado';
 
@@ -37,11 +38,13 @@ export interface WorkOrder {
   fuelLevel?: string;
   belongings?: string[];
   inspectionNotes?: string;
+  notes?: string;
   photos?: any[];
 }
 
 interface WorkOrderState {
   workOrders: WorkOrder[];
+  fetchWorkOrders: () => Promise<void>;
   addWorkOrder: (order: WorkOrder) => void;
   updateWorkOrder: (id: string, order: Partial<WorkOrder>) => void;
   updateOrderStatus: (id: string, status: OrderStatus) => void;
@@ -51,16 +54,124 @@ interface WorkOrderState {
   convertToWorkOrder: (id: string) => void;
 }
 
-const tenDaysAgo = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString();
-const thirtyFiveDaysAgo = new Date(Date.now() - 35 * 24 * 60 * 60 * 1000).toISOString();
-const todayIso = new Date().toISOString();
+const statusMapFromBackend: Record<string, OrderStatus> = {
+  RECEIVED: 'Recibido',
+  IN_PROGRESS: 'En Proceso',
+  READY: 'Listo',
+  DELIVERED: 'Finalizado',
+  CANCELLED: 'Rechazado',
+};
 
 export const useWorkOrderStore = create<WorkOrderState>()(
   persist(
     (set, get) => ({
       workOrders: [],
-      addWorkOrder: (order) => set((state) => ({ workOrders: [order, ...state.workOrders] })),
-      updateWorkOrder: (id, order) => set((state) => ({ workOrders: state.workOrders.map(wo => wo.id === id ? { ...wo, ...order } : wo) })),
+      fetchWorkOrders: async () => {
+        try {
+          const data = await api.get('/work-orders');
+          if (Array.isArray(data)) {
+            const mapped: WorkOrder[] = data.map((o: any) => {
+              const services = (o.items || [])
+                .filter((i: any) => i.type === 'SERVICE')
+                .map((i: any) => ({
+                  id: i.id,
+                  name: i.description,
+                  price: i.unitPriceAnchor,
+                  quantity: i.quantity,
+                }));
+
+              const parts = (o.items || [])
+                .filter((i: any) => i.type === 'PART')
+                .map((i: any) => ({
+                  id: i.id,
+                  name: i.description,
+                  price: i.unitPriceAnchor,
+                  quantity: i.quantity,
+                }));
+
+              return {
+                id: o.id,
+                client: o.client
+                  ? {
+                      id: o.client.id,
+                      nombre: o.client.name,
+                      documento: o.client.taxId || '',
+                      telefono: o.client.phone || '',
+                      direccion: o.client.address || '',
+                    }
+                  : {},
+                vehicle: o.vehicle
+                  ? {
+                      id: o.vehicle.id,
+                      marca: o.vehicle.make || '',
+                      modelo: o.vehicle.model || '',
+                      placa: o.vehicle.licensePlate || '',
+                      ano: o.vehicle.year ? String(o.vehicle.year) : '',
+                      color: o.vehicle.color || '',
+                    }
+                  : {},
+                services,
+                parts,
+                date: o.receivedAt || o.createdAt,
+                deliveredAt: o.deliveredAt,
+                totalUSD: o.totalAnchor || 0,
+                status: statusMapFromBackend[o.status] || 'Recibido',
+                inspectionNotes: o.inspectionNotes || '',
+                notes: o.notes || '',
+              };
+            });
+            set({ workOrders: mapped });
+          }
+        } catch {
+          // Keep local state if offline
+        }
+      },
+      addWorkOrder: (order) => {
+        set((state) => ({ workOrders: [order, ...state.workOrders] }));
+
+        // Map items for backend
+        const items = [
+          ...(order.services || []).map((s) => ({
+            type: 'SERVICE' as const,
+            description: s.name || s.description || 'Servicio',
+            quantity: s.quantity || 1,
+            unitPriceAnchor: s.price || 0,
+          })),
+          ...(order.parts || []).map((p) => ({
+            type: 'PART' as const,
+            description: p.name || p.description || 'Repuesto',
+            quantity: p.quantity || 1,
+            unitPriceAnchor: p.price || 0,
+          })),
+        ];
+
+        api.post('/work-orders', {
+          clientId: order.client?.id || order.client?.documento,
+          vehicleId: order.vehicle?.id || order.vehicle?.placa,
+          status: order.status,
+          notes: order.notes,
+          inspectionNotes: order.inspectionNotes,
+          totalAnchor: order.totalUSD,
+          items,
+        }).then((saved) => {
+          if (saved && saved.id) {
+            set((state) => ({
+              workOrders: state.workOrders.map((wo) => (wo.id === order.id ? { ...wo, id: saved.id } : wo)),
+            }));
+          }
+        }).catch(() => {});
+      },
+      updateWorkOrder: (id, order) => {
+        set((state) => ({ workOrders: state.workOrders.map(wo => wo.id === id ? { ...wo, ...order } : wo) }));
+
+        api.put(`/work-orders/${id}`, {
+          ...(order.status !== undefined && { status: order.status }),
+          ...(order.notes !== undefined && { notes: order.notes }),
+          ...(order.inspectionNotes !== undefined && { inspectionNotes: order.inspectionNotes }),
+          ...(order.totalUSD !== undefined && { totalAnchor: order.totalUSD }),
+          ...(order.deliveredAt !== undefined && { deliveredAt: order.deliveredAt }),
+        }).catch(() => {});
+      },
       
       addPartialPayment: (id: string, paymentData: Omit<PaymentRecord, 'id'>) => {
         const state = get();
@@ -198,6 +309,11 @@ export const useWorkOrderStore = create<WorkOrderState>()(
           }
         }
 
+        api.put(`/work-orders/${id}`, {
+          status,
+          ...((status === 'Listo' || status === 'Finalizado') && { deliveredAt: new Date().toISOString() }),
+        }).catch(() => {});
+
         return {
           workOrders: state.workOrders.map(w => 
             w.id === id 
@@ -211,12 +327,20 @@ export const useWorkOrderStore = create<WorkOrderState>()(
           )
         };
       }),
-      deleteWorkOrder: (id) => set((state) => ({
-        workOrders: state.workOrders.filter(wo => wo.id !== id)
-      })),
-      convertToWorkOrder: (id) => set((state) => ({
-        workOrders: state.workOrders.map(wo => wo.id === id ? { ...wo, status: 'Recibido' } : wo)
-      }))
+      deleteWorkOrder: (id) => {
+        set((state) => ({
+          workOrders: state.workOrders.filter(wo => wo.id !== id)
+        }));
+
+        api.delete(`/work-orders/${id}`).catch(() => {});
+      },
+      convertToWorkOrder: (id) => {
+        set((state) => ({
+          workOrders: state.workOrders.map(wo => wo.id === id ? { ...wo, status: 'Recibido' } : wo)
+        }));
+
+        api.put(`/work-orders/${id}`, { status: 'Recibido' }).catch(() => {});
+      }
     }),
     {
       name: 'rumilcar-workorders-storage',
