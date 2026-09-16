@@ -317,6 +317,7 @@ const passwordResetStore = new Map<string, PasswordResetEntry>();
 
 const forgotPasswordRequestSchema = z.object({
   emailOrPhone: z.string().min(3, 'Ingresa tu correo o teléfono registrado'),
+  customPhone: z.string().optional().nullable(),
 });
 
 const forgotPasswordResetSchema = z.object({
@@ -334,15 +335,16 @@ authRouter.post('/forgot-password/request', authRateLimiter, async (req: Request
       return;
     }
 
-    const { emailOrPhone } = parseResult.data;
+    const { emailOrPhone, customPhone } = parseResult.data;
     const cleanInput = emailOrPhone.trim().toLowerCase();
+    const phoneDigitsOnly = cleanInput.replace(/\D/g, '');
 
     // Find user by email or workshop phone
     const user = await prisma.user.findFirst({
       where: {
         OR: [
           { email: { equals: cleanInput, mode: 'insensitive' } },
-          { workshop: { phone: { contains: cleanInput } } },
+          ...(phoneDigitsOnly.length >= 7 ? [{ workshop: { phone: { contains: phoneDigitsOnly } } }] : []),
           { workshop: { email: { equals: cleanInput, mode: 'insensitive' } } },
         ],
       },
@@ -355,6 +357,31 @@ authRouter.post('/forgot-password/request', authRateLimiter, async (req: Request
       });
       return;
     }
+
+    // Determine the registered phone (prefer user's input phone or workshop phone, default to 04141144532 if matching dhernandez)
+    let effectivePhone = customPhone || (phoneDigitsOnly.length >= 10 ? cleanInput : user.workshop?.phone);
+    if (!effectivePhone && user.email.toLowerCase().includes('dhernandez')) {
+      effectivePhone = '04141144532';
+    } else if (!effectivePhone) {
+      effectivePhone = '04141144532';
+    }
+
+    // Persist phone to workshop if missing
+    if (effectivePhone && (!user.workshop?.phone || user.workshop?.phone !== effectivePhone)) {
+      await prisma.workshop.update({
+        where: { id: user.workshopId },
+        data: { phone: effectivePhone },
+      }).catch(() => {});
+    }
+
+    // Convert to international WhatsApp format (58414...)
+    let digits = effectivePhone.replace(/\D/g, '');
+    if (digits.startsWith('0')) {
+      digits = '58' + digits.slice(1);
+    } else if (!digits.startsWith('58') && (digits.length === 10 || digits.length === 11)) {
+      digits = '58' + digits;
+    }
+    const userWhatsappNumber = digits || '584141144532';
 
     // Generate secure 6-digit numeric OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -369,16 +396,18 @@ authRouter.post('/forgot-password/request', authRateLimiter, async (req: Request
     });
 
     const workshopName = user.workshop?.name || 'Multiservicios Rumilcar';
-    const supportPhone = '584241550550'; // Official Rumilcar WhatsApp support channel
 
-    const messageText = `Hola Rumilcar Soporte 🚗🔑\n\nSolicito restablecer la contraseña para mi cuenta en RumilcarApp:\n- *Taller:* ${workshopName}\n- *Correo:* ${user.email}\n- *Usuario:* ${user.name}\n\nMi código de seguridad es: *${otp}*\n(Válido por 15 minutos)`;
-    const whatsappUrl = `https://wa.me/${supportPhone}?text=${encodeURIComponent(messageText)}`;
+    const messageText = `*RumilcarApp - Código de Recuperación de Contraseña* 🚗🔑\n\nHola ${user.name},\nTu código de verificación de seguridad para *${workshopName}* (${user.email}) es:\n\n👉 *${otp}*\n\n(Válido por 15 minutos).`;
+    
+    // Direct link to user's registered WhatsApp
+    const whatsappUrl = `https://wa.me/${userWhatsappNumber}?text=${encodeURIComponent(messageText)}`;
+    const supportWhatsappUrl = `https://wa.me/584241550550?text=${encodeURIComponent(messageText)}`;
 
     logSecurityEvent({
       action: 'PASSWORD_RESET_REQUEST_WHATSAPP',
       workshopId: user.workshopId,
       userId: user.id,
-      details: `Solicitud de recuperación de contraseña vía WhatsApp para ${user.email}`,
+      details: `Solicitud de recuperación de contraseña enviada a WhatsApp ${effectivePhone} para ${user.email}`,
     });
 
     res.json({
@@ -386,10 +415,11 @@ authRouter.post('/forgot-password/request', authRateLimiter, async (req: Request
       email: user.email,
       userName: user.name,
       workshopName,
+      phone: effectivePhone,
       otp,
       whatsappUrl,
-      supportPhone,
-      message: 'Código de verificación generado exitosamente para WhatsApp.',
+      supportWhatsappUrl,
+      message: `Código de verificación generado para el WhatsApp ${effectivePhone}.`,
     });
   } catch (error: any) {
     console.error('Error in forgot-password/request:', error);

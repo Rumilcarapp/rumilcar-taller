@@ -736,9 +736,14 @@ export const LoginPage: React.FC = () => {
                   padding: '14px',
                   textAlign: 'center',
                 }}>
-                  <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    Tu Código de Seguridad para {forgotData?.email}
+                  <div style={{ fontSize: '13px', color: 'var(--color-text-secondary)', marginBottom: '2px' }}>
+                    Código de seguridad para: <strong style={{ color: 'var(--color-text-primary)' }}>{forgotData?.email}</strong>
                   </div>
+                  {forgotData?.phone && (
+                    <div style={{ fontSize: '12px', color: '#22c55e', fontWeight: 600, marginBottom: '6px' }}>
+                      ✓ WhatsApp registrado: {forgotData.phone}
+                    </div>
+                  )}
                   <div style={{
                     fontSize: '32px',
                     fontWeight: 800,
@@ -763,13 +768,14 @@ export const LoginPage: React.FC = () => {
                         background: 'var(--color-bg-secondary)',
                         border: '1px solid var(--color-border)',
                         color: 'var(--color-text-primary)',
-                        padding: '6px 12px',
-                        borderRadius: '6px',
+                        padding: '8px 14px',
+                        borderRadius: '8px',
                         fontSize: '12px',
                         cursor: 'pointer',
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: '6px',
+                        fontWeight: 600,
                       }}
                     >
                       {copiedOtp ? <Check size={14} color="#22c55e" /> : <Copy size={14} />}
@@ -784,19 +790,20 @@ export const LoginPage: React.FC = () => {
                         style={{
                           background: '#22c55e',
                           color: '#ffffff',
-                          padding: '6px 12px',
-                          borderRadius: '6px',
-                          fontSize: '12px',
+                          padding: '8px 16px',
+                          borderRadius: '8px',
+                          fontSize: '13px',
                           textDecoration: 'none',
-                          fontWeight: 600,
+                          fontWeight: 700,
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: '6px',
+                          boxShadow: '0 2px 8px rgba(34, 197, 94, 0.3)',
                         }}
                       >
-                        <MessageSquare size={14} />
-                        <span>Abrir WhatsApp de Soporte</span>
-                        <ExternalLink size={12} />
+                        <MessageSquare size={15} />
+                        <span>📲 Enviar a WhatsApp ({forgotData.phone || '04141144532'})</span>
+                        <ExternalLink size={13} />
                       </a>
                     )}
                   </div>
