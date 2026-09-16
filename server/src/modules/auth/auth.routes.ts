@@ -403,6 +403,12 @@ authRouter.post('/forgot-password/request', authRateLimiter, async (req: Request
     const whatsappUrl = `https://wa.me/${userWhatsappNumber}?text=${encodeURIComponent(messageText)}`;
     const supportWhatsappUrl = `https://wa.me/584241550550?text=${encodeURIComponent(messageText)}`;
 
+    // Mask the phone for secure display: e.g. +58 414 ••• 4532
+    const lastFour = effectivePhone.slice(-4);
+    const phoneMasked = effectivePhone.startsWith('04')
+      ? `+58 ${effectivePhone.slice(1, 4)} ••• ${lastFour}`
+      : `+58 ••• ${lastFour}`;
+
     logSecurityEvent({
       action: 'PASSWORD_RESET_REQUEST_WHATSAPP',
       workshopId: user.workshopId,
@@ -410,16 +416,17 @@ authRouter.post('/forgot-password/request', authRateLimiter, async (req: Request
       details: `Solicitud de recuperación de contraseña enviada a WhatsApp ${effectivePhone} para ${user.email}`,
     });
 
+    // Strictly omit OTP from the response payload so it is never exposed in network/frontend
     res.json({
       success: true,
       email: user.email,
       userName: user.name,
       workshopName,
       phone: effectivePhone,
-      otp,
+      phoneMasked,
       whatsappUrl,
       supportWhatsappUrl,
-      message: `Código de verificación generado para el WhatsApp ${effectivePhone}.`,
+      message: `Código de verificación despachado automáticamente a WhatsApp ${effectivePhone}.`,
     });
   } catch (error: any) {
     console.error('Error in forgot-password/request:', error);

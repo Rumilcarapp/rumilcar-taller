@@ -22,8 +22,6 @@ import {
   CheckCircle2,
   MessageSquare,
   KeyRound,
-  Copy,
-  Check,
   ArrowLeft,
   ExternalLink,
 } from 'lucide-react';
@@ -35,15 +33,14 @@ export const LoginPage: React.FC = () => {
   const { users, addUser, addAuditLog } = useUserManagementStore();
   const { isLight, toggleTheme } = useThemeStore();
 
-  // Mode: login or register
   const [mode, setMode] = useState<'login' | 'register'>('login');
 
-  // Login form state
+  // Form states
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
 
-  // Register form state
+  // Register form states
   const [workshopName, setWorkshopName] = useState('');
   const [ownerName, setOwnerName] = useState('');
   const [regEmail, setRegEmail] = useState('');
@@ -63,7 +60,6 @@ export const LoginPage: React.FC = () => {
   const [forgotNewPassword, setForgotNewPassword] = useState('');
   const [forgotConfirmPassword, setForgotConfirmPassword] = useState('');
   const [showForgotPass, setShowForgotPass] = useState(false);
-  const [copiedOtp, setCopiedOtp] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -307,6 +303,15 @@ export const LoginPage: React.FC = () => {
       return;
     }
     setForgotLoading(true);
+
+    // Pre-open window to ensure popup blocker does not prevent WhatsApp from opening after async fetch
+    let waWindow: Window | null = null;
+    try {
+      waWindow = window.open('about:blank', '_blank');
+    } catch {
+      // Ignored if browser strictly blocks initial window
+    }
+
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'https://rumilcar-taller.onrender.com/api';
       const res = await fetch(`${apiUrl}/auth/forgot-password/request`, {
@@ -316,14 +321,28 @@ export const LoginPage: React.FC = () => {
       });
       const data = await res.json();
       if (!res.ok) {
+        if (waWindow) waWindow.close();
         setForgotError(data.error || 'No se pudo generar el código de recuperación.');
         setForgotLoading(false);
         return;
       }
+
+      // Automatically dispatch WhatsApp window with the recovery message
+      if (data.whatsappUrl) {
+        if (waWindow && !waWindow.closed) {
+          waWindow.location.href = data.whatsappUrl;
+        } else {
+          window.open(data.whatsappUrl, '_blank');
+        }
+      } else if (waWindow) {
+        waWindow.close();
+      }
+
       setForgotData(data);
       setForgotStep('verify');
       setForgotLoading(false);
     } catch {
+      if (waWindow) waWindow.close();
       setForgotError('Error de conexión con el servidor. Verifica tu internet.');
       setForgotLoading(false);
     }
@@ -730,83 +749,79 @@ export const LoginPage: React.FC = () => {
             ) : (
               <form onSubmit={handleResetPassword} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div style={{
-                  background: 'var(--color-bg-primary)',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: '8px',
-                  padding: '14px',
+                  background: 'rgba(34, 197, 94, 0.06)',
+                  border: '1px solid rgba(34, 197, 94, 0.3)',
+                  borderRadius: '10px',
+                  padding: '16px',
                   textAlign: 'center',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '8px',
                 }}>
-                  <div style={{ fontSize: '13px', color: 'var(--color-text-secondary)', marginBottom: '2px' }}>
-                    Código de seguridad para: <strong style={{ color: 'var(--color-text-primary)' }}>{forgotData?.email}</strong>
-                  </div>
-                  {forgotData?.phone && (
-                    <div style={{ fontSize: '12px', color: '#22c55e', fontWeight: 600, marginBottom: '6px' }}>
-                      ✓ WhatsApp registrado: {forgotData.phone}
-                    </div>
-                  )}
                   <div style={{
-                    fontSize: '32px',
-                    fontWeight: 800,
-                    letterSpacing: '8px',
+                    width: '46px',
+                    height: '46px',
+                    borderRadius: '50%',
+                    background: 'rgba(34, 197, 94, 0.15)',
+                    border: '1px solid #22c55e',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                     color: '#22c55e',
-                    margin: '8px 0',
-                    fontFamily: 'monospace',
                   }}>
-                    {forgotData?.otp}
+                    <ShieldCheck size={26} />
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '8px', flexWrap: 'wrap' }}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (forgotData?.otp) {
-                          navigator.clipboard.writeText(forgotData.otp);
-                          setCopiedOtp(true);
-                          setTimeout(() => setCopiedOtp(false), 2000);
-                        }
-                      }}
+
+                  <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-text-primary)' }}>
+                    Código Enviado Automáticamente por WhatsApp
+                  </div>
+
+                  <div style={{ fontSize: '13px', color: 'var(--color-text-secondary)', maxWidth: '400px', lineHeight: 1.5 }}>
+                    Hemos despachado tu código de seguridad de 6 dígitos al WhatsApp registrado:{' '}
+                    <strong style={{ color: '#22c55e', fontWeight: 700 }}>
+                      {forgotData?.phoneMasked || forgotData?.phone || '04141144532'}
+                    </strong>
+                  </div>
+
+                  <div style={{
+                    background: 'rgba(59, 130, 246, 0.08)',
+                    border: '1px dashed rgba(59, 130, 246, 0.35)',
+                    borderRadius: '6px',
+                    padding: '8px 12px',
+                    fontSize: '12px',
+                    color: 'var(--color-text-secondary)',
+                    marginTop: '2px',
+                    lineHeight: 1.4,
+                  }}>
+                    🔒 <strong>Por estricta seguridad:</strong> El código no se muestra en esta pantalla. Revisa el mensaje enviado a tu WhatsApp e ingrésalo a continuación.
+                  </div>
+
+                  {forgotData?.whatsappUrl && (
+                    <a
+                      href={forgotData.whatsappUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       style={{
-                        background: 'var(--color-bg-secondary)',
-                        border: '1px solid var(--color-border)',
-                        color: 'var(--color-text-primary)',
-                        padding: '8px 14px',
-                        borderRadius: '8px',
+                        marginTop: '6px',
+                        background: 'transparent',
+                        border: '1px solid #22c55e',
+                        color: '#22c55e',
+                        padding: '6px 14px',
+                        borderRadius: '6px',
                         fontSize: '12px',
-                        cursor: 'pointer',
+                        textDecoration: 'none',
+                        fontWeight: 600,
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: '6px',
-                        fontWeight: 600,
                       }}
                     >
-                      {copiedOtp ? <Check size={14} color="#22c55e" /> : <Copy size={14} />}
-                      <span>{copiedOtp ? '¡Copiado!' : 'Copiar Código'}</span>
-                    </button>
-
-                    {forgotData?.whatsappUrl && (
-                      <a
-                        href={forgotData.whatsappUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          background: '#22c55e',
-                          color: '#ffffff',
-                          padding: '8px 16px',
-                          borderRadius: '8px',
-                          fontSize: '13px',
-                          textDecoration: 'none',
-                          fontWeight: 700,
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          boxShadow: '0 2px 8px rgba(34, 197, 94, 0.3)',
-                        }}
-                      >
-                        <MessageSquare size={15} />
-                        <span>📲 Enviar a WhatsApp ({forgotData.phone || '04141144532'})</span>
-                        <ExternalLink size={13} />
-                      </a>
-                    )}
-                  </div>
+                      <MessageSquare size={14} />
+                      <span>¿No se abrió WhatsApp? Haz clic aquí para abrirlo</span>
+                      <ExternalLink size={12} />
+                    </a>
+                  )}
                 </div>
 
                 {forgotError && <div className="login-error" style={{ marginBottom: 0 }}>{forgotError}</div>}
