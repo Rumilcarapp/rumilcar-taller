@@ -299,3 +299,172 @@ authRouter.post('/change-password', authenticate, async (req: AuthRequest, res: 
     res.status(500).json({ error: 'Error al cambiar la contraseña' });
   }
 });
+
+// ============================================================================
+// WhatsApp Password Recovery Protocol
+// ============================================================================
+
+interface PasswordResetEntry {
+  otp: string;
+  expiresAt: number;
+  userId: string;
+  email: string;
+  attempts: number;
+}
+
+// In-memory thread-safe store for active OTP reset tokens (15-minute TTL)
+const passwordResetStore = new Map<string, PasswordResetEntry>();
+
+const forgotPasswordRequestSchema = z.object({
+  emailOrPhone: z.string().min(3, 'Ingresa tu correo o teléfono registrado'),
+});
+
+const forgotPasswordResetSchema = z.object({
+  email: z.string().email('Correo electrónico inválido'),
+  otp: z.string().length(6, 'El código debe tener 6 dígitos'),
+  newPassword: z.string().min(6, 'La nueva contraseña debe tener al menos 6 caracteres'),
+});
+
+// POST /api/auth/forgot-password/request - Generate WhatsApp OTP reset code
+authRouter.post('/forgot-password/request', authRateLimiter, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const parseResult = forgotPasswordRequestSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      res.status(400).json({ error: parseResult.error.errors[0].message });
+      return;
+    }
+
+    const { emailOrPhone } = parseResult.data;
+    const cleanInput = emailOrPhone.trim().toLowerCase();
+
+    // Find user by email or workshop phone
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: { equals: cleanInput, mode: 'insensitive' } },
+          { workshop: { phone: { contains: cleanInput } } },
+          { workshop: { email: { equals: cleanInput, mode: 'insensitive' } } },
+        ],
+      },
+      include: { workshop: true },
+    });
+
+    if (!user) {
+      res.status(404).json({
+        error: 'No encontramos ninguna cuenta registrada con ese correo electrónico o teléfono.',
+      });
+      return;
+    }
+
+    // Generate secure 6-digit numeric OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = Date.now() + 15 * 60 * 1000; // 15 minutes
+
+    passwordResetStore.set(user.email.toLowerCase(), {
+      otp,
+      expiresAt,
+      userId: user.id,
+      email: user.email,
+      attempts: 0,
+    });
+
+    const workshopName = user.workshop?.name || 'Multiservicios Rumilcar';
+    const supportPhone = '584241550550'; // Official Rumilcar WhatsApp support channel
+
+    const messageText = `Hola Rumilcar Soporte 🚗🔑\n\nSolicito restablecer la contraseña para mi cuenta en RumilcarApp:\n- *Taller:* ${workshopName}\n- *Correo:* ${user.email}\n- *Usuario:* ${user.name}\n\nMi código de seguridad es: *${otp}*\n(Válido por 15 minutos)`;
+    const whatsappUrl = `https://wa.me/${supportPhone}?text=${encodeURIComponent(messageText)}`;
+
+    logSecurityEvent({
+      action: 'PASSWORD_RESET_REQUEST_WHATSAPP',
+      workshopId: user.workshopId,
+      userId: user.id,
+      details: `Solicitud de recuperación de contraseña vía WhatsApp para ${user.email}`,
+    });
+
+    res.json({
+      success: true,
+      email: user.email,
+      userName: user.name,
+      workshopName,
+      otp,
+      whatsappUrl,
+      supportPhone,
+      message: 'Código de verificación generado exitosamente para WhatsApp.',
+    });
+  } catch (error: any) {
+    console.error('Error in forgot-password/request:', error);
+    res.status(500).json({ error: 'Error al procesar la solicitud de recuperación por WhatsApp' });
+  }
+});
+
+// POST /api/auth/forgot-password/reset - Verify OTP and update password
+authRouter.post('/forgot-password/reset', authRateLimiter, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const parseResult = forgotPasswordResetSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      res.status(400).json({ error: parseResult.error.errors[0].message });
+      return;
+    }
+
+    const { email, otp, newPassword } = parseResult.data;
+    const cleanEmail = email.trim().toLowerCase();
+
+    const entry = passwordResetStore.get(cleanEmail);
+
+    if (!entry) {
+      res.status(400).json({
+        error: 'No hay ninguna solicitud de recuperación activa para este correo. Solicita un nuevo código.',
+      });
+      return;
+    }
+
+    if (Date.now() > entry.expiresAt) {
+      passwordResetStore.delete(cleanEmail);
+      res.status(400).json({
+        error: 'El código de seguridad ha expirado (válido por 15 minutos). Solicita uno nuevo.',
+      });
+      return;
+    }
+
+    if (entry.attempts >= 5) {
+      passwordResetStore.delete(cleanEmail);
+      res.status(429).json({
+        error: 'Has superado el número máximo de intentos fallidos. Solicita un nuevo código de seguridad.',
+      });
+      return;
+    }
+
+    if (entry.otp !== otp.trim()) {
+      entry.attempts += 1;
+      res.status(400).json({
+        error: `Código de verificación incorrecto. Intentos restantes: ${5 - entry.attempts}`,
+      });
+      return;
+    }
+
+    // OTP is valid! Hash new password and update in PostgreSQL
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+
+    const updatedUser = await prisma.user.update({
+      where: { id: entry.userId },
+      data: { passwordHash },
+    });
+
+    passwordResetStore.delete(cleanEmail);
+
+    logSecurityEvent({
+      action: 'PASSWORD_RESET_SUCCESS_WHATSAPP',
+      workshopId: updatedUser.workshopId,
+      userId: updatedUser.id,
+      details: `Contraseña restablecida exitosamente vía WhatsApp para ${cleanEmail}`,
+    });
+
+    res.json({
+      success: true,
+      message: '¡Contraseña restablecida exitosamente! Ya puedes iniciar sesión con tu nueva contraseña.',
+    });
+  } catch (error: any) {
+    console.error('Error in forgot-password/reset:', error);
+    res.status(500).json({ error: 'Error al restablecer la contraseña' });
+  }
+});

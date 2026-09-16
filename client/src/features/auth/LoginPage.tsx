@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Input } from '../../components/ui';
+import { Button, Input, Modal } from '../../components/ui';
 import { useAuthStore } from '../../stores/authStore';
 import { useUserManagementStore } from '../../store/useUserManagementStore';
 import { useThemeStore } from '../../store/themeStore';
@@ -20,6 +20,12 @@ import {
   LogIn,
   UserPlus,
   CheckCircle2,
+  MessageSquare,
+  KeyRound,
+  Copy,
+  Check,
+  ArrowLeft,
+  ExternalLink,
 } from 'lucide-react';
 import './LoginPage.css';
 
@@ -45,6 +51,19 @@ export const LoginPage: React.FC = () => {
   const [regPassword, setRegPassword] = useState('');
   const [regConfirmPassword, setRegConfirmPassword] = useState('');
   const [showRegPass, setShowRegPass] = useState(false);
+
+  // WhatsApp Forgot Password modal state
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotIdentifier, setForgotIdentifier] = useState('');
+  const [forgotStep, setForgotStep] = useState<'request' | 'verify'>('request');
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotError, setForgotError] = useState('');
+  const [forgotData, setForgotData] = useState<any>(null);
+  const [forgotOtp, setForgotOtp] = useState('');
+  const [forgotNewPassword, setForgotNewPassword] = useState('');
+  const [forgotConfirmPassword, setForgotConfirmPassword] = useState('');
+  const [showForgotPass, setShowForgotPass] = useState(false);
+  const [copiedOtp, setCopiedOtp] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -279,6 +298,83 @@ export const LoginPage: React.FC = () => {
     }, 700);
   };
 
+  const handleRequestOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotError('');
+    const clean = forgotIdentifier.trim().toLowerCase();
+    if (!clean) {
+      setForgotError('Por favor ingresa tu correo electrónico o teléfono registrado.');
+      return;
+    }
+    setForgotLoading(true);
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://rumilcar-taller.onrender.com/api';
+      const res = await fetch(`${apiUrl}/auth/forgot-password/request`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emailOrPhone: clean }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setForgotError(data.error || 'No se pudo generar el código de recuperación.');
+        setForgotLoading(false);
+        return;
+      }
+      setForgotData(data);
+      setForgotStep('verify');
+      setForgotLoading(false);
+    } catch {
+      setForgotError('Error de conexión con el servidor. Verifica tu internet.');
+      setForgotLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotError('');
+    const cleanOtp = forgotOtp.trim();
+    if (!cleanOtp || cleanOtp.length !== 6) {
+      setForgotError('Ingresa el código de seguridad de 6 dígitos.');
+      return;
+    }
+    if (forgotNewPassword.length < 6) {
+      setForgotError('La nueva contraseña debe tener al menos 6 caracteres.');
+      return;
+    }
+    if (forgotNewPassword !== forgotConfirmPassword) {
+      setForgotError('Las contraseñas no coinciden. Por favor verifícalas.');
+      return;
+    }
+    setForgotLoading(true);
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://rumilcar-taller.onrender.com/api';
+      const res = await fetch(`${apiUrl}/auth/forgot-password/reset`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: forgotData?.email || forgotIdentifier.trim().toLowerCase(),
+          otp: cleanOtp,
+          newPassword: forgotNewPassword,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setForgotError(data.error || 'Código incorrecto o expirado.');
+        setForgotLoading(false);
+        return;
+      }
+      // Success!
+      setShowForgotModal(false);
+      setEmail(forgotData?.email || forgotIdentifier.trim().toLowerCase());
+      setPassword('');
+      setSuccessMsg('¡Contraseña restablecida con éxito! Ya puedes iniciar sesión con tu nueva contraseña.');
+      setForgotLoading(false);
+    } catch {
+      setForgotError('Error al restablecer la contraseña. Verifica tu conexión.');
+      setForgotLoading(false);
+    }
+  };
+
   return (
     <div className="login-page">
       <div className="login-bg-pattern" />
@@ -378,6 +474,37 @@ export const LoginPage: React.FC = () => {
                 </button>
               }
             />
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '-4px', marginBottom: '16px' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setForgotIdentifier(email || '');
+                  setForgotStep('request');
+                  setForgotError('');
+                  setForgotOtp('');
+                  setForgotNewPassword('');
+                  setForgotConfirmPassword('');
+                  setForgotData(null);
+                  setShowForgotModal(true);
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#22c55e',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '2px 0',
+                }}
+              >
+                <MessageSquare size={14} />
+                <span>¿Olvidaste tu contraseña? Recupérala vía WhatsApp</span>
+              </button>
+            </div>
 
             <Button type="submit" variant="primary" fullWidth loading={loading} size="lg">
               Iniciar Sesión
@@ -529,6 +656,219 @@ export const LoginPage: React.FC = () => {
           </form>
         )}
       </div>
+
+      {/* WhatsApp Password Recovery Modal */}
+      {showForgotModal && (
+        <Modal
+          isOpen={showForgotModal}
+          onClose={() => setShowForgotModal(false)}
+          title="Recuperar Contraseña vía WhatsApp"
+          size="md"
+        >
+          <div style={{ padding: '8px 0' }}>
+            {forgotStep === 'request' ? (
+              <form onSubmit={handleRequestOtp} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{
+                  background: 'rgba(34, 197, 94, 0.08)',
+                  border: '1px solid rgba(34, 197, 94, 0.25)',
+                  borderRadius: '8px',
+                  padding: '12px 16px',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '12px',
+                }}>
+                  <div style={{
+                    background: '#22c55e',
+                    color: '#fff',
+                    borderRadius: '50%',
+                    width: '32px',
+                    height: '32px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    marginTop: '2px',
+                  }}>
+                    <MessageSquare size={18} />
+                  </div>
+                  <div style={{ fontSize: '13px', lineHeight: 1.5, color: 'var(--color-text-primary)' }}>
+                    <strong>Protocolo de Seguridad Oficial:</strong>
+                    <p style={{ margin: '4px 0 0 0', color: 'var(--color-text-secondary)' }}>
+                      Ingresa tu correo electrónico registrado o el teléfono de tu taller. Generaremos un código de verificación exclusivo de 6 dígitos que podrás enviar directamente a nuestro canal de soporte de WhatsApp.
+                    </p>
+                  </div>
+                </div>
+
+                {forgotError && <div className="login-error" style={{ marginBottom: 0 }}>{forgotError}</div>}
+
+                <Input
+                  label="Correo Electrónico o Teléfono Registrado"
+                  type="text"
+                  value={forgotIdentifier}
+                  onChange={(e) => setForgotIdentifier(e.target.value)}
+                  icon={<Mail size={16} />}
+                  placeholder="Ej: dhernandez888@gmail.com"
+                  required
+                />
+
+                <Button
+                  type="submit"
+                  fullWidth
+                  loading={forgotLoading}
+                  size="lg"
+                  style={{
+                    backgroundColor: '#22c55e',
+                    borderColor: '#22c55e',
+                    color: '#ffffff',
+                    fontWeight: 700,
+                  }}
+                  icon={<MessageSquare size={18} />}
+                >
+                  Generar Código y Conectar con WhatsApp
+                </Button>
+              </form>
+            ) : (
+              <form onSubmit={handleResetPassword} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{
+                  background: 'var(--color-bg-primary)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: '8px',
+                  padding: '14px',
+                  textAlign: 'center',
+                }}>
+                  <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Tu Código de Seguridad para {forgotData?.email}
+                  </div>
+                  <div style={{
+                    fontSize: '32px',
+                    fontWeight: 800,
+                    letterSpacing: '8px',
+                    color: '#22c55e',
+                    margin: '8px 0',
+                    fontFamily: 'monospace',
+                  }}>
+                    {forgotData?.otp}
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '8px', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (forgotData?.otp) {
+                          navigator.clipboard.writeText(forgotData.otp);
+                          setCopiedOtp(true);
+                          setTimeout(() => setCopiedOtp(false), 2000);
+                        }
+                      }}
+                      style={{
+                        background: 'var(--color-bg-secondary)',
+                        border: '1px solid var(--color-border)',
+                        color: 'var(--color-text-primary)',
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                      }}
+                    >
+                      {copiedOtp ? <Check size={14} color="#22c55e" /> : <Copy size={14} />}
+                      <span>{copiedOtp ? '¡Copiado!' : 'Copiar Código'}</span>
+                    </button>
+
+                    {forgotData?.whatsappUrl && (
+                      <a
+                        href={forgotData.whatsappUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          background: '#22c55e',
+                          color: '#ffffff',
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          textDecoration: 'none',
+                          fontWeight: 600,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                        }}
+                      >
+                        <MessageSquare size={14} />
+                        <span>Abrir WhatsApp de Soporte</span>
+                        <ExternalLink size={12} />
+                      </a>
+                    )}
+                  </div>
+                </div>
+
+                {forgotError && <div className="login-error" style={{ marginBottom: 0 }}>{forgotError}</div>}
+
+                <Input
+                  label="Código de Seguridad (6 dígitos)"
+                  type="text"
+                  maxLength={6}
+                  value={forgotOtp}
+                  onChange={(e) => setForgotOtp(e.target.value.replace(/\D/g, ''))}
+                  icon={<KeyRound size={16} />}
+                  placeholder="Ingresa los 6 dígitos"
+                  required
+                />
+
+                <Input
+                  label="Nueva Contraseña (mínimo 6 caracteres)"
+                  type={showForgotPass ? 'text' : 'password'}
+                  value={forgotNewPassword}
+                  onChange={(e) => setForgotNewPassword(e.target.value)}
+                  icon={<Lock size={16} />}
+                  placeholder="Tu nueva contraseña"
+                  required
+                  suffix={
+                    <button
+                      type="button"
+                      className="pass-toggle"
+                      onClick={() => setShowForgotPass(!showForgotPass)}
+                      tabIndex={-1}
+                    >
+                      {showForgotPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  }
+                />
+
+                <Input
+                  label="Confirmar Nueva Contraseña"
+                  type={showForgotPass ? 'text' : 'password'}
+                  value={forgotConfirmPassword}
+                  onChange={(e) => setForgotConfirmPassword(e.target.value)}
+                  icon={<Lock size={16} />}
+                  placeholder="Repite tu nueva contraseña"
+                  required
+                />
+
+                <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setForgotStep('request')}
+                    icon={<ArrowLeft size={16} />}
+                  >
+                    Atrás
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    fullWidth
+                    loading={forgotLoading}
+                    size="lg"
+                  >
+                    Restablecer y Guardar Contraseña
+                  </Button>
+                </div>
+              </form>
+            )}
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };
