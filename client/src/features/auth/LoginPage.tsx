@@ -808,7 +808,7 @@ export const LoginPage: React.FC = () => {
                   value={forgotIdentifier}
                   onChange={(e) => setForgotIdentifier(e.target.value)}
                   icon={<Mail size={16} />}
-                  placeholder="Ej: dhernandez888@gmail.com"
+                  placeholder="Ej: usuario@taller.com o 04141234567"
                   required
                 />
 

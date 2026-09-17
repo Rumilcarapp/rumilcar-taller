@@ -113,7 +113,7 @@ Para crear la plantilla en **Meta Business Suite > Herramientas de Mensajería >
 1. **Prueba de Solicitud Exitosa:**
    - Ir a la pantalla de inicio de sesión.
    - Clic en *"¿Olvidaste tu contraseña? Recupérala vía WhatsApp"*.
-   - Ingresar el correo `dhernandez888@gmail.com`.
+   - Ingresar el correo `usuario@taller.com` (o el teléfono registrado del taller).
    - Clic en *"Enviar Código por WhatsApp"*.
    - Constatar:
      - No se abre ninguna ventana emergente `wa.me`.
