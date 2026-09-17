@@ -1,10 +1,19 @@
 import { Router, Request, Response } from 'express';
+import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import { prisma } from '../../config/database';
 import { JWT_SECRET, JWT_EXPIRES_IN } from '../../config/jwt';
-import { authRateLimiter, authenticate, AuthRequest, logSecurityEvent } from '../../middleware/auth';
+import {
+  authRateLimiter,
+  forgotPasswordRateLimiter,
+  verifyOtpRateLimiter,
+  authenticate,
+  AuthRequest,
+  logSecurityEvent,
+} from '../../middleware/auth';
+import { whatsappService, WhatsAppService } from '../../services/whatsapp/whatsapp.service';
 
 export const authRouter = Router();
 
@@ -110,6 +119,7 @@ authRouter.post('/register', authRateLimiter, async (req: Request, res: Response
         role: result.user.role,
         name: result.user.name,
         email: result.user.email,
+        tokenVersion: result.user.tokenVersion,
       },
       JWT_SECRET,
       { expiresIn: JWT_EXPIRES_IN }
@@ -197,6 +207,7 @@ authRouter.post('/login', authRateLimiter, async (req: Request, res: Response): 
         role: user.role,
         name: user.name,
         email: user.email,
+        tokenVersion: user.tokenVersion,
       },
       JWT_SECRET,
       { expiresIn: JWT_EXPIRES_IN }
@@ -250,7 +261,8 @@ authRouter.get('/me', authenticate, async (req: AuthRequest, res: Response): Pro
       },
     });
   } catch (error: any) {
-    res.status(500).json({ error: 'Error al consultar perfil del usuario' });
+    console.error('Auth me error:', error);
+    res.status(500).json({ error: 'Error al obtener datos del usuario' });
   }
 });
 
@@ -274,168 +286,342 @@ authRouter.post('/change-password', authenticate, async (req: AuthRequest, res: 
       return;
     }
 
-    const isValid = await bcrypt.compare(currentPassword, user.passwordHash);
-    if (!isValid) {
+    const isValidPassword = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!isValidPassword) {
       res.status(400).json({ error: 'La contraseña actual no es correcta' });
       return;
     }
 
-    const newHash = await bcrypt.hash(newPassword, 10);
+    const passwordHash = await bcrypt.hash(newPassword, 10);
     await prisma.user.update({
       where: { id: user.id },
-      data: { passwordHash: newHash },
+      data: {
+        passwordHash,
+        tokenVersion: { increment: 1 }, // Revoke old sessions
+      },
     });
 
     logSecurityEvent({
-      action: 'PASSWORD_CHANGED',
+      action: 'CHANGE_PASSWORD',
       workshopId: user.workshopId,
       userId: user.id,
-      details: 'Contraseña actualizada satisfactoriamente',
+      details: 'Contraseña cambiada exitosamente. Sesiones previas revocadas.',
     });
 
-    res.json({ success: true, message: 'Contraseña actualizada con éxito' });
+    res.json({ message: 'Contraseña actualizada correctamente' });
   } catch (error: any) {
     console.error('Change password error:', error);
     res.status(500).json({ error: 'Error al cambiar la contraseña' });
   }
 });
 
-// ============================================================================
-// WhatsApp Password Recovery Protocol
-// ============================================================================
+// ==========================================
+// ENTERPRISE WHATSAPP PASSWORD RECOVERY
+// ==========================================
 
-interface PasswordResetEntry {
-  otp: string;
-  expiresAt: number;
-  userId: string;
-  email: string;
-  attempts: number;
+const OTP_PEPPER = process.env.JWT_SECRET || 'rumilcar_otp_pepper_2026';
+
+function hashSecret(val: string): string {
+  return crypto.createHash('sha256').update(`${val}:${OTP_PEPPER}`).digest('hex');
 }
 
-// In-memory thread-safe store for active OTP reset tokens (15-minute TTL)
-const passwordResetStore = new Map<string, PasswordResetEntry>();
-
+// Schemas
 const forgotPasswordRequestSchema = z.object({
   emailOrPhone: z.string().min(3, 'Ingresa tu correo o teléfono registrado'),
-  customPhone: z.string().optional().nullable(),
+});
+
+const forgotPasswordVerifySchema = z.object({
+  emailOrPhone: z.string().min(3, 'Identificador requerido'),
+  otp: z.string().length(6, 'El código de seguridad debe tener exactamente 6 dígitos'),
 });
 
 const forgotPasswordResetSchema = z.object({
-  email: z.string().email('Correo electrónico inválido'),
-  otp: z.string().length(6, 'El código debe tener 6 dígitos'),
+  resetToken: z.string().min(20, 'Token de recuperación inválido'),
   newPassword: z.string().min(6, 'La nueva contraseña debe tener al menos 6 caracteres'),
 });
 
-// POST /api/auth/forgot-password/request - Generate WhatsApp OTP reset code
-authRouter.post('/forgot-password/request', authRateLimiter, async (req: Request, res: Response): Promise<void> => {
+/**
+ * Helper: Find user and strictly authorized phone from database
+ */
+async function findUserAndAuthorizedPhone(emailOrPhone: string) {
+  const clean = emailOrPhone.trim().toLowerCase();
+  const digitsOnly = clean.replace(/\D/g, '');
+
+  const user = await prisma.user.findFirst({
+    where: {
+      OR: [
+        { email: { equals: clean, mode: 'insensitive' } },
+        ...(digitsOnly.length >= 7 ? [{ workshop: { phone: { contains: digitsOnly } } }] : []),
+        { workshop: { email: { equals: clean, mode: 'insensitive' } } },
+      ],
+    },
+    include: { workshop: true },
+  });
+
+  if (!user || !user.isActive) {
+    return { user: null, phone: null, normPhone: null };
+  }
+
+  // The phone is obtained EXCLUSIVELY from the registered workshop phone
+  const rawPhone = user.workshop?.phone;
+  if (!rawPhone) {
+    return { user, phone: null, normPhone: null };
+  }
+
+  const norm = WhatsAppService.normalizePhone(rawPhone);
+  if (!norm.valid) {
+    return { user, phone: rawPhone, normPhone: null };
+  }
+
+  return { user, phone: rawPhone, normPhone: norm };
+}
+
+/**
+ * Core Request / Resend Handler with Anti-Enumeration & Official WhatsApp Dispatch
+ */
+async function handleOtpRequest(req: Request, res: Response, isResend: boolean = false): Promise<void> {
+  const parseResult = forgotPasswordRequestSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    res.status(400).json({ error: parseResult.error.errors[0].message });
+    return;
+  }
+
+  const { emailOrPhone } = parseResult.data;
+  const { user, normPhone } = await findUserAndAuthorizedPhone(emailOrPhone);
+
+  const GENERIC_RESPONSE = {
+    success: true,
+    message: 'Si los datos corresponden a una cuenta válida, recibirás instrucciones de recuperación por el canal registrado.',
+    phoneMasked: null as string | null,
+    expiresInSeconds: 900,
+    canResendAt: new Date(Date.now() + 60000).toISOString(),
+  };
+
+  // Anti-enumeration: If user does not exist or has no valid phone, return generic response
+  if (!user || !normPhone) {
+    res.json(GENERIC_RESPONSE);
+    return;
+  }
+
+  // Check 60-second cooldown on active tokens
+  const recentToken = await prisma.passwordResetToken.findFirst({
+    where: {
+      userId: user.id,
+      createdAt: { gt: new Date(Date.now() - 60000) },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  if (recentToken) {
+    const remainingSeconds = Math.ceil((recentToken.createdAt.getTime() + 60000 - Date.now()) / 1000);
+    res.status(429).json({
+      error: `Por favor espera ${remainingSeconds} segundos antes de solicitar otro código.`,
+      canResendAt: new Date(recentToken.createdAt.getTime() + 60000).toISOString(),
+    });
+    return;
+  }
+
+  // Invalidate previous pending tokens for this user
+  await prisma.passwordResetToken.updateMany({
+    where: { userId: user.id, consumedAt: null },
+    data: { consumedAt: new Date() },
+  });
+
+  // Generate cryptographically secure 6-digit numeric OTP
+  const otpNumber = crypto.randomInt(100000, 1000000);
+  const otp = otpNumber.toString();
+  const otpHash = hashSecret(otp);
+  const phoneMasked = WhatsAppService.maskPhone(normPhone.e164);
+  const expiresInMinutes = 15;
+  const expiresAt = new Date(Date.now() + expiresInMinutes * 60 * 1000);
+
+  // Dispatch message through official WhatsApp Service
+  const sendResult = await whatsappService.sendOtp({
+    phone: normPhone.e164,
+    otp,
+    expiresInMinutes,
+    userName: user.name,
+    workshopName: user.workshop?.name,
+  });
+
+  if (!sendResult.success) {
+    // Record failed attempt in database
+    await prisma.passwordResetToken.create({
+      data: {
+        userId: user.id,
+        workshopId: user.workshopId,
+        phoneMasked,
+        otpHash,
+        expiresAt,
+        requestIp: (req.ip || req.socket.remoteAddress || '').slice(0, 45),
+        userAgent: (req.headers['user-agent'] || '').slice(0, 255),
+        provider: sendResult.provider,
+        providerMessageId: null,
+        deliveryStatus: 'FAILED',
+      },
+    });
+
+    logSecurityEvent({
+      action: 'PASSWORD_RESET_WHATSAPP_FAILED',
+      workshopId: user.workshopId,
+      userId: user.id,
+      details: `Fallo al enviar WhatsApp a ${normPhone.e164}: ${sendResult.error}`,
+      ip: req.ip,
+    });
+
+    // Do NOT simulate success if provider failed
+    res.status(503).json({
+      error: 'El servicio de mensajería WhatsApp Business no está configurado o no se encuentra disponible.',
+      details: sendResult.error,
+    });
+    return;
+  }
+
+  // Record successful dispatch in PostgreSQL
+  await prisma.passwordResetToken.create({
+    data: {
+      userId: user.id,
+      workshopId: user.workshopId,
+      phoneMasked,
+      otpHash,
+      expiresAt,
+      requestIp: (req.ip || req.socket.remoteAddress || '').slice(0, 45),
+      userAgent: (req.headers['user-agent'] || '').slice(0, 255),
+      provider: sendResult.provider,
+      providerMessageId: sendResult.providerMessageId || null,
+      deliveryStatus: sendResult.deliveryStatus,
+    },
+  });
+
+  logSecurityEvent({
+    action: isResend ? 'PASSWORD_RESET_OTP_RESENT' : 'PASSWORD_RESET_OTP_REQUESTED',
+    workshopId: user.workshopId,
+    userId: user.id,
+    details: `Código OTP despachado vía ${sendResult.provider} a ${phoneMasked}`,
+    ip: req.ip,
+  });
+
+  res.json({
+    success: true,
+    message: 'Si los datos corresponden a una cuenta válida, recibirás instrucciones por WhatsApp.',
+    phoneMasked,
+    expiresInSeconds: 900,
+    canResendAt: new Date(Date.now() + 60000).toISOString(),
+  });
+}
+
+// POST /api/auth/forgot-password/request
+authRouter.post('/forgot-password/request', forgotPasswordRateLimiter, async (req: Request, res: Response): Promise<void> => {
   try {
-    const parseResult = forgotPasswordRequestSchema.safeParse(req.body);
+    await handleOtpRequest(req, res, false);
+  } catch (error: any) {
+    console.error('Error in forgot-password/request:', error);
+    res.status(500).json({ error: 'Error al procesar la solicitud de recuperación' });
+  }
+});
+
+// POST /api/auth/forgot-password/resend
+authRouter.post('/forgot-password/resend', forgotPasswordRateLimiter, async (req: Request, res: Response): Promise<void> => {
+  try {
+    await handleOtpRequest(req, res, true);
+  } catch (error: any) {
+    console.error('Error in forgot-password/resend:', error);
+    res.status(500).json({ error: 'Error al procesar el reenvío de código' });
+  }
+});
+
+// POST /api/auth/forgot-password/verify
+authRouter.post('/forgot-password/verify', verifyOtpRateLimiter, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const parseResult = forgotPasswordVerifySchema.safeParse(req.body);
     if (!parseResult.success) {
       res.status(400).json({ error: parseResult.error.errors[0].message });
       return;
     }
 
-    const { emailOrPhone, customPhone } = parseResult.data;
-    const cleanInput = emailOrPhone.trim().toLowerCase();
-    const phoneDigitsOnly = cleanInput.replace(/\D/g, '');
-
-    // Find user by email or workshop phone
-    const user = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { email: { equals: cleanInput, mode: 'insensitive' } },
-          ...(phoneDigitsOnly.length >= 7 ? [{ workshop: { phone: { contains: phoneDigitsOnly } } }] : []),
-          { workshop: { email: { equals: cleanInput, mode: 'insensitive' } } },
-        ],
-      },
-      include: { workshop: true },
-    });
+    const { emailOrPhone, otp } = parseResult.data;
+    const { user } = await findUserAndAuthorizedPhone(emailOrPhone);
 
     if (!user) {
-      res.status(404).json({
-        error: 'No encontramos ninguna cuenta registrada con ese correo electrónico o teléfono.',
+      res.status(400).json({ error: 'Código de verificación incorrecto o expirado.' });
+      return;
+    }
+
+    // Find active token record for this user
+    const tokenRecord = await prisma.passwordResetToken.findFirst({
+      where: {
+        userId: user.id,
+        consumedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!tokenRecord) {
+      res.status(400).json({
+        error: 'El código de seguridad ha expirado (válido por 15 minutos) o no existe una solicitud activa.',
       });
       return;
     }
 
-    // Determine the registered phone (prefer user's input phone or workshop phone, default to 04141144532 if matching dhernandez)
-    let effectivePhone = customPhone || (phoneDigitsOnly.length >= 10 ? cleanInput : user.workshop?.phone);
-    if (!effectivePhone && user.email.toLowerCase().includes('dhernandez')) {
-      effectivePhone = '04141144532';
-    } else if (!effectivePhone) {
-      effectivePhone = '04141144532';
+    if (tokenRecord.attempts >= 5) {
+      // Invalidate token
+      await prisma.passwordResetToken.update({
+        where: { id: tokenRecord.id },
+        data: { consumedAt: new Date() },
+      });
+      res.status(429).json({
+        error: 'Has superado el número máximo de intentos fallidos (5). Solicita un nuevo código de seguridad.',
+      });
+      return;
     }
 
-    // Persist phone to workshop if missing
-    if (effectivePhone && (!user.workshop?.phone || user.workshop?.phone !== effectivePhone)) {
-      await prisma.workshop.update({
-        where: { id: user.workshopId },
-        data: { phone: effectivePhone },
-      }).catch(() => {});
+    const inputHash = hashSecret(otp.trim());
+    if (inputHash !== tokenRecord.otpHash) {
+      const updated = await prisma.passwordResetToken.update({
+        where: { id: tokenRecord.id },
+        data: { attempts: { increment: 1 } },
+      });
+      const remaining = 5 - updated.attempts;
+      res.status(400).json({
+        error: `Código de verificación incorrecto. Intentos restantes: ${Math.max(0, remaining)}`,
+      });
+      return;
     }
 
-    // Convert to international WhatsApp format (58414...)
-    let digits = effectivePhone.replace(/\D/g, '');
-    if (digits.startsWith('0')) {
-      digits = '58' + digits.slice(1);
-    } else if (!digits.startsWith('58') && (digits.length === 10 || digits.length === 11)) {
-      digits = '58' + digits;
-    }
-    const userWhatsappNumber = digits || '584141144532';
+    // OTP is valid! Issue short-lived one-time reset token (10 min TTL)
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetTokenHash = hashSecret(resetToken);
 
-    // Generate secure 6-digit numeric OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = Date.now() + 15 * 60 * 1000; // 15 minutes
-
-    passwordResetStore.set(user.email.toLowerCase(), {
-      otp,
-      expiresAt,
-      userId: user.id,
-      email: user.email,
-      attempts: 0,
+    await prisma.passwordResetToken.update({
+      where: { id: tokenRecord.id },
+      data: {
+        resetTokenHash,
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+      },
     });
-
-    const workshopName = user.workshop?.name || 'Multiservicios Rumilcar';
-
-    const messageText = `*RumilcarApp - Código de Recuperación de Contraseña* 🚗🔑\n\nHola ${user.name},\nTu código de verificación de seguridad para *${workshopName}* (${user.email}) es:\n\n👉 *${otp}*\n\n(Válido por 15 minutos).`;
-    
-    // Direct link to user's registered WhatsApp
-    const whatsappUrl = `https://wa.me/${userWhatsappNumber}?text=${encodeURIComponent(messageText)}`;
-    const supportWhatsappUrl = `https://wa.me/584241550550?text=${encodeURIComponent(messageText)}`;
-
-    // Mask the phone for secure display: e.g. +58 414 ••• 4532
-    const lastFour = effectivePhone.slice(-4);
-    const phoneMasked = effectivePhone.startsWith('04')
-      ? `+58 ${effectivePhone.slice(1, 4)} ••• ${lastFour}`
-      : `+58 ••• ${lastFour}`;
 
     logSecurityEvent({
-      action: 'PASSWORD_RESET_REQUEST_WHATSAPP',
-      workshopId: user.workshopId,
-      userId: user.id,
-      details: `Solicitud de recuperación de contraseña enviada a WhatsApp ${effectivePhone} para ${user.email}`,
+      action: 'PASSWORD_RESET_OTP_VERIFIED',
+      workshopId: tokenRecord.workshopId,
+      userId: tokenRecord.userId,
+      details: 'Código OTP verificado correctamente. Token de restablecimiento de un solo uso emitido.',
+      ip: req.ip,
     });
 
-    // Strictly omit OTP from the response payload so it is never exposed in network/frontend
     res.json({
       success: true,
-      email: user.email,
-      userName: user.name,
-      workshopName,
-      phone: effectivePhone,
-      phoneMasked,
-      whatsappUrl,
-      supportWhatsappUrl,
-      message: `Código de verificación despachado automáticamente a WhatsApp ${effectivePhone}.`,
+      resetToken,
+      expiresInSeconds: 600,
     });
   } catch (error: any) {
-    console.error('Error in forgot-password/request:', error);
-    res.status(500).json({ error: 'Error al procesar la solicitud de recuperación por WhatsApp' });
+    console.error('Error in forgot-password/verify:', error);
+    res.status(500).json({ error: 'Error al verificar el código de seguridad' });
   }
 });
 
-// POST /api/auth/forgot-password/reset - Verify OTP and update password
-authRouter.post('/forgot-password/reset', authRateLimiter, async (req: Request, res: Response): Promise<void> => {
+// POST /api/auth/forgot-password/reset
+authRouter.post('/forgot-password/reset', forgotPasswordRateLimiter, async (req: Request, res: Response): Promise<void> => {
   try {
     const parseResult = forgotPasswordResetSchema.safeParse(req.body);
     if (!parseResult.success) {
@@ -443,62 +629,66 @@ authRouter.post('/forgot-password/reset', authRateLimiter, async (req: Request, 
       return;
     }
 
-    const { email, otp, newPassword } = parseResult.data;
-    const cleanEmail = email.trim().toLowerCase();
+    const { resetToken, newPassword } = parseResult.data;
+    const resetTokenHash = hashSecret(resetToken);
 
-    const entry = passwordResetStore.get(cleanEmail);
-
-    if (!entry) {
-      res.status(400).json({
-        error: 'No hay ninguna solicitud de recuperación activa para este correo. Solicita un nuevo código.',
-      });
-      return;
-    }
-
-    if (Date.now() > entry.expiresAt) {
-      passwordResetStore.delete(cleanEmail);
-      res.status(400).json({
-        error: 'El código de seguridad ha expirado (válido por 15 minutos). Solicita uno nuevo.',
-      });
-      return;
-    }
-
-    if (entry.attempts >= 5) {
-      passwordResetStore.delete(cleanEmail);
-      res.status(429).json({
-        error: 'Has superado el número máximo de intentos fallidos. Solicita un nuevo código de seguridad.',
-      });
-      return;
-    }
-
-    if (entry.otp !== otp.trim()) {
-      entry.attempts += 1;
-      res.status(400).json({
-        error: `Código de verificación incorrecto. Intentos restantes: ${5 - entry.attempts}`,
-      });
-      return;
-    }
-
-    // OTP is valid! Hash new password and update in PostgreSQL
-    const passwordHash = await bcrypt.hash(newPassword, 10);
-
-    const updatedUser = await prisma.user.update({
-      where: { id: entry.userId },
-      data: { passwordHash },
+    const tokenRecord = await prisma.passwordResetToken.findFirst({
+      where: {
+        resetTokenHash,
+        consumedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      include: { user: true },
     });
 
-    passwordResetStore.delete(cleanEmail);
+    if (!tokenRecord) {
+      res.status(400).json({
+        error: 'El token de recuperación es inválido, ya fue utilizado o ha expirado.',
+      });
+      return;
+    }
+
+    // Hash new password using bcrypt
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+
+    // Atomic transaction: update password, increment tokenVersion (revoking all sessions), consume reset token, create audit log
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: tokenRecord.userId },
+        data: {
+          passwordHash,
+          tokenVersion: { increment: 1 },
+        },
+      });
+
+      await tx.passwordResetToken.update({
+        where: { id: tokenRecord.id },
+        data: { consumedAt: new Date() },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          workshopId: tokenRecord.workshopId,
+          userId: tokenRecord.userId,
+          action: 'PASSWORD_RESET_SUCCESS',
+          entity: 'SECURITY_AUTH',
+          details: `Contraseña restablecida exitosamente para ${tokenRecord.user.email}. Sesiones activas revocadas.`,
+          ipAddress: (req.ip || req.socket.remoteAddress || '').slice(0, 45),
+        },
+      });
+    });
 
     logSecurityEvent({
-      action: 'PASSWORD_RESET_SUCCESS_WHATSAPP',
-      workshopId: updatedUser.workshopId,
-      userId: updatedUser.id,
-      details: `Contraseña restablecida exitosamente vía WhatsApp para ${cleanEmail}`,
+      action: 'PASSWORD_RESET_COMPLETED',
+      workshopId: tokenRecord.workshopId,
+      userId: tokenRecord.userId,
+      details: `Contraseña restablecida exitosamente vía WhatsApp para ${tokenRecord.user.email}`,
+      ip: req.ip,
     });
 
     res.json({
       success: true,
-      message: '¡Contraseña restablecida exitosamente! Ya puedes iniciar sesión con tu nueva contraseña.',
+      message: '¡Contraseña restablecida exitosamente! Todas las sesiones anteriores han sido revocadas. Ya puedes iniciar sesión con tu nueva contraseña.',
     });
   } catch (error: any) {
     console.error('Error in forgot-password/reset:', error);

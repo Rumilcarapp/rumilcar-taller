@@ -32,12 +32,13 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
       email?: string;
       userName?: string;
       userEmail?: string;
+      tokenVersion?: number;
     };
 
     // Verify user exists and is active in database
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
-      select: { id: true, workshopId: true, role: true, isActive: true, name: true, email: true },
+      select: { id: true, workshopId: true, role: true, isActive: true, name: true, email: true, tokenVersion: true },
     });
 
     if (!user) {
@@ -47,6 +48,12 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
 
     if (!user.isActive) {
       res.status(403).json({ error: 'Tu usuario ha sido desactivado. Contacta al administrador de tu taller.' });
+      return;
+    }
+
+    // Global session revocation: if tokenVersion does not match, reject immediately
+    if (decoded.tokenVersion !== undefined && user.tokenVersion !== undefined && decoded.tokenVersion !== user.tokenVersion) {
+      res.status(401).json({ error: 'Tu sesión ha sido revocada debido a un cambio de contraseña. Inicia sesión nuevamente.' });
       return;
     }
 
@@ -90,13 +97,12 @@ export const requireRole = (...allowedRoles: string[]) => {
     // SUPERADMIN always has access
     if (req.userRole === 'SUPERADMIN' || allowedRoles.includes(req.userRole)) {
       next();
-      return;
+    } else {
+      res.status(403).json({
+        error: `Acceso denegado: se requiere uno de los siguientes roles: ${allowedRoles.join(', ')}`,
+        userRole: req.userRole,
+      });
     }
-
-    res.status(403).json({
-      error: `Acceso denegado: se requiere uno de los siguientes roles: ${allowedRoles.join(', ')}`,
-      userRole: req.userRole,
-    });
   };
 };
 
@@ -112,7 +118,7 @@ export const requireSuperAdmin = (req: AuthRequest, res: Response, next: NextFun
 };
 
 /**
- * Rate Limiter: Auth endpoints (Login, Register, Password Reset)
+ * Rate Limiter: Auth endpoints (Login, Register)
  * 20 attempts per 15 minutes per IP
  */
 export const authRateLimiter = rateLimit({
@@ -122,6 +128,34 @@ export const authRateLimiter = rateLimit({
   legacyHeaders: false,
   message: {
     error: 'Demasiados intentos de acceso desde esta dirección IP. Por favor intenta de nuevo en 15 minutos.',
+  },
+});
+
+/**
+ * Rate Limiter: Recovery code request & resend
+ * 10 requests per 15 minutes per IP
+ */
+export const forgotPasswordRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: 'Demasiadas solicitudes de recuperación de contraseña. Por favor intenta en 15 minutos.',
+  },
+});
+
+/**
+ * Rate Limiter: OTP verification
+ * 15 verification attempts per 15 minutes per IP
+ */
+export const verifyOtpRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 15,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: 'Demasiados intentos de verificación de código. Por favor espera 15 minutos.',
   },
 });
 
@@ -140,9 +174,9 @@ export const apiRateLimiter = rateLimit({
 });
 
 /**
- * Helper: Record security/audit logs
+ * Helper: Record security/audit logs in console and in PostgreSQL
  */
-export const logSecurityEvent = (event: {
+export const logSecurityEvent = async (event: {
   action: string;
   workshopId?: string;
   userId?: string;
@@ -151,4 +185,21 @@ export const logSecurityEvent = (event: {
 }) => {
   const timestamp = new Date().toISOString();
   console.log(`[AUDIT] ${timestamp} | Act: ${event.action} | WID: ${event.workshopId || 'GLOBAL'} | UID: ${event.userId || 'ANON'} | ${event.details || ''}`);
+
+  if (event.workshopId) {
+    try {
+      await prisma.auditLog.create({
+        data: {
+          workshopId: event.workshopId,
+          userId: event.userId || null,
+          action: event.action,
+          entity: 'SECURITY_AUTH',
+          details: event.details || null,
+          ipAddress: event.ip || null,
+        },
+      });
+    } catch {
+      // Non-blocking fallback
+    }
+  }
 };

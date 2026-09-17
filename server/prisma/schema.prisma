@@ -5,6 +5,7 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ========================
@@ -47,22 +48,25 @@ model Workshop {
   inventoryMovements       InventoryMovement[]
   mechanicPayrolls         MechanicPayroll[]
   auditLogs                AuditLog[]
+  passwordResetTokens      PasswordResetToken[]
 }
 
 model User {
-  id           String   @id @default(uuid())
-  workshopId   String
-  name         String
-  email        String   @unique
-  passwordHash String
-  role         String   @default("OWNER")
-  isActive     Boolean  @default(true)
-  lastLoginAt  DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                  String   @id @default(uuid())
+  workshopId          String
+  name                String
+  email               String   @unique
+  passwordHash        String
+  role                String   @default("OWNER")
+  isActive            Boolean  @default(true)
+  tokenVersion        Int      @default(1)
+  lastLoginAt         DateTime?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
-  workshop     Workshop @relation(fields: [workshopId], references: [id])
-  workOrders   WorkOrder[] @relation("CreatedBy")
+  workshop            Workshop @relation(fields: [workshopId], references: [id])
+  workOrders          WorkOrder[] @relation("CreatedBy")
+  passwordResetTokens PasswordResetToken[]
 }
 
 model Mechanic {
@@ -322,7 +326,7 @@ model InventoryItem {
   workOrderItems  WorkOrderItem[]
   movements       InventoryMovement[]
 
-  @@unique([workshopId, sku])
+  @@index([workshopId, sku])
   @@index([workshopId])
 }
 
@@ -583,6 +587,35 @@ model AuditLog {
   workshop   Workshop? @relation(fields: [workshopId], references: [id], onDelete: Cascade)
 
   @@index([workshopId, createdAt])
+}
+
+// ==========================================
+// Password Reset Tokens (WhatsApp Recovery)
+// ==========================================
+
+model PasswordResetToken {
+  id                String    @id @default(uuid())
+  userId            String
+  workshopId        String
+  phoneMasked       String?
+  otpHash           String
+  resetTokenHash    String?
+  expiresAt         DateTime
+  attempts          Int       @default(0)
+  consumedAt        DateTime?
+  requestIp         String?
+  userAgent         String?
+  provider          String?
+  providerMessageId String?
+  deliveryStatus    String    @default("PENDING") // PENDING, SENT, DELIVERED, FAILED
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workshop          Workshop  @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([expiresAt])
 }
 
 
