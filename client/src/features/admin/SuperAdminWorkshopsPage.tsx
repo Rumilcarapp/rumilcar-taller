@@ -23,9 +23,21 @@ import {
   ExternalLink,
   Copy,
   Check,
-  Eye
+  Eye,
+  ChevronDown,
+  SlidersHorizontal,
+  Trash2,
+  FileText,
+  Send,
+  RotateCcw
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
+import {
+  useSuperAdminWhatsAppStore,
+  SuperAdminWATemplate,
+  WorkshopTemplateData,
+} from '../../store/useSuperAdminWhatsAppStore';
+import { normalizePhoneNumber } from '../../lib/whatsapp';
 import './SuperAdminWorkshopsPage.css';
 
 export const SuperAdminWorkshopsPage: React.FC = () => {
@@ -76,11 +88,53 @@ export const SuperAdminWorkshopsPage: React.FC = () => {
     email: '',
   });
 
+  // WhatsApp Support & Templates store
+  const {
+    templates: waTemplates,
+    addTemplate: addWATemplate,
+    updateTemplate: updateWATemplate,
+    deleteTemplate: deleteWATemplate,
+    resetToDefaults: resetWATemplates,
+    replaceVariables: replaceWAVariables,
+  } = useSuperAdminWhatsAppStore();
+
+  // Action Menu Dropdown state
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+
+  // WhatsApp Support Modal state
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
+  const [selectedWATemplateId, setSelectedWATemplateId] = useState<string>('');
+  const [customWhatsAppText, setCustomWhatsAppText] = useState<string>('');
+  const [copiedWhatsApp, setCopiedWhatsApp] = useState(false);
+
+  // WhatsApp Template Manager Modal state
+  const [showTemplateManagerModal, setShowTemplateManagerModal] = useState(false);
+  const [isEditingTemplate, setIsEditingTemplate] = useState(false);
+  const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
+  const [templateForm, setTemplateForm] = useState<{
+    title: string;
+    category: SuperAdminWATemplate['category'];
+    text: string;
+  }>({
+    title: '',
+    category: 'GENERAL',
+    text: '',
+  });
+
   // Feedback toast message
   const [toastMessage, setToastMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
     fetchAdminWorkshops();
+  }, []);
+
+  // Close open dropdown menu when clicking anywhere outside
+  useEffect(() => {
+    const handleDocumentClick = () => {
+      setActiveMenuId(null);
+    };
+    window.addEventListener('click', handleDocumentClick);
+    return () => window.removeEventListener('click', handleDocumentClick);
   }, []);
 
   const showToast = (type: 'success' | 'error', text: string) => {
@@ -231,6 +285,137 @@ export const SuperAdminWorkshopsPage: React.FC = () => {
   };
 
   // -------------------------------------------------------------
+  // WHATSAPP SUPPORT & TEMPLATES HANDLERS
+  // -------------------------------------------------------------
+  const handleOpenWhatsAppModal = (w: AdminWorkshopItem) => {
+    setSelectedWorkshop(w);
+    const defaultTpl = waTemplates[0];
+    const tplId = defaultTpl ? defaultTpl.id : '';
+    setSelectedWATemplateId(tplId);
+
+    const tplData: WorkshopTemplateData = {
+      nombre_dueno: w.ownerName,
+      nombre_taller: w.workshopName,
+      dias_restantes: w.daysRemaining,
+      plan: w.plan === 'TRIAL' ? 'Prueba 15 Días' : `Plan ${w.plan}`,
+      email: w.email,
+      telefono: w.phone || '',
+      fecha_registro: new Date(w.createdAt).toLocaleDateString('es-VE'),
+    };
+
+    if (defaultTpl) {
+      setCustomWhatsAppText(replaceWAVariables(defaultTpl.text, tplData));
+    } else {
+      setCustomWhatsAppText(`Hola ${w.ownerName}, te saluda el equipo de Soporte de Rumilcarapp.`);
+    }
+
+    setCopiedWhatsApp(false);
+    setShowWhatsAppModal(true);
+  };
+
+  const handleSelectTemplate = (tplId: string) => {
+    setSelectedWATemplateId(tplId);
+    if (!selectedWorkshop) return;
+    const tpl = waTemplates.find((t) => t.id === tplId);
+    if (tpl) {
+      const tplData: WorkshopTemplateData = {
+        nombre_dueno: selectedWorkshop.ownerName,
+        nombre_taller: selectedWorkshop.workshopName,
+        dias_restantes: selectedWorkshop.daysRemaining,
+        plan: selectedWorkshop.plan === 'TRIAL' ? 'Prueba 15 Días' : `Plan ${selectedWorkshop.plan}`,
+        email: selectedWorkshop.email,
+        telefono: selectedWorkshop.phone || '',
+        fecha_registro: new Date(selectedWorkshop.createdAt).toLocaleDateString('es-VE'),
+      };
+      setCustomWhatsAppText(replaceWAVariables(tpl.text, tplData));
+    }
+  };
+
+  const handleSendWhatsApp = (preferWeb: boolean = false) => {
+    if (!selectedWorkshop) return;
+    const norm = normalizePhoneNumber(selectedWorkshop.phone);
+    if (!norm.valid && !norm.e164) {
+      showToast('error', 'El taller no tiene un número de teléfono válido registrado.');
+      return;
+    }
+    const encoded = encodeURIComponent(customWhatsAppText);
+    const baseUrl = preferWeb ? 'https://web.whatsapp.com/send' : 'https://wa.me';
+    const finalUrl = preferWeb
+      ? `${baseUrl}?phone=${norm.e164}&text=${encoded}`
+      : `${baseUrl}/${norm.e164}?text=${encoded}`;
+    window.open(finalUrl, '_blank', 'noopener,noreferrer');
+    showToast('success', 'Abriendo WhatsApp con el mensaje seleccionado...');
+  };
+
+  const handleCopyWhatsApp = () => {
+    if (!customWhatsAppText) return;
+    navigator.clipboard.writeText(customWhatsAppText);
+    setCopiedWhatsApp(true);
+    showToast('success', 'Mensaje copiado al portapapeles');
+    setTimeout(() => setCopiedWhatsApp(false), 2000);
+  };
+
+  const handleInsertVariable = (variableTag: string) => {
+    setCustomWhatsAppText((prev) => prev + (prev.endsWith(' ') || prev.endsWith('\n') ? '' : ' ') + variableTag);
+  };
+
+  const handleOpenNewTemplate = () => {
+    setIsEditingTemplate(true);
+    setEditingTemplateId(null);
+    setTemplateForm({
+      title: '',
+      category: 'GENERAL',
+      text: '',
+    });
+  };
+
+  const handleEditTemplate = (tpl: SuperAdminWATemplate) => {
+    setIsEditingTemplate(true);
+    setEditingTemplateId(tpl.id);
+    setTemplateForm({
+      title: tpl.title,
+      category: tpl.category,
+      text: tpl.text,
+    });
+  };
+
+  const handleSaveTemplate = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!templateForm.title.trim() || !templateForm.text.trim()) {
+      showToast('error', 'Por favor ingresa un título y el contenido de la plantilla.');
+      return;
+    }
+
+    if (editingTemplateId) {
+      updateWATemplate(editingTemplateId, templateForm);
+      showToast('success', 'Plantilla actualizada exitosamente.');
+    } else {
+      const created = addWATemplate(templateForm);
+      setSelectedWATemplateId(created.id);
+      showToast('success', 'Nueva plantilla creada exitosamente.');
+    }
+
+    setIsEditingTemplate(false);
+    setEditingTemplateId(null);
+  };
+
+  const handleDeleteTemplate = (id: string, title: string) => {
+    if (!window.confirm(`¿Estás seguro de eliminar la plantilla "${title}"?`)) return;
+    deleteWATemplate(id);
+    showToast('success', 'Plantilla eliminada.');
+    if (selectedWATemplateId === id && waTemplates.length > 1) {
+      const next = waTemplates.find((t) => t.id !== id);
+      if (next) setSelectedWATemplateId(next.id);
+    }
+  };
+
+  const handleResetTemplates = () => {
+    if (!window.confirm('¿Restablecer todas las plantillas a las versiones originales de fábrica?')) return;
+    resetWATemplates();
+    showToast('success', 'Plantillas restablecidas a valores predeterminados.');
+  };
+
+  // -------------------------------------------------------------
   // FILTERING LOGIC
   // -------------------------------------------------------------
   const filteredWorkshops = adminWorkshops.filter((w) => {
@@ -306,6 +491,16 @@ export const SuperAdminWorkshopsPage: React.FC = () => {
             style={{ width: '40px', height: '40px' }}
           >
             <RefreshCw size={18} className={isRefreshing ? 'animate-spin' : ''} />
+          </button>
+
+          <button
+            className="saas-btn-secondary"
+            onClick={() => setShowTemplateManagerModal(true)}
+            title="Administrar y personalizar plantillas de WhatsApp para soporte"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+          >
+            <FileText size={17} color="#25D366" />
+            <span>Plantillas WhatsApp</span>
           </button>
 
           <button
@@ -431,7 +626,7 @@ export const SuperAdminWorkshopsPage: React.FC = () => {
                 <th>Días Restantes</th>
                 <th>Personal Creado</th>
                 <th>Estado Acceso</th>
-                <th>Acciones de Soporte</th>
+                <th style={{ textAlign: 'right' }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -447,10 +642,6 @@ export const SuperAdminWorkshopsPage: React.FC = () => {
                 </tr>
               ) : (
                 filteredWorkshops.map((w) => {
-                  const cleanPhone = (w.phone || '').replace(/\D/g, '');
-                  const waText = encodeURIComponent(
-                    `Hola ${w.ownerName}, te saluda Luark Padilla de soporte Rumilcarapp. Nos comunicamos en relación a la cuenta de tu taller ${w.workshopName}.`
-                  );
                   const isSuspended = w.status === 'SUSPENDED' || w.status === 'PAST_DUE';
 
                   return (
@@ -536,66 +727,126 @@ export const SuperAdminWorkshopsPage: React.FC = () => {
                         </span>
                       </td>
 
-                      <td>
-                        <div className="saas-table-actions">
-                          {/* WhatsApp */}
-                          {cleanPhone ? (
-                            <a
-                              href={`https://wa.me/${cleanPhone}?text=${waText}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="saas-icon-btn btn-wa"
-                              title="Escribir por WhatsApp al dueño"
-                            >
-                              <MessageCircle size={16} />
-                            </a>
-                          ) : null}
-
-                          {/* Reset Password */}
+                      <td style={{ textAlign: 'right' }}>
+                        <div className="saas-action-menu-wrapper">
                           <button
-                            className="saas-icon-btn btn-key"
-                            onClick={() => handleOpenPasswordModal(w)}
-                            title="Restablecer contraseña del dueño"
+                            type="button"
+                            className={`saas-action-trigger-btn ${activeMenuId === w.workshopId ? 'active' : ''}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveMenuId(activeMenuId === w.workshopId ? null : w.workshopId);
+                            }}
+                            title="Desplegar acciones de soporte para este taller"
                           >
-                            <Key size={16} />
+                            <SlidersHorizontal size={13} />
+                            <span>Acciones</span>
+                            <ChevronDown
+                              size={13}
+                              className={`chevron-icon ${activeMenuId === w.workshopId ? 'open' : ''}`}
+                            />
                           </button>
 
-                          {/* Toggle Suspend/Activate */}
-                          <button
-                            className={`saas-icon-btn ${isSuspended ? 'btn-success' : 'btn-danger'}`}
-                            onClick={() => handleToggleStatus(w)}
-                            title={isSuspended ? 'Reactivar acceso al software' : 'Suspender acceso'}
-                          >
-                            {isSuspended ? <Play size={15} /> : <Pause size={15} />}
-                          </button>
+                          {activeMenuId === w.workshopId && (
+                            <>
+                              <div
+                                className="saas-dropdown-overlay"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveMenuId(null);
+                                }}
+                              />
+                              <div
+                                className="saas-action-dropdown-menu"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {/* WhatsApp */}
+                                <button
+                                  type="button"
+                                  className="saas-dropdown-item wa-item"
+                                  onClick={() => {
+                                    setActiveMenuId(null);
+                                    handleOpenWhatsAppModal(w);
+                                  }}
+                                  title="Enviar mensaje de soporte por WhatsApp con plantilla"
+                                >
+                                  <MessageCircle size={15} color="#25D366" />
+                                  <span>Soporte WhatsApp</span>
+                                </button>
 
-                          {/* Edit Details */}
-                          <button
-                            className="saas-icon-btn"
-                            onClick={() => handleOpenEditModal(w)}
-                            title="Editar datos del taller"
-                          >
-                            <Edit size={16} />
-                          </button>
+                                {/* Reset Password */}
+                                <button
+                                  type="button"
+                                  className="saas-dropdown-item"
+                                  onClick={() => {
+                                    setActiveMenuId(null);
+                                    handleOpenPasswordModal(w);
+                                  }}
+                                  title="Restablecer clave maestra del dueño"
+                                >
+                                  <Key size={15} color="#f59e0b" />
+                                  <span>Restablecer Clave</span>
+                                </button>
 
-                          {/* Direct link to Membresías */}
-                          <button
-                            className="saas-icon-btn"
-                            onClick={() => navigate('/admin/membresias')}
-                            title="Gestionar pagos y membresía"
-                          >
-                            <ShieldCheck size={16} />
-                          </button>
+                                {/* Toggle Suspend/Activate */}
+                                <button
+                                  type="button"
+                                  className={`saas-dropdown-item ${isSuspended ? 'success-item' : 'danger-item'}`}
+                                  onClick={() => {
+                                    setActiveMenuId(null);
+                                    handleToggleStatus(w);
+                                  }}
+                                  title={isSuspended ? 'Reactivar acceso al software' : 'Suspender acceso'}
+                                >
+                                  {isSuspended ? <Play size={15} color="#10b981" /> : <Pause size={15} color="#ef4444" />}
+                                  <span>{isSuspended ? 'Reactivar Acceso' : 'Suspender Acceso'}</span>
+                                </button>
 
-                          {/* Modo Ver como Taller (Impersonation) */}
-                          <button
-                            className="saas-icon-btn"
-                            onClick={() => handleImpersonate(w)}
-                            title="👁️ Entrar al software como este Taller (Supervisión)"
-                            style={{ color: '#0ea5e9', borderColor: 'rgba(14, 165, 233, 0.4)', background: 'rgba(14, 165, 233, 0.1)' }}
-                          >
-                            <Eye size={16} />
-                          </button>
+                                {/* Edit Details */}
+                                <button
+                                  type="button"
+                                  className="saas-dropdown-item"
+                                  onClick={() => {
+                                    setActiveMenuId(null);
+                                    handleOpenEditModal(w);
+                                  }}
+                                  title="Editar datos del taller"
+                                >
+                                  <Edit size={15} color="#60a5fa" />
+                                  <span>Editar Datos</span>
+                                </button>
+
+                                {/* Direct link to Membresías */}
+                                <button
+                                  type="button"
+                                  className="saas-dropdown-item"
+                                  onClick={() => {
+                                    setActiveMenuId(null);
+                                    navigate('/admin/membresias');
+                                  }}
+                                  title="Gestionar pagos y membresía"
+                                >
+                                  <ShieldCheck size={15} color="#a855f7" />
+                                  <span>Membresías y Pagos</span>
+                                </button>
+
+                                <div className="saas-dropdown-divider" />
+
+                                {/* Modo Ver como Taller (Impersonation) */}
+                                <button
+                                  type="button"
+                                  className="saas-dropdown-item impersonate-item"
+                                  onClick={() => {
+                                    setActiveMenuId(null);
+                                    handleImpersonate(w);
+                                  }}
+                                  title="Entrar al software como este Taller (Supervisión)"
+                                >
+                                  <Eye size={15} color="#0ea5e9" />
+                                  <span>Supervisar Taller</span>
+                                </button>
+                              </div>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -904,6 +1155,357 @@ export const SuperAdminWorkshopsPage: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 4: SOPORTE WHATSAPP CON SELECCIÓN DE PLANTILLA */}
+      {showWhatsAppModal && selectedWorkshop && (
+        <div className="saas-modal-backdrop">
+          <div className="saas-wa-modal-card">
+            <div className="saas-modal-header">
+              <h3 className="saas-modal-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <MessageCircle size={22} color="#25D366" />
+                <span>Soporte WhatsApp para Taller</span>
+              </h3>
+              <button
+                className="saas-modal-close-btn"
+                onClick={() => setShowWhatsAppModal(false)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="saas-modal-body">
+              {/* Workshop Summary Badge */}
+              <div className="saas-wa-workshop-badge">
+                <div className="saas-wa-workshop-info">
+                  <div className="saas-wa-workshop-title">{selectedWorkshop.workshopName}</div>
+                  <div className="saas-wa-workshop-meta">
+                    Dueño: <strong style={{ color: '#ffffff' }}>{selectedWorkshop.ownerName}</strong>
+                    {selectedWorkshop.phone ? (
+                      <> · Tel: <strong style={{ color: '#25D366' }}>{selectedWorkshop.phone}</strong></>
+                    ) : (
+                      <> · <span style={{ color: '#ef4444' }}>Sin teléfono registrado</span></>
+                    )}
+                    <> · Plan: <strong>{selectedWorkshop.plan}</strong> ({selectedWorkshop.daysRemaining} días restantes)</>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  className="saas-wa-manage-btn"
+                  onClick={() => setShowTemplateManagerModal(true)}
+                  title="Crear, editar o eliminar plantillas de soporte"
+                >
+                  <FileText size={14} />
+                  <span>Gestionar Plantillas</span>
+                </button>
+              </div>
+
+              {/* Template Selector */}
+              <div className="saas-wa-template-selector-box">
+                <div className="saas-wa-selector-header">
+                  <label className="saas-wa-selector-label">Seleccionar Plantilla de Soporte</label>
+                  <span style={{ fontSize: '11px', color: '#a1a1aa' }}>
+                    {waTemplates.length} plantilla(s) disponible(s)
+                  </span>
+                </div>
+                <select
+                  value={selectedWATemplateId}
+                  onChange={(e) => handleSelectTemplate(e.target.value)}
+                  className="saas-form-input"
+                  style={{ width: '100%', cursor: 'pointer', background: '#27272a' }}
+                >
+                  {waTemplates.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      [{t.category}] {t.title}
+                    </option>
+                  ))}
+                  <option value="custom">✏️ Mensaje Libre / Personalizado</option>
+                </select>
+              </div>
+
+              {/* Message Content Textarea */}
+              <div className="saas-form-group">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label className="saas-form-label" style={{ margin: 0 }}>
+                    Mensaje a Enviar (Personalizable en tiempo real)
+                  </label>
+                  <span style={{ fontSize: '11px', color: '#71717a' }}>
+                    {customWhatsAppText.length} caracteres
+                  </span>
+                </div>
+                <textarea
+                  value={customWhatsAppText}
+                  onChange={(e) => setCustomWhatsAppText(e.target.value)}
+                  className="saas-wa-textarea"
+                  placeholder="Escribe o personaliza el mensaje de soporte..."
+                  rows={7}
+                />
+
+                {/* Variable Tags Help */}
+                <div className="saas-wa-variables-hint">
+                  <span style={{ fontSize: '11px', color: '#71717a' }}>Insertar variables:</span>
+                  {[
+                    '{nombre_dueno}',
+                    '{nombre_taller}',
+                    '{dias_restantes}',
+                    '{plan}',
+                    '{email}',
+                  ].map((v) => (
+                    <button
+                      key={v}
+                      type="button"
+                      className="saas-wa-var-tag"
+                      onClick={() => handleInsertVariable(v)}
+                      title={`Insertar ${v} al texto`}
+                    >
+                      +{v}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="saas-modal-footer" style={{ justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={handleCopyWhatsApp}
+                  className="saas-btn-secondary"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                >
+                  {copiedWhatsApp ? <Check size={16} color="#10b981" /> : <Copy size={16} />}
+                  <span>{copiedWhatsApp ? '¡Copiado!' : 'Copiar Texto'}</span>
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  type="button"
+                  className="saas-btn-secondary"
+                  onClick={() => setShowWhatsAppModal(false)}
+                >
+                  Cerrar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSendWhatsApp(false)}
+                  className="saas-btn-wa"
+                  title="Abrir en WhatsApp"
+                >
+                  <MessageCircle size={16} />
+                  <span>Enviar por WhatsApp</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 5: GESTIÓN Y EDICIÓN DE PLANTILLAS WHATSAPP */}
+      {showTemplateManagerModal && (
+        <div className="saas-modal-backdrop">
+          <div className="saas-tpl-modal-card">
+            <div className="saas-modal-header">
+              <h3 className="saas-modal-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <FileText size={20} color="#25D366" />
+                <span>Gestor de Plantillas de WhatsApp (Soporte)</span>
+              </h3>
+              <button
+                className="saas-modal-close-btn"
+                onClick={() => {
+                  setShowTemplateManagerModal(false);
+                  setIsEditingTemplate(false);
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="saas-modal-body">
+              {!isEditingTemplate ? (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                    <p style={{ margin: 0, fontSize: '13px', color: '#a1a1aa' }}>
+                      Crea y personaliza las plantillas de mensaje para comunicarte con los dueños de talleres por WhatsApp.
+                    </p>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        type="button"
+                        onClick={handleResetTemplates}
+                        className="saas-btn-secondary"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', padding: '6px 10px' }}
+                        title="Restablecer plantillas predeterminadas"
+                      >
+                        <RotateCcw size={14} />
+                        <span>Restablecer</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleOpenNewTemplate}
+                        className="saas-btn-primary"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', padding: '6px 12px', background: '#25D366' }}
+                      >
+                        <Plus size={14} />
+                        <span>Nueva Plantilla</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="saas-tpl-list">
+                    {waTemplates.map((tpl) => (
+                      <div key={tpl.id} className="saas-tpl-item">
+                        <div className="saas-tpl-item-top">
+                          <div className="saas-tpl-item-title">
+                            <span>{tpl.title}</span>
+                            <span className={`saas-tpl-badge ${tpl.category}`}>{tpl.category}</span>
+                            {tpl.isDefault && (
+                              <span style={{ fontSize: '10px', color: '#71717a' }}>(Predeterminada)</span>
+                            )}
+                          </div>
+                          <div className="saas-tpl-item-actions">
+                            <button
+                              type="button"
+                              className="saas-tpl-action-btn"
+                              onClick={() => handleEditTemplate(tpl)}
+                              title="Editar plantilla"
+                            >
+                              <Edit size={14} />
+                            </button>
+                            {!tpl.isDefault && (
+                              <button
+                                type="button"
+                                className="saas-tpl-action-btn delete-btn"
+                                onClick={() => handleDeleteTemplate(tpl.id, tpl.title)}
+                                title="Eliminar plantilla"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        <div className="saas-tpl-item-preview">
+                          {tpl.text}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <form onSubmit={handleSaveTemplate}>
+                  <div style={{ marginBottom: '14px', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '10px' }}>
+                    <h4 style={{ margin: 0, fontSize: '14px', color: '#ffffff' }}>
+                      {editingTemplateId ? 'Editar Plantilla de WhatsApp' : 'Crear Nueva Plantilla de WhatsApp'}
+                    </h4>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px' }}>
+                    <div className="saas-form-group">
+                      <label className="saas-form-label">Título de la Plantilla *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Ej. Recordatorio de Prueba 3 días"
+                        value={templateForm.title}
+                        onChange={(e) => setTemplateForm({ ...templateForm, title: e.target.value })}
+                        className="saas-form-input"
+                      />
+                    </div>
+
+                    <div className="saas-form-group">
+                      <label className="saas-form-label">Categoría</label>
+                      <select
+                        value={templateForm.category}
+                        onChange={(e) =>
+                          setTemplateForm({
+                            ...templateForm,
+                            category: e.target.value as SuperAdminWATemplate['category'],
+                          })
+                        }
+                        className="saas-form-input"
+                        style={{ cursor: 'pointer', background: '#27272a' }}
+                      >
+                        <option value="BIENVENIDA">Bienvenida</option>
+                        <option value="VENCIMIENTO">Vencimiento</option>
+                        <option value="SOPORTE">Soporte</option>
+                        <option value="PAGO">Pago</option>
+                        <option value="PROMOCION">Promoción</option>
+                        <option value="GENERAL">General</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="saas-form-group">
+                    <label className="saas-form-label">Contenido del Mensaje *</label>
+                    <textarea
+                      required
+                      rows={8}
+                      placeholder="Escribe el texto de la plantilla. Usa variables entre llaves..."
+                      value={templateForm.text}
+                      onChange={(e) => setTemplateForm({ ...templateForm, text: e.target.value })}
+                      className="saas-wa-textarea"
+                    />
+                    <div className="saas-wa-variables-hint">
+                      <span style={{ fontSize: '11px', color: '#71717a' }}>Insertar variables disponibles:</span>
+                      {[
+                        '{nombre_dueno}',
+                        '{nombre_taller}',
+                        '{dias_restantes}',
+                        '{plan}',
+                        '{email}',
+                        '{telefono}',
+                      ].map((v) => (
+                        <button
+                          key={v}
+                          type="button"
+                          className="saas-wa-var-tag"
+                          onClick={() =>
+                            setTemplateForm((prev) => ({
+                              ...prev,
+                              text: prev.text + (prev.text.endsWith(' ') || prev.text.endsWith('\n') ? '' : ' ') + v,
+                            }))
+                          }
+                        >
+                          +{v}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="saas-modal-footer" style={{ padding: '12px 0 0 0', background: 'transparent', borderTop: 'none' }}>
+                    <button
+                      type="button"
+                      className="saas-btn-secondary"
+                      onClick={() => setIsEditingTemplate(false)}
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      className="saas-btn-primary"
+                      style={{ background: '#25D366' }}
+                    >
+                      <span>{editingTemplateId ? 'Guardar Cambios' : 'Crear Plantilla'}</span>
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+
+            <div className="saas-modal-footer">
+              <button
+                type="button"
+                className="saas-btn-secondary"
+                onClick={() => {
+                  setShowTemplateManagerModal(false);
+                  setIsEditingTemplate(false);
+                }}
+              >
+                Cerrar
+              </button>
+            </div>
           </div>
         </div>
       )}
