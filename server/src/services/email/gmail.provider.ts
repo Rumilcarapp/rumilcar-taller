@@ -22,18 +22,32 @@ export class GmailEmailProvider implements IEmailProvider {
     this.from = process.env.MAIL_FROM?.trim() || `Rumilcar App <${this.user || 'soporte@rumilcar.com'}>`;
 
     if (this.isConfigured()) {
-      this.transporter = nodemailer.createTransport({
-        host: this.host,
-        port: this.port,
-        secure: this.secure, // true for 465, false for 587
-        auth: {
-          user: this.user,
-          pass: this.password,
-        },
-        connectionTimeout: 10000,
-        greetingTimeout: 10000,
-        socketTimeout: 15000,
-      });
+      // Use 'service: gmail' which handles cloud egress and ports automatically (bypassing cloud 465 blocks)
+      if (this.host === 'smtp.gmail.com' || this.user?.endsWith('@gmail.com')) {
+        this.transporter = nodemailer.createTransport({
+          service: 'gmail',
+          auth: {
+            user: this.user,
+            pass: this.password,
+          },
+          connectionTimeout: 15000,
+          greetingTimeout: 15000,
+          socketTimeout: 20000,
+        });
+      } else {
+        this.transporter = nodemailer.createTransport({
+          host: this.host,
+          port: this.port,
+          secure: this.secure,
+          auth: {
+            user: this.user,
+            pass: this.password,
+          },
+          connectionTimeout: 15000,
+          greetingTimeout: 15000,
+          socketTimeout: 20000,
+        });
+      }
     }
   }
 
@@ -53,10 +67,28 @@ export class GmailEmailProvider implements IEmailProvider {
       await this.transporter.verify();
       return { success: true };
     } catch (err: any) {
-      return {
-        success: false,
-        error: err.message || 'Error al conectar con el servidor SMTP de Gmail',
-      };
+      // Try fallback to port 587 STARTTLS
+      try {
+        const fallback = nodemailer.createTransport({
+          host: 'smtp.gmail.com',
+          port: 587,
+          secure: false,
+          requireTLS: true,
+          auth: {
+            user: this.user,
+            pass: this.password,
+          },
+          connectionTimeout: 10000,
+        });
+        await fallback.verify();
+        this.transporter = fallback;
+        return { success: true };
+      } catch (fallbackErr: any) {
+        return {
+          success: false,
+          error: fallbackErr.message || err.message || 'Error al conectar con el servidor SMTP de Gmail',
+        };
+      }
     }
   }
 
@@ -91,13 +123,44 @@ export class GmailEmailProvider implements IEmailProvider {
         messageId: info.messageId,
       };
     } catch (err: any) {
-      const errorMsg = err.message || 'Error desconocido al enviar correo vía Gmail SMTP';
-      console.error(`[EMAIL SMTP ERROR] Falló el envío a ${options.to}: ${errorMsg}`);
-      return {
-        success: false,
-        provider: this.name,
-        error: errorMsg,
-      };
+      console.warn(`[EMAIL WARN] Falló envío primario (${err.message}). Intentando fallback con puerto 587 STARTTLS...`);
+      try {
+        const fallbackTransporter = nodemailer.createTransport({
+          host: 'smtp.gmail.com',
+          port: 587,
+          secure: false,
+          requireTLS: true,
+          auth: {
+            user: this.user,
+            pass: this.password,
+          },
+          connectionTimeout: 15000,
+        });
+
+        const fallbackInfo = await fallbackTransporter.sendMail({
+          from: this.from,
+          to: options.to,
+          subject: options.subject,
+          text: options.text,
+          html: options.html,
+        });
+
+        console.log(`[EMAIL SUCCESS (FALLBACK)] Correo enviado a ${options.to} (ID: ${fallbackInfo.messageId})`);
+
+        return {
+          success: true,
+          provider: this.name,
+          messageId: fallbackInfo.messageId,
+        };
+      } catch (fallbackErr: any) {
+        const errorMsg = fallbackErr.message || err.message || 'Error desconocido al enviar correo vía Gmail SMTP';
+        console.error(`[EMAIL SMTP ERROR] Falló el envío a ${options.to}: ${errorMsg}`);
+        return {
+          success: false,
+          provider: this.name,
+          error: errorMsg,
+        };
+      }
     }
   }
 }

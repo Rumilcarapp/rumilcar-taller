@@ -343,7 +343,10 @@ export const LoginPage: React.FC = () => {
       });
       const data = await res.json();
       if (!res.ok) {
-        setForgotError(data.error || 'No se pudo procesar la solicitud de recuperación.');
+        const msg = data.details
+          ? `${data.error}: ${data.details}`
+          : data.error || 'No se pudo procesar la solicitud de recuperación.';
+        setForgotError(msg);
         setForgotLoading(false);
         return;
       }
