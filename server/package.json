@@ -22,11 +22,13 @@
     "express": "^5.1.0",
     "express-rate-limit": "^8.7.0",
     "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^10.0.10",
     "prisma": "^6.9.0",
     "typescript": "~5.8.0",
     "zod": "^3.24.0"
   },
   "devDependencies": {
+    "@types/nodemailer": "^8.0.2",
     "tsx": "^4.19.0"
   },
   "allowScripts": {}

@@ -1,4 +1,4 @@
-﻿services:
+services:
   - type: web
     name: rumilcar-api
     env: node
@@ -16,3 +16,24 @@
         generateValue: true
       - key: CORS_ORIGIN
         value: "*"
+      - key: EMAIL_PROVIDER
+        value: gmail
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: 465
+      - key: SMTP_SECURE
+        value: "true"
+      - key: SMTP_USER
+        value: redesmultiserviciosrumilcar@gmail.com
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: MAIL_FROM
+        value: "Rumilcar App <redesmultiserviciosrumilcar@gmail.com>"
+      - key: FRONTEND_URL
+        value: https://rumilcarapp.vercel.app
+      - key: PASSWORD_RESET_EXPIRES_MINUTES
+        value: 15
+      - key: PASSWORD_RESET_RATE_LIMIT_SECONDS
+        value: 60
+

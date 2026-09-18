@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Button, Input, Modal } from '../../components/ui';
 import { useAuthStore } from '../../stores/authStore';
 import { useUserManagementStore } from '../../store/useUserManagementStore';
@@ -31,6 +31,7 @@ import './LoginPage.css';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const login = useAuthStore((s) => s.login);
   const { users, addUser, addAuditLog } = useUserManagementStore();
   const { isLight, toggleTheme } = useThemeStore();
@@ -51,53 +52,48 @@ export const LoginPage: React.FC = () => {
   const [regConfirmPassword, setRegConfirmPassword] = useState('');
   const [showRegPass, setShowRegPass] = useState(false);
 
-  // WhatsApp Forgot Password modal state
+  // Email Forgot Password modal state
   const [showForgotModal, setShowForgotModal] = useState(false);
-  const [forgotIdentifier, setForgotIdentifier] = useState('');
-  const [forgotStep, setForgotStep] = useState<'request' | 'verify' | 'reset'>('request');
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotStep, setForgotStep] = useState<'request' | 'sent'>('request');
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotError, setForgotError] = useState('');
-  const [forgotData, setForgotData] = useState<any>(null);
-  const [forgotOtp, setForgotOtp] = useState('');
-  const [forgotResetToken, setForgotResetToken] = useState('');
-  const [forgotNewPassword, setForgotNewPassword] = useState('');
-  const [forgotConfirmPassword, setForgotConfirmPassword] = useState('');
-  const [showForgotPass, setShowForgotPass] = useState(false);
-  const [expireTimer, setExpireTimer] = useState(900);
-  const [resendCooldown, setResendCooldown] = useState(60);
+  const [forgotSuccessMsg, setForgotSuccessMsg] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
 
-  // Recovery countdown timers (15m expiry, 60s resend)
+  // Recovery countdown timer (60s resend)
   useEffect(() => {
     let interval: any = null;
-    if (showForgotModal && forgotStep === 'verify') {
+    if (resendCooldown > 0) {
       interval = setInterval(() => {
-        setExpireTimer((prev) => (prev > 0 ? prev - 1 : 0));
         setResendCooldown((prev) => (prev > 0 ? prev - 1 : 0));
       }, 1000);
     }
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [showForgotModal, forgotStep]);
+  }, [resendCooldown]);
 
   const handleCloseForgotModal = () => {
     setShowForgotModal(false);
-    setForgotIdentifier('');
+    setForgotEmail('');
     setForgotStep('request');
     setForgotLoading(false);
     setForgotError('');
-    setForgotData(null);
-    setForgotOtp('');
-    setForgotResetToken('');
-    setForgotNewPassword('');
-    setForgotConfirmPassword('');
-    setExpireTimer(900);
-    setResendCooldown(60);
+    setForgotSuccessMsg('');
+    setResendCooldown(0);
   };
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  // Check for success message passed from ResetPasswordPage navigation
+  useEffect(() => {
+    if (location.state?.successMessage) {
+      setSuccessMsg(location.state.successMessage);
+    }
+  }, [location.state]);
 
   const handleLoginUser = (userToLogin: any, token?: string) => {
     const userWorkshop = userToLogin.workshopName || 'Multiservicios Rumilcar';
@@ -328,12 +324,12 @@ export const LoginPage: React.FC = () => {
     }, 700);
   };
 
-  const handleRequestOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleRequestResetLink = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setForgotError('');
-    const clean = forgotIdentifier.trim().toLowerCase();
-    if (!clean) {
-      setForgotError('Por favor ingresa tu correo electrónico o teléfono registrado.');
+    const cleanEmail = forgotEmail.trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      setForgotError('Por favor ingresa una dirección de correo electrónico válida.');
       return;
     }
     setForgotLoading(true);
@@ -343,7 +339,7 @@ export const LoginPage: React.FC = () => {
       const res = await fetch(`${apiUrl}/auth/forgot-password/request`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ emailOrPhone: clean }),
+        body: JSON.stringify({ email: cleanEmail }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -352,119 +348,12 @@ export const LoginPage: React.FC = () => {
         return;
       }
 
-      setForgotData(data);
-      setExpireTimer(data.expiresInSeconds || 900);
-      setResendCooldown(60);
-      setForgotStep('verify');
-      setForgotLoading(false);
-    } catch {
-      setForgotError('Error de conexión con el servidor. Verifica tu internet.');
-      setForgotLoading(false);
-    }
-  };
-
-  const handleResendOtp = async () => {
-    if (resendCooldown > 0 || forgotLoading) return;
-    setForgotError('');
-    setForgotLoading(true);
-
-    try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://rumilcar-taller.onrender.com/api';
-      const res = await fetch(`${apiUrl}/auth/forgot-password/resend`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ emailOrPhone: forgotIdentifier.trim().toLowerCase() }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setForgotError(data.error || 'No se pudo reenviar el código.');
-        setForgotLoading(false);
-        return;
-      }
-
-      setForgotData(data);
-      setExpireTimer(900);
+      setForgotSuccessMsg(data.message || 'Si los datos corresponden a una cuenta activa, recibirás un enlace de recuperación en tu correo.');
+      setForgotStep('sent');
       setResendCooldown(60);
       setForgotLoading(false);
     } catch {
-      setForgotError('Error de conexión al reenviar el código.');
-      setForgotLoading(false);
-    }
-  };
-
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setForgotError('');
-    const cleanOtp = forgotOtp.trim();
-    if (!cleanOtp || cleanOtp.length !== 6) {
-      setForgotError('Ingresa el código de seguridad de 6 dígitos.');
-      return;
-    }
-
-    setForgotLoading(true);
-    try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://rumilcar-taller.onrender.com/api';
-      const res = await fetch(`${apiUrl}/auth/forgot-password/verify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          emailOrPhone: forgotIdentifier.trim().toLowerCase(),
-          otp: cleanOtp,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setForgotError(data.error || 'Código incorrecto o expirado.');
-        setForgotLoading(false);
-        return;
-      }
-
-      setForgotResetToken(data.resetToken);
-      setForgotStep('reset');
-      setForgotLoading(false);
-    } catch {
-      setForgotError('Error de conexión al verificar el código.');
-      setForgotLoading(false);
-    }
-  };
-
-  const handleResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setForgotError('');
-    if (forgotNewPassword.length < 6) {
-      setForgotError('La nueva contraseña debe tener al menos 6 caracteres.');
-      return;
-    }
-    if (forgotNewPassword !== forgotConfirmPassword) {
-      setForgotError('Las contraseñas no coinciden. Por favor verifícalas.');
-      return;
-    }
-
-    setForgotLoading(true);
-    try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://rumilcar-taller.onrender.com/api';
-      const res = await fetch(`${apiUrl}/auth/forgot-password/reset`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          resetToken: forgotResetToken,
-          newPassword: forgotNewPassword,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setForgotError(data.error || 'No se pudo actualizar la contraseña.');
-        setForgotLoading(false);
-        return;
-      }
-
-      // Success! Clean all sensitive state and close modal
-      handleCloseForgotModal();
-      setEmail(forgotIdentifier.trim().toLowerCase());
-      setPassword('');
-      setSuccessMsg('¡Contraseña restablecida con éxito! Todas las sesiones previas fueron revocadas. Inicia sesión con tu nueva contraseña.');
-    } catch {
-      setForgotError('Error al restablecer la contraseña. Verifica tu conexión.');
+      setForgotError('Error de conexión con el servidor. Verifica tu conexión a internet.');
       setForgotLoading(false);
     }
   };
@@ -573,19 +462,16 @@ export const LoginPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => {
-                  setForgotIdentifier(email || '');
+                  setForgotEmail(email || '');
                   setForgotStep('request');
                   setForgotError('');
-                  setForgotOtp('');
-                  setForgotNewPassword('');
-                  setForgotConfirmPassword('');
-                  setForgotData(null);
+                  setForgotSuccessMsg('');
                   setShowForgotModal(true);
                 }}
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: '#22c55e',
+                  color: 'var(--color-primary)',
                   fontSize: '13px',
                   fontWeight: 600,
                   cursor: 'pointer',
@@ -595,8 +481,8 @@ export const LoginPage: React.FC = () => {
                   padding: '2px 0',
                 }}
               >
-                <MessageSquare size={14} />
-                <span>¿Olvidaste tu contraseña? Recupérala vía WhatsApp</span>
+                <Mail size={14} />
+                <span>¿Olvidaste tu contraseña? Recupérala por correo</span>
               </button>
             </div>
 
@@ -751,51 +637,48 @@ export const LoginPage: React.FC = () => {
         )}
       </div>
 
-      {/* WhatsApp Password Recovery Modal */}
+      {/* Email Password Recovery Modal */}
       {showForgotModal && (
         <Modal
           isOpen={showForgotModal}
           onClose={handleCloseForgotModal}
-          title={
-            forgotStep === 'request'
-              ? 'Recuperar Contraseña vía WhatsApp'
-              : forgotStep === 'verify'
-              ? 'Verificar Código de Seguridad'
-              : 'Establecer Nueva Contraseña'
-          }
+          title="Recuperar Contraseña por Correo"
           size="md"
         >
           <div style={{ padding: '8px 0' }}>
-            {/* STEP 1: REQUEST */}
-            {forgotStep === 'request' && (
-              <form onSubmit={handleRequestOtp} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{
-                  background: 'rgba(34, 197, 94, 0.08)',
-                  border: '1px solid rgba(34, 197, 94, 0.25)',
-                  borderRadius: '8px',
-                  padding: '14px',
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '12px',
-                }}>
-                  <div style={{
-                    background: '#22c55e',
-                    color: '#fff',
-                    borderRadius: '50%',
-                    width: '32px',
-                    height: '32px',
+            {forgotStep === 'request' ? (
+              <form onSubmit={handleRequestResetLink} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div
+                  style={{
+                    background: 'rgba(59, 130, 246, 0.08)',
+                    border: '1px solid rgba(59, 130, 246, 0.25)',
+                    borderRadius: '8px',
+                    padding: '14px',
                     display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                    marginTop: '2px',
-                  }}>
-                    <MessageSquare size={18} />
+                    alignItems: 'flex-start',
+                    gap: '12px',
+                  }}
+                >
+                  <div
+                    style={{
+                      background: 'var(--color-primary, #dc2626)',
+                      color: '#fff',
+                      borderRadius: '50%',
+                      width: '34px',
+                      height: '34px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                      marginTop: '2px',
+                    }}
+                  >
+                    <Mail size={18} />
                   </div>
                   <div style={{ fontSize: '13px', lineHeight: 1.5, color: 'var(--color-text-primary)' }}>
-                    <strong>Protocolo Oficial de Seguridad:</strong>
+                    <strong>Protocolo Oficial de Recuperación:</strong>
                     <p style={{ margin: '4px 0 0 0', color: 'var(--color-text-secondary)' }}>
-                      Te enviaremos un código al número de WhatsApp registrado en tu cuenta. Por seguridad, no podemos mostrar ni modificar el número desde aquí.
+                      Ingresa tu correo electrónico registrado. Te enviaremos un enlace seguro para restablecer tu contraseña.
                     </p>
                   </div>
                 </div>
@@ -803,211 +686,12 @@ export const LoginPage: React.FC = () => {
                 {forgotError && <div className="login-error" style={{ marginBottom: 0 }}>{forgotError}</div>}
 
                 <Input
-                  label="Correo Electrónico o Teléfono Registrado"
-                  type="text"
-                  value={forgotIdentifier}
-                  onChange={(e) => setForgotIdentifier(e.target.value)}
+                  label="Correo Electrónico Registrado"
+                  type="email"
+                  value={forgotEmail}
+                  onChange={(e) => setForgotEmail(e.target.value)}
                   icon={<Mail size={16} />}
-                  placeholder="Ej: usuario@taller.com o 04141234567"
-                  required
-                />
-
-                <Button
-                  type="submit"
-                  fullWidth
-                  loading={forgotLoading}
-                  disabled={forgotLoading || !forgotIdentifier.trim()}
-                  size="lg"
-                  style={{
-                    backgroundColor: '#22c55e',
-                    borderColor: '#22c55e',
-                    color: '#ffffff',
-                    fontWeight: 700,
-                  }}
-                  icon={<MessageSquare size={18} />}
-                >
-                  Enviar Código por WhatsApp
-                </Button>
-              </form>
-            )}
-
-            {/* STEP 2: VERIFY OTP */}
-            {forgotStep === 'verify' && (
-              <form onSubmit={handleVerifyOtp} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{
-                  background: 'rgba(34, 197, 94, 0.06)',
-                  border: '1px solid rgba(34, 197, 94, 0.3)',
-                  borderRadius: '10px',
-                  padding: '16px',
-                  textAlign: 'center',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '8px',
-                }}>
-                  <div style={{
-                    width: '44px',
-                    height: '44px',
-                    borderRadius: '50%',
-                    background: 'rgba(34, 197, 94, 0.15)',
-                    border: '1px solid #22c55e',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#22c55e',
-                  }}>
-                    <ShieldCheck size={24} />
-                  </div>
-
-                  <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-text-primary)' }}>
-                    Código Despachado por WhatsApp
-                  </div>
-
-                  {forgotData?.phoneMasked && (
-                    <div style={{ fontSize: '13px', color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>
-                      Enviado al WhatsApp verificado:{' '}
-                      <strong style={{ color: '#22c55e', fontWeight: 700 }}>{forgotData.phoneMasked}</strong>
-                    </div>
-                  )}
-
-                  <div style={{
-                    background: 'rgba(59, 130, 246, 0.08)',
-                    border: '1px dashed rgba(59, 130, 246, 0.35)',
-                    borderRadius: '6px',
-                    padding: '8px 12px',
-                    fontSize: '12px',
-                    color: 'var(--color-text-secondary)',
-                    lineHeight: 1.4,
-                  }}>
-                    🔒 <strong>Por estricta seguridad:</strong> El código no se muestra en esta pantalla. Revisa el mensaje enviado a tu aplicación de WhatsApp.
-                  </div>
-
-                  {/* Expiration Countdown */}
-                  <div style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    fontSize: '12px',
-                    color: expireTimer > 60 ? 'var(--color-text-secondary)' : '#ef4444',
-                    fontWeight: 600,
-                    marginTop: '4px',
-                  }}>
-                    <Clock size={14} />
-                    <span>El código expira en: {Math.floor(expireTimer / 60)}:{(expireTimer % 60).toString().padStart(2, '0')}</span>
-                  </div>
-                </div>
-
-                {forgotError && <div className="login-error" style={{ marginBottom: 0 }}>{forgotError}</div>}
-
-                <Input
-                  label="Código de Seguridad (6 dígitos)"
-                  type="text"
-                  maxLength={6}
-                  value={forgotOtp}
-                  onChange={(e) => setForgotOtp(e.target.value.replace(/\D/g, ''))}
-                  icon={<KeyRound size={16} />}
-                  placeholder="Ingresa los 6 dígitos numéricos"
-                  required
-                />
-
-                {/* Resend button with cooldown */}
-                <div style={{ display: 'flex', justifyContent: 'center' }}>
-                  {resendCooldown > 0 ? (
-                    <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
-                      Podrás reenviar un nuevo código en <strong>{resendCooldown}s</strong>
-                    </span>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={handleResendOtp}
-                      disabled={forgotLoading}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#22c55e',
-                        fontSize: '13px',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        textDecoration: 'underline',
-                      }}
-                    >
-                      <RefreshCw size={14} />
-                      <span>Reenviar código de verificación</span>
-                    </button>
-                  )}
-                </div>
-
-                <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setForgotStep('request')}
-                    icon={<ArrowLeft size={16} />}
-                    disabled={forgotLoading}
-                  >
-                    Atrás
-                  </Button>
-                  <Button
-                    type="submit"
-                    variant="primary"
-                    fullWidth
-                    loading={forgotLoading}
-                    disabled={forgotLoading || forgotOtp.length !== 6}
-                    size="lg"
-                  >
-                    Verificar Código
-                  </Button>
-                </div>
-              </form>
-            )}
-
-            {/* STEP 3: NEW PASSWORD */}
-            {forgotStep === 'reset' && (
-              <form onSubmit={handleResetPassword} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{
-                  background: 'rgba(59, 130, 246, 0.08)',
-                  border: '1px solid rgba(59, 130, 246, 0.25)',
-                  borderRadius: '8px',
-                  padding: '12px 14px',
-                  fontSize: '13px',
-                  color: 'var(--color-text-secondary)',
-                  lineHeight: 1.5,
-                }}>
-                  ✓ <strong>Identidad verificada con éxito.</strong> Ingresa tu nueva contraseña para acceder al sistema.
-                </div>
-
-                {forgotError && <div className="login-error" style={{ marginBottom: 0 }}>{forgotError}</div>}
-
-                <Input
-                  label="Nueva Contraseña (mínimo 6 caracteres)"
-                  type={showForgotPass ? 'text' : 'password'}
-                  value={forgotNewPassword}
-                  onChange={(e) => setForgotNewPassword(e.target.value)}
-                  icon={<Lock size={16} />}
-                  placeholder="Tu nueva contraseña segura"
-                  required
-                  suffix={
-                    <button
-                      type="button"
-                      className="pass-toggle"
-                      onClick={() => setShowForgotPass(!showForgotPass)}
-                      tabIndex={-1}
-                    >
-                      {showForgotPass ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
-                  }
-                />
-
-                <Input
-                  label="Confirmar Nueva Contraseña"
-                  type={showForgotPass ? 'text' : 'password'}
-                  value={forgotConfirmPassword}
-                  onChange={(e) => setForgotConfirmPassword(e.target.value)}
-                  icon={<Lock size={16} />}
-                  placeholder="Repite tu nueva contraseña"
+                  placeholder="usuario@taller.com"
                   required
                 />
 
@@ -1016,12 +700,103 @@ export const LoginPage: React.FC = () => {
                   variant="primary"
                   fullWidth
                   loading={forgotLoading}
-                  disabled={forgotLoading || forgotNewPassword.length < 6 || forgotNewPassword !== forgotConfirmPassword}
+                  disabled={forgotLoading || !forgotEmail.trim()}
                   size="lg"
+                  icon={<Mail size={18} />}
                 >
-                  Guardar Contraseña e Iniciar Sesión
+                  Enviar Enlace de Recuperación
                 </Button>
               </form>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', textAlign: 'center' }}>
+                <div
+                  style={{
+                    width: '56px',
+                    height: '56px',
+                    borderRadius: '50%',
+                    background: 'rgba(34, 197, 94, 0.15)',
+                    border: '2px solid #22c55e',
+                    color: '#22c55e',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    margin: '0 auto',
+                  }}
+                >
+                  <CheckCircle2 size={32} />
+                </div>
+
+                <div>
+                  <h3 style={{ fontSize: '17px', fontWeight: 700, margin: '0 0 8px 0', color: 'var(--color-text-primary)' }}>
+                    ¡Enlace Despachado!
+                  </h3>
+                  <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)', lineHeight: 1.6, margin: 0 }}>
+                    {forgotSuccessMsg ||
+                      'Si la dirección coincide con una cuenta activa, recibirás el enlace con las instrucciones para restablecer tu contraseña.'}
+                  </p>
+                </div>
+
+                <div
+                  style={{
+                    background: 'rgba(59, 130, 246, 0.08)',
+                    border: '1px dashed rgba(59, 130, 246, 0.35)',
+                    borderRadius: '8px',
+                    padding: '12px 14px',
+                    fontSize: '12px',
+                    color: 'var(--color-text-secondary)',
+                    lineHeight: 1.5,
+                    textAlign: 'left',
+                  }}
+                >
+                  💡 <strong>¿No encuentras el correo?</strong>
+                  <ul style={{ margin: '6px 0 0 0', paddingLeft: '18px' }}>
+                    <li>Revisa tu carpeta de <strong>Spam o Correo no deseado</strong>.</li>
+                    <li>El enlace es válido por <strong>15 minutos</strong>.</li>
+                  </ul>
+                </div>
+
+                {forgotError && <div className="login-error" style={{ marginBottom: 0 }}>{forgotError}</div>}
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {resendCooldown > 0 ? (
+                    <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+                      Podrás solicitar otro enlace en <strong>{resendCooldown}s</strong>
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleRequestResetLink()}
+                      disabled={forgotLoading}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--color-primary)',
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        textDecoration: 'underline',
+                      }}
+                    >
+                      <RefreshCw size={14} />
+                      <span>Reenviar correo de recuperación</span>
+                    </button>
+                  )}
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    fullWidth
+                    onClick={handleCloseForgotModal}
+                    size="md"
+                  >
+                    Entendido, Volver al Inicio de Sesión
+                  </Button>
+                </div>
+              </div>
             )}
           </div>
         </Modal>

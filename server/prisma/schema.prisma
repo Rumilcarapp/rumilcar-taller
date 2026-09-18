@@ -598,7 +598,7 @@ model PasswordResetToken {
   userId            String
   workshopId        String
   phoneMasked       String?
-  otpHash           String
+  otpHash           String?
   resetTokenHash    String?
   expiresAt         DateTime
   attempts          Int       @default(0)
@@ -616,6 +616,7 @@ model PasswordResetToken {
 
   @@index([userId, createdAt])
   @@index([expiresAt])
+  @@index([resetTokenHash])
 }
 
 
