@@ -76,20 +76,20 @@ export const SuperAdminReportsPage: React.FC = () => {
 
   // Extract analytics or use store fallbacks
   const summary = adminAnalytics?.summary || {
-    mrrUSD: adminKpis?.mrrUSD || 39,
-    arrUSD: (adminKpis?.mrrUSD || 39) * 12,
-    totalRevenueUSD: 118,
-    totalRevenueVES: 118 * rate,
-    totalWorkshops: adminWorkshops.length || 3,
-    activePaidWorkshops: adminWorkshops.filter(w => w.status === 'ACTIVE').length || 1,
-    trialingWorkshops: adminWorkshops.filter(w => w.isTrial).length || 2,
-    expiringSoonWorkshops: adminWorkshops.filter(w => w.daysRemaining <= 3 && w.daysRemaining >= 0).length || 1,
+    mrrUSD: adminKpis?.mrrUSD || 0,
+    arrUSD: (adminKpis?.mrrUSD || 0) * 12,
+    totalRevenueUSD: 0,
+    totalRevenueVES: 0,
+    totalWorkshops: adminWorkshops.length,
+    activePaidWorkshops: adminWorkshops.filter(w => w.status === 'ACTIVE').length,
+    trialingWorkshops: adminWorkshops.filter(w => w.isTrial).length,
+    expiringSoonWorkshops: adminWorkshops.filter(w => w.daysRemaining <= 3 && w.daysRemaining >= 0).length,
     suspendedWorkshops: 0,
-    conversionRate: Math.round(((adminWorkshops.filter(w => w.status === 'ACTIVE').length || 1) / (adminWorkshops.length || 3)) * 100),
-    totalPlatformOrders: adminWorkshops.reduce((acc, w) => acc + (w.stats?.orders || 0), 68),
-    totalPlatformClients: adminWorkshops.reduce((acc, w) => acc + (w.stats?.clients || 0), 95),
-    totalPlatformVehicles: 84,
-    totalPlatformUsers: 14,
+    conversionRate: adminWorkshops.length ? Math.round((adminWorkshops.filter(w => w.status === 'ACTIVE').length / adminWorkshops.length) * 100) : 0,
+    totalPlatformOrders: adminWorkshops.reduce((acc, w) => acc + (w.stats?.orders || 0), 0),
+    totalPlatformClients: adminWorkshops.reduce((acc, w) => acc + (w.stats?.clients || 0), 0),
+    totalPlatformVehicles: 0,
+    totalPlatformUsers: 0,
   };
 
   const planDistribution = adminAnalytics?.planDistribution || [
@@ -99,19 +99,9 @@ export const SuperAdminReportsPage: React.FC = () => {
     { plan: 'ELITE', name: 'Taller Élite / Multisede', count: 0, priceUSD: 79, mrrUSD: 0, color: '#8b5cf6' },
   ];
 
-  const paymentMethods = adminAnalytics?.paymentMethodsBreakdown || [
-    { method: 'PAGO_MOVIL', label: 'Pago Móvil (Mercantil)', count: 2, totalUSD: 78, totalVES: 78 * rate },
-    { method: 'USDT_BINANCE', label: 'Binance Pay (USDT)', count: 1, totalUSD: 40, totalVES: 40 * rate },
-    { method: 'ZINLI', label: 'Zinli Wallet (USD)', count: 0, totalUSD: 0, totalVES: 0 },
-  ];
+  const paymentMethods = adminAnalytics?.paymentMethodsBreakdown || [];
 
-  const monthlyTrend = adminAnalytics?.monthlyRevenueTrend || [
-    { month: 'May 2026', revenueUSD: 39, paidWorkshops: 1 },
-    { month: 'Jun 2026', revenueUSD: 39, paidWorkshops: 1 },
-    { month: 'Jul 2026', revenueUSD: 58, paidWorkshops: 2 },
-    { month: 'Ago 2026', revenueUSD: 78, paidWorkshops: 2 },
-    { month: 'Sep 2026', revenueUSD: 118, paidWorkshops: 3 },
-  ];
+  const monthlyTrend = adminAnalytics?.monthlyRevenueTrend || [];
 
   const topWorkshops = adminAnalytics?.topWorkshops || adminWorkshops.map(w => ({
     workshopId: w.workshopId,
@@ -128,28 +118,7 @@ export const SuperAdminReportsPage: React.FC = () => {
     createdAt: w.createdAt,
   }));
 
-  const recentPayments = adminAnalytics?.recentPayments || [
-    {
-      id: 'p-demo-1',
-      workshopName: 'Auto Frenos Caracas C.A.',
-      amountUSD: 39,
-      amountVES: 39 * rate,
-      paymentMethod: 'PAGO_MOVIL',
-      referenceNumber: 'REF-849201',
-      status: 'APPROVED',
-      createdAt: new Date(Date.now() - 3 * 86400000).toISOString(),
-    },
-    {
-      id: 'p-demo-2',
-      workshopName: 'Multiservicios Rumilcar',
-      amountUSD: 39,
-      amountVES: 39 * rate,
-      paymentMethod: 'USDT_BINANCE',
-      referenceNumber: 'BINANCE-TX-9921',
-      status: 'APPROVED',
-      createdAt: new Date(Date.now() - 10 * 86400000).toISOString(),
-    },
-  ];
+  const recentPayments = adminAnalytics?.recentPayments || [];
 
   const maxRevenueTrend = Math.max(...monthlyTrend.map(m => m.revenueUSD), 50);
 

@@ -2,7 +2,7 @@ import React from 'react';
 import { useOnboardingStore } from '../../store/useOnboardingStore';
 import { useAuthStore } from '../../stores/authStore';
 import { Button } from '../ui';
-import { Sparkles, Trash2, Eye, ShieldCheck, ArrowRight, X } from 'lucide-react';
+import { Sparkles, Trash2, ArrowRight, X } from 'lucide-react';
 import './OnboardingModal.css';
 
 export const OnboardingModal: React.FC = () => {
@@ -16,10 +16,6 @@ export const OnboardingModal: React.FC = () => {
 
   const handleStartClean = () => {
     clearAllMockData();
-  };
-
-  const handleExploreDemo = () => {
-    dismissWelcomeModal();
   };
 
   return (
@@ -66,7 +62,6 @@ export const OnboardingModal: React.FC = () => {
         </div>
 
         <div className="onboarding-options">
-          {/* Option 1: Clean Slate (Recommended) */}
           <div className="onboarding-option-card primary" onClick={handleStartClean}>
             <div>
               <div className="onboarding-option-icon clean">
@@ -82,26 +77,11 @@ export const OnboardingModal: React.FC = () => {
             </Button>
           </div>
 
-          {/* Option 2: Explore with demo data */}
-          <div className="onboarding-option-card" onClick={handleExploreDemo}>
-            <div>
-              <div className="onboarding-option-icon demo">
-                <Eye size={20} />
-              </div>
-              <h3 className="onboarding-option-title">Explorar con Ejemplos</h3>
-              <p className="onboarding-option-desc">
-                Conserva las órdenes ficticias para practicar, revisar los reportes y ver cómo se imprimen los comprobantes.
-              </p>
-            </div>
-            <Button variant="outline" fullWidth size="md">
-              Mantener Ejemplos
-            </Button>
-          </div>
         </div>
 
         <div className="onboarding-footer">
           <p className="onboarding-footer-note">
-            💡 <em>Nota: Podrás alternar o limpiar los datos en cualquier momento desde el menú de Primeros Pasos.</em>
+            💡 <em>Nota: el taller comenzará sin clientes, vehículos ni operaciones ficticias.</em>
           </p>
         </div>
       </div>

@@ -319,7 +319,11 @@ authRouter.post('/change-password', authenticate, async (req: AuthRequest, res: 
 // ENTERPRISE EMAIL PASSWORD RECOVERY (GMAIL SMTP)
 // ==========================================
 
-const RESET_TOKEN_PEPPER = process.env.JWT_SECRET || 'rumilcar_reset_pepper_2026';
+const RESET_TOKEN_PEPPER = process.env.PASSWORD_RESET_PEPPER || process.env.JWT_SECRET;
+
+if (!RESET_TOKEN_PEPPER) {
+  throw new Error('PASSWORD_RESET_PEPPER o JWT_SECRET es obligatorio para el flujo de recuperación');
+}
 
 function hashResetToken(token: string): string {
   return crypto.createHash('sha256').update(`${token}:${RESET_TOKEN_PEPPER}`).digest('hex');
@@ -464,14 +468,12 @@ authRouter.post('/forgot-password/request', forgotPasswordRateLimiter, async (re
       if (!emailService.isConfigured()) {
         res.status(503).json({
           error: 'El servicio de correo electrónico no está configurado en el servidor.',
-          details: sendResult.error,
         });
         return;
       }
 
       res.status(500).json({
         error: 'Hubo un error al enviar el correo de recuperación. Por favor intenta de nuevo.',
-        details: sendResult.error,
       });
       return;
     }

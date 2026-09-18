@@ -18,7 +18,6 @@ export const UserModal: React.FC<UserModalProps> = ({
   const [name, setName] = useState(initialUser?.name || '');
   const [email, setEmail] = useState(initialUser?.email || '');
   const [phone, setPhone] = useState(initialUser?.phone || '');
-  const [password, setPassword] = useState(initialUser?.password || '123456');
   const [role, setRole] = useState(initialUser?.role || 'RECEPTIONIST');
   const [isActive, setIsActive] = useState(initialUser !== undefined ? initialUser?.isActive ?? true : true);
 
@@ -33,7 +32,6 @@ export const UserModal: React.FC<UserModalProps> = ({
         name,
         email,
         phone,
-        password,
         role,
         isActive,
       });
@@ -51,7 +49,6 @@ export const UserModal: React.FC<UserModalProps> = ({
         name,
         email,
         phone,
-        password,
         role,
         isActive,
       });
@@ -84,7 +81,7 @@ export const UserModal: React.FC<UserModalProps> = ({
           />
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+        <div>
           <div>
             <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>Correo Electrónico (Login)</label>
             <input
@@ -125,17 +122,6 @@ export const UserModal: React.FC<UserModalProps> = ({
             </select>
           </div>
 
-          <div>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>Contraseña de Acceso</label>
-            <input
-              type="text"
-              required
-              placeholder="Contraseña"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-bg-surface)', fontSize: '13px' }}
-            />
-          </div>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>

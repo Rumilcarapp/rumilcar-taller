@@ -257,6 +257,19 @@ subscriptionsRouter.post('/report-payment', authenticate, async (req: AuthReques
 subscriptionsRouter.get('/admin/workshops', authenticate, requireSuperAdmin, async (_req: AuthRequest, res: Response) => {
   try {
     const workshops = await prisma.workshop.findMany({
+      where: {
+        // Exclude platform SuperAdmin accounts and internal/test profiles from client workshop counts
+        users: {
+          none: {
+            role: 'SUPERADMIN',
+          },
+        },
+        NOT: [
+          { name: { contains: 'Rumilcar Central', mode: 'insensitive' } },
+          { email: { in: ['luarkpadilla@gmail.com', 'redes.multiserviciosrumilcar@gmail.com'] } },
+          { users: { some: { email: { in: ['luarkpadilla@gmail.com', 'redes.multiserviciosrumilcar@gmail.com'] } } } },
+        ],
+      },
       include: {
         users: {
           select: { id: true, name: true, email: true, role: true },
@@ -931,61 +944,6 @@ subscriptionsRouter.put('/admin/update-workshop', authenticate, requireSuperAdmi
   } catch (error: any) {
     console.error('Error updating workshop details by SuperAdmin:', error);
     res.status(500).json({ error: 'Error al actualizar datos del taller' });
-  }
-});
-
-// GET /api/subscriptions/admin/workshops — List all client workshops for SuperAdmin
-subscriptionsRouter.get('/admin/workshops', authenticate, requireSuperAdmin, async (_req: AuthRequest, res: Response) => {
-  try {
-    const workshops = await prisma.workshop.findMany({
-      include: {
-        users: true,
-        subscription: {
-          include: { payments: true },
-        },
-        _count: {
-          select: { workOrders: true, clients: true, mechanics: true },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    const now = new Date();
-    const formatted = workshops.map((w) => {
-      const owner = w.users.find((u) => u.role === 'OWNER') || w.users[0];
-      const sub = w.subscription;
-      let daysRemaining = 0;
-      if (sub?.currentPeriodEnd && sub.status === 'ACTIVE') {
-        daysRemaining = Math.max(0, Math.ceil((sub.currentPeriodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
-      } else if (sub?.trialEndsAt) {
-        daysRemaining = Math.max(0, Math.ceil((sub.trialEndsAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
-      }
-
-      return {
-        workshopId: w.id,
-        workshopName: w.name,
-        ownerName: owner?.name || 'Dueño',
-        phone: w.phone || '',
-        email: w.email || owner?.email || '',
-        plan: sub?.plan || 'TRIAL',
-        status: sub?.status || 'TRIALING',
-        isTrial: sub?.plan === 'TRIAL' || sub?.status === 'TRIALING',
-        daysRemaining,
-        subscriptionEnd: sub?.currentPeriodEnd || sub?.trialEndsAt,
-        stats: {
-          orders: w._count.workOrders,
-          clients: w._count.clients,
-          mechanics: w._count.mechanics,
-        },
-        payments: sub?.payments || [],
-        createdAt: w.createdAt,
-      };
-    });
-
-    res.json({ success: true, workshops: formatted, data: formatted });
-  } catch (error: any) {
-    console.error('Error fetching admin workshops:', error);
-    res.status(500).json({ error: 'Error al listar talleres' });
   }
 });
 

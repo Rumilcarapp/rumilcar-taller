@@ -76,6 +76,30 @@ export const CashRegisterPage: React.FC = () => {
   const [period, setPeriod] = useState<'HOY' | 'SEMANA' | 'MES' | 'ANO' | 'TODOS'>('MES');
   const [currencyDisplay, setCurrencyDisplay] = useState<'USD' | 'VES'>('USD');
 
+  const handleExportTransactions = () => {
+    const header = ['Fecha', 'Tipo', 'Método', 'Monto USD', 'Monto VES', 'Tasa', 'Referencia', 'Descripción'];
+    const rows = transactions.map((tx) => [
+      tx.fecha,
+      tx.tipo,
+      tx.metodo,
+      tx.montoUSD,
+      tx.montoVES ?? '',
+      tx.tasaCambio ?? '',
+      tx.referencia ?? '',
+      tx.descripcion,
+    ]);
+    const csv = [header, ...rows]
+      .map((row) => row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+    const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `rumilcar-transacciones-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   // Box Open / Close Audit Modal state
   const [showOpenModal, setShowOpenModal] = useState(false);
   const [openBalanceInput, setOpenBalanceInput] = useState('0.00');
@@ -663,8 +687,8 @@ export const CashRegisterPage: React.FC = () => {
 
           {/* Export Actions Bar */}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', background: 'var(--color-bg-secondary)', padding: '12px 18px', borderRadius: '12px', border: '1px solid var(--color-border)' }}>
-            <Button variant="outline" icon={<Download size={16} />} onClick={() => alert('Descargando archivo Excel con transacciones...')}>
-              Descargar Excel
+            <Button variant="outline" icon={<Download size={16} />} onClick={handleExportTransactions}>
+              Descargar CSV para Excel
             </Button>
             <Button icon={<Printer size={16} />} onClick={() => window.print()}>
               Descargar Reporte PDF

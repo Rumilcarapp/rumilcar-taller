@@ -35,6 +35,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: () => {
+    const currentWorkshopId = get().user?.workshopId;
+    if (currentWorkshopId) {
+      localStorage.setItem('rumilcar_last_workshop_id', currentWorkshopId);
+    }
     localStorage.removeItem('rumilcar_user');
     localStorage.removeItem('rumilcar_token');
     localStorage.removeItem('rumilcar_impersonate_backup');

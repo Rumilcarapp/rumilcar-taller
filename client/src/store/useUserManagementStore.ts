@@ -43,7 +43,6 @@ export interface ManagedUser {
   id: string;
   name: string;
   email: string;
-  password?: string;
   phone?: string;
   role: AppRoleKey;
   isActive: boolean;
@@ -240,18 +239,8 @@ const DEFAULT_ROLES: RoleDefinition[] = [
   },
 ];
 
-const DEFAULT_USERS: ManagedUser[] = [
-  {
-    id: 'usr-superadmin',
-    name: 'Luark Padilla',
-    email: 'luarkpadilla@gmail.com',
-    phone: '04241550550',
-    role: 'SUPERADMIN',
-    isActive: true,
-    lastLogin: new Date().toISOString(),
-    createdAt: new Date().toISOString(),
-  },
-];
+// Users are loaded from the authenticated backend. Never seed accounts locally.
+const DEFAULT_USERS: ManagedUser[] = [];
 
 const DEFAULT_AUDIT_LOGS: AuditLog[] = [];
 

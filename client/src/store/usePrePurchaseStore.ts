@@ -129,29 +129,7 @@ export const getDefaultChecklistCategories = (): ChecklistCategory[] =>
 export const usePrePurchaseStore = create<PrePurchaseState>()(
   persist(
     (set) => ({
-      inspections: [
-        {
-          id: 'PC-2026-0001',
-          date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-          client: { nombre: 'Carlos', apellido: 'Benitez', documento: 'V-18456123', telefono: '04141112233' },
-          broughtBy: 'Vendedor particular (Pedro G.)',
-          vehicle: {
-            placa: 'AB123CD',
-            marca: 'Toyota',
-            modelo: 'Yaris',
-            year: 2014,
-            color: 'Plata',
-            km: 125000
-          },
-          categories: defaultChecklistCategories,
-          generalDiagnosis: 'Vehículo en excelente estado mecánico general. Compresión de motor óptima (160 PSI parejo). Requiere pronto reemplazo de amortiguadores traseros por leve fuga.',
-          verdict: 'PRECAUCION',
-          priceUSD: 45.00,
-          currency: 'USD',
-          mechanicName: 'Carlos P.',
-          status: 'Completada'
-        }
-      ],
+      inspections: [],
       addInspection: (inspection) => set((state) => ({ inspections: [inspection, ...state.inspections] })),
       updateInspection: (id, inspection) => set((state) => ({ inspections: state.inspections.map(i => i.id === id ? { ...i, ...inspection } : i) })),
       deleteInspection: (id) => set((state) => ({ inspections: state.inspections.filter(i => i.id !== id) }))

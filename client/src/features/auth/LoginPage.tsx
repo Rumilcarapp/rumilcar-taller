@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Button, Input, Modal } from '../../components/ui';
 import { useAuthStore } from '../../stores/authStore';
 import { useUserManagementStore } from '../../store/useUserManagementStore';
+import { useOnboardingStore } from '../../store/useOnboardingStore';
 import { useThemeStore } from '../../store/themeStore';
 import { useWorkshopStore } from '../../store/useWorkshopStore';
 import {
@@ -33,7 +34,7 @@ export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const login = useAuthStore((s) => s.login);
-  const { users, addUser, addAuditLog } = useUserManagementStore();
+  const { addAuditLog } = useUserManagementStore();
   const { isLight, toggleTheme } = useThemeStore();
 
   const [mode, setMode] = useState<'login' | 'register'>('login');
@@ -97,6 +98,15 @@ export const LoginPage: React.FC = () => {
 
   const handleLoginUser = (userToLogin: any, token?: string) => {
     const userWorkshop = userToLogin.workshopName || 'Multiservicios Rumilcar';
+    const incomingWorkshopId = userToLogin.workshopId || '';
+    const previousWorkshopId =
+      useAuthStore.getState().user?.workshopId || localStorage.getItem('rumilcar_last_workshop_id') || '';
+    if (incomingWorkshopId && previousWorkshopId && incomingWorkshopId !== previousWorkshopId) {
+      useOnboardingStore.getState().clearAllMockData();
+    }
+    if (incomingWorkshopId) {
+      localStorage.setItem('rumilcar_last_workshop_id', incomingWorkshopId);
+    }
     if (userToLogin.workshopName && userToLogin.workshopName !== 'Rumilcar Central (SaaS)') {
       useWorkshopStore.getState().updateWorkshop({
         name: userToLogin.workshopName,
@@ -203,13 +213,6 @@ export const LoginPage: React.FC = () => {
       return;
     }
 
-    // Check if email already exists in local list
-    const existing = users.find((u) => u.email.toLowerCase() === regEmail.trim().toLowerCase());
-    if (existing) {
-      setError('Este correo electrónico ya está registrado. Inicia sesión o usa otro.');
-      return;
-    }
-
     setLoading(true);
 
     try {
@@ -223,6 +226,7 @@ export const LoginPage: React.FC = () => {
           email: regEmail.trim().toLowerCase(),
           password: regPassword,
           workshopName: workshopName.trim(),
+          phone: regPhone.trim(),
         }),
       });
 
@@ -230,15 +234,8 @@ export const LoginPage: React.FC = () => {
         const data = await res.json();
         setSuccessMsg('¡Taller registrado con éxito! Entrando al sistema...');
 
-        // Register in local user list
-        addUser({
-          name: ownerName.trim(),
-          email: regEmail.trim().toLowerCase(),
-          password: regPassword,
-          phone: regPhone.trim(),
-          role: 'OWNER',
-          isActive: true,
-        });
+        // A new workshop must never inherit data from another account.
+        useOnboardingStore.getState().clearAllMockData();
 
         // Reset workshop profile store to a clean state for this new workshop
         useWorkshopStore.getState().resetToCleanProfile(workshopName.trim());
@@ -295,10 +292,7 @@ export const LoginPage: React.FC = () => {
       });
       const data = await res.json();
       if (!res.ok) {
-        const msg = data.details
-          ? `${data.error}: ${data.details}`
-          : data.error || 'No se pudo procesar la solicitud de recuperación.';
-        setForgotError(msg);
+        setForgotError(data.error || 'No se pudo procesar la solicitud de recuperación.');
         setForgotLoading(false);
         return;
       }

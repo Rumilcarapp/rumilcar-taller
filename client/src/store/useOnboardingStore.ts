@@ -11,6 +11,10 @@ import { usePayrollStore } from './usePayrollStore';
 import { usePersonnelStore } from './usePersonnelStore';
 import { useWorkshopStore } from './useWorkshopStore';
 import { useAntiInflationStore } from './useAntiInflationStore';
+import { useInspectionStore } from './useInspectionStore';
+import { usePrePurchaseStore } from './usePrePurchaseStore';
+import { useAppointmentStore } from './useAppointmentStore';
+import { useCRMStore } from './useCRMStore';
 
 export interface OnboardingStep {
   id: string;
@@ -68,6 +72,10 @@ export const useOnboardingStore = create<OnboardingState>()(
         useInventoryStore.setState({ items: [] });
         useCashStore.setState({ transactions: [], closureHistory: [], currentBalanceUSD: 0, openingBalanceUSD: 0 });
         useDiagnosticStore.setState({ diagnostics: [] });
+        useInspectionStore.setState({ inspections: [] });
+        usePrePurchaseStore.setState({ inspections: [] });
+        useAppointmentStore.setState({ appointments: [] });
+        useCRMStore.setState({ opportunities: [], interactions: [] });
         useExpenseStore.getState().clearGastos();
         usePayrollStore.getState().clearPayroll();
         usePersonnelStore.getState().clearPersonnel();

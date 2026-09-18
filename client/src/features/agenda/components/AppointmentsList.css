@@ -231,3 +231,35 @@ body:not(.light-theme) .cancel-confirm-overlay {
   justify-content: center;
   gap: var(--space-3);
 }
+
+@media (max-width: 640px) {
+  .appointments-header,
+  .appointments-content {
+    padding-left: var(--space-3);
+    padding-right: var(--space-3);
+  }
+
+  .appointment-card {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .apt-main {
+    gap: var(--space-3);
+  }
+
+  .apt-actions-col {
+    align-items: stretch;
+    gap: var(--space-2);
+  }
+
+  .apt-status,
+  .apt-actions {
+    margin-bottom: 0;
+    justify-content: flex-start;
+  }
+
+  .apt-meta {
+    flex-wrap: wrap;
+  }
+}

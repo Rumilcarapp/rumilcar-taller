@@ -8,8 +8,7 @@ export class VercelRelayEmailProvider implements IEmailProvider {
   constructor() {
     this.relayUrl =
       process.env.EMAIL_RELAY_URL || 'https://rumilcarapp.vercel.app/api/send-email';
-    this.relaySecret =
-      process.env.EMAIL_RELAY_SECRET || 'rumilcar_relay_secret_2026';
+    this.relaySecret = process.env.EMAIL_RELAY_SECRET || '';
   }
 
   public isConfigured(): boolean {

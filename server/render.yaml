@@ -15,11 +15,13 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: CORS_ORIGIN
-        value: "*"
+        value: "https://rumilcarapp.vercel.app,http://localhost:5173"
       - key: EMAIL_PROVIDER
         value: relay
       - key: EMAIL_RELAY_URL
         value: https://rumilcarapp.vercel.app/api/send-email
+      - key: EMAIL_RELAY_SECRET
+        sync: false
       - key: SMTP_HOST
         value: smtp.gmail.com
       - key: SMTP_PORT
@@ -38,4 +40,6 @@ services:
         value: 15
       - key: PASSWORD_RESET_RATE_LIMIT_SECONDS
         value: 60
+      - key: PASSWORD_RESET_PEPPER
+        sync: false
 

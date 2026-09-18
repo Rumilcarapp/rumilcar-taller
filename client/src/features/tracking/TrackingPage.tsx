@@ -31,7 +31,7 @@ export const TrackingPage: React.FC = () => {
     (o) =>
       o.id.toLowerCase() === id?.toLowerCase() ||
       o.vehicle?.placa?.toLowerCase() === id?.toLowerCase()
-  ) || workOrders[0]; // fallback to first for demo if invalid id
+  );
 
   if (!order) {
     return (

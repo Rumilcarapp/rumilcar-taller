@@ -416,9 +416,21 @@ export const SuperAdminWorkshopsPage: React.FC = () => {
   };
 
   // -------------------------------------------------------------
-  // FILTERING LOGIC
+  // FILTERING LOGIC (Solo talleres clientes reales)
   // -------------------------------------------------------------
-  const filteredWorkshops = adminWorkshops.filter((w) => {
+  const clientWorkshops = adminWorkshops.filter((w) => {
+    const name = (w.workshopName || '').toLowerCase();
+    const email = (w.email || '').toLowerCase();
+    const owner = (w.ownerName || '').toLowerCase();
+    return (
+      !name.includes('rumilcar central') &&
+      email !== 'luarkpadilla@gmail.com' &&
+      owner !== 'luark padilla' &&
+      email !== 'redes.multiserviciosrumilcar@gmail.com'
+    );
+  });
+
+  const filteredWorkshops = clientWorkshops.filter((w) => {
     const term = searchTerm.toLowerCase();
     const matchesSearch =
       w.workshopName.toLowerCase().includes(term) ||
@@ -437,12 +449,12 @@ export const SuperAdminWorkshopsPage: React.FC = () => {
     return matchesSearch && matchesPlan && matchesStatus;
   });
 
-  // KPIs
-  const totalWorkshops = adminWorkshops.length;
-  const activeWorkshops = adminWorkshops.filter((w) => w.status === 'ACTIVE').length;
-  const trialWorkshops = adminWorkshops.filter((w) => w.isTrial).length;
-  const suspendedWorkshops = adminWorkshops.filter((w) => w.status === 'SUSPENDED' || w.status === 'PAST_DUE').length;
-  const totalUsersInNetwork = adminWorkshops.reduce((acc, w) => acc + (w.stats?.mechanics || 1), 0);
+  // KPIs calculados estrictamente sobre talleres clientes reales
+  const totalWorkshops = clientWorkshops.length;
+  const activeWorkshops = clientWorkshops.filter((w) => w.status === 'ACTIVE').length;
+  const trialWorkshops = clientWorkshops.filter((w) => w.isTrial).length;
+  const suspendedWorkshops = clientWorkshops.filter((w) => w.status === 'SUSPENDED' || w.status === 'PAST_DUE').length;
+  const totalUsersInNetwork = clientWorkshops.reduce((acc, w) => acc + (w.stats?.mechanics || 1), 0);
 
   return (
     <div className="saas-workshops-page">

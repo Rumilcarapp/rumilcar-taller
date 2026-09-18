@@ -1,6 +1,6 @@
 # Configuración del Sistema Oficial de Recuperación por Correo Gmail (SMTP)
 
-Este documento detalla la arquitectura, configuración y despliegue del sistema oficial de recuperación de contraseñas de **Rumilcar App** utilizando **Gmail SMTP con Contraseñas de Aplicación de Google**.
+Este documento detalla la arquitectura, configuración y despliegue del sistema oficial de recuperación de contraseñas de **Rumilcar App** utilizando **Gmail**. En desarrollo puede usarse SMTP directo; en producción sobre Render se recomienda el relay HTTPS de Vercel porque evita bloqueos de puertos SMTP.
 
 ---
 
@@ -19,7 +19,7 @@ El sistema reemplaza por completo cualquier dependencia de WhatsApp para la aute
                                  ├── Anti-Enumeration (Respuesta idéntica exista o no la cuenta)
                                  ├── Generación de Token Criptográfico (32 bytes / 64 hex)
                                  ├── Almacenamiento de Hash SHA-256 + Pepper en PostgreSQL (15 min TTL)
-                                 └── Envío de Email HTML responsive vía Gmail SMTP (Port 465 SSL)
+                                 └── Envío de Email HTML responsive vía Gmail SMTP local o relay HTTPS en producción
                                            │
                                            ▼
                              [Cliente recibe Email en Gmail]
@@ -48,13 +48,16 @@ En el servidor (`server/.env` local y en las variables de entorno de **Render**)
 
 | Variable | Valor Recomendado | Descripción |
 |---|---|---|
-| `EMAIL_PROVIDER` | `gmail` | Proveedor activo de correo |
+| `EMAIL_PROVIDER` | `gmail` en local / `relay` en Render | Proveedor activo de correo |
 | `SMTP_HOST` | `smtp.gmail.com` | Host del servidor SMTP de Google |
 | `SMTP_PORT` | `465` | Puerto SSL (o `587` para STARTTLS) |
 | `SMTP_SECURE` | `true` | `true` para puerto 465, `false` para 587 |
 | `SMTP_USER` | `redesmultiserviciosrumilcar@gmail.com` | Correo oficial del taller en Gmail |
 | `SMTP_PASSWORD` | `[Contraseña de Aplicación de 16 letras]` | Generada en Google Account (sin espacios) |
 | `MAIL_FROM` | `"Rumilcar App <redesmultiserviciosrumilcar@gmail.com>"` | Encabezado remitente |
+| `EMAIL_RELAY_URL` | `https://rumilcarapp.vercel.app/api/send-email` | Endpoint HTTPS del relay en producción |
+| `EMAIL_RELAY_SECRET` | `[Secreto compartido con Vercel]` | Autenticación entre Render y el relay |
+| `PASSWORD_RESET_PEPPER` | `[Secreto aleatorio independiente]` | Protección adicional del hash del token |
 | `FRONTEND_URL` | `https://rumilcarapp.vercel.app` | URL base de la aplicación web cliente |
 | `PASSWORD_RESET_EXPIRES_MINUTES` | `15` | Tiempo de vida del enlace |
 | `PASSWORD_RESET_RATE_LIMIT_SECONDS` | `60` | Cooldown mínimo entre solicitudes |
@@ -83,10 +86,10 @@ En tu servicio backend en Render (`rumilcar-api`):
 1. Ingresa al Dashboard de [Render](https://dashboard.render.com).
 2. Selecciona tu servicio **`rumilcar-api`**.
 3. Haz clic en la pestaña **Environment**.
-4. Busca o añade la variable:
-   - **Key:** `SMTP_PASSWORD`
-   - **Value:** [Tu contraseña de aplicación de 16 letras sin espacios]
-5. Guarda los cambios. Render reiniciará el servicio con el nuevo valor en menos de un minuto.
+4. Configura `EMAIL_PROVIDER=relay`, `EMAIL_RELAY_URL` y `EMAIL_RELAY_SECRET`.
+5. Si vas a usar SMTP directo, configura `EMAIL_PROVIDER=gmail`, `SMTP_USER`, `SMTP_PASSWORD` y `MAIL_FROM`.
+6. Configura también `PASSWORD_RESET_PEPPER` con un valor aleatorio largo.
+7. Guarda los cambios. Render reiniciará el servicio con el nuevo valor en menos de un minuto.
 
 ---
 

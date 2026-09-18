@@ -231,3 +231,28 @@
 .tracking-btn-whatsapp:hover {
   transform: translateY(-2px);
 }
+
+@media (max-width: 480px) {
+  .tracking-wrapper {
+    padding: 10px 8px;
+  }
+
+  .tracking-card {
+    border-radius: 12px;
+  }
+
+  .tracking-header,
+  .tracking-content {
+    padding: 18px 14px;
+  }
+
+  .tracking-title {
+    font-size: 19px;
+  }
+
+  .tracking-total-row,
+  .tracking-due-banner {
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+}

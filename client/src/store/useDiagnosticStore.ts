@@ -23,21 +23,7 @@ interface DiagnosticState {
 export const useDiagnosticStore = create<DiagnosticState>()(
   persist(
     (set) => ({
-      diagnostics: [
-        {
-          id: 'DIA-001',
-          vehiclePlaca: 'AA11BB',
-          date: new Date().toISOString(),
-          clientReport: 'Ruido al frenar',
-          mechanicReport: 'Pastillas de freno desgastadas al 10% de vida util. Requieren reemplazo inmediato.',
-          checkedSystems: {
-            motor: 'good',
-            frenos: 'danger',
-            suspension: 'good',
-            electrico: 'good'
-          }
-        }
-      ],
+      diagnostics: [],
       addDiagnostic: (diag) => set((state) => ({
         diagnostics: [diag, ...state.diagnostics]
       }))

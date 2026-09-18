@@ -590,7 +590,7 @@ model AuditLog {
 }
 
 // ==========================================
-// Password Reset Tokens (WhatsApp Recovery)
+// Password Reset Tokens (Email Recovery)
 // ==========================================
 
 model PasswordResetToken {
@@ -618,5 +618,4 @@ model PasswordResetToken {
   @@index([expiresAt])
   @@index([resetTokenHash])
 }
-
 
