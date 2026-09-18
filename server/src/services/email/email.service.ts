@@ -1,14 +1,17 @@
 import { IEmailProvider, EmailResult } from './email.types';
 import { GmailEmailProvider } from './gmail.provider';
 import { ResendEmailProvider } from './resend.provider';
+import { BrevoEmailProvider } from './brevo.provider';
 import { buildPasswordResetEmail, buildPasswordChangedConfirmationEmail } from './email.templates';
 
 export class EmailService {
   private provider: IEmailProvider;
 
   constructor() {
-    // If RESEND_API_KEY is configured, use Resend HTTP API (bypasses Render cloud SMTP blocks)
-    if (process.env.RESEND_API_KEY || process.env.EMAIL_PROVIDER === 'resend') {
+    // 1. If BREVO_API_KEY is configured, use Brevo HTTP API (allows sending to any email on port 443 HTTPS)
+    if (process.env.BREVO_API_KEY || process.env.EMAIL_PROVIDER === 'brevo') {
+      this.provider = new BrevoEmailProvider();
+    } else if (process.env.RESEND_API_KEY || process.env.EMAIL_PROVIDER === 'resend') {
       this.provider = new ResendEmailProvider();
     } else {
       this.provider = new GmailEmailProvider();
