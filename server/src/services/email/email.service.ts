@@ -1,15 +1,15 @@
 import { IEmailProvider, EmailResult } from './email.types';
 import { GmailEmailProvider } from './gmail.provider';
+import { ResendEmailProvider } from './resend.provider';
 import { buildPasswordResetEmail, buildPasswordChangedConfirmationEmail } from './email.templates';
 
 export class EmailService {
   private provider: IEmailProvider;
 
   constructor() {
-    // Allows switching provider via EMAIL_PROVIDER if needed
-    const providerName = process.env.EMAIL_PROVIDER || 'gmail';
-    if (providerName === 'gmail') {
-      this.provider = new GmailEmailProvider();
+    // If RESEND_API_KEY is configured, use Resend HTTP API (bypasses Render cloud SMTP blocks)
+    if (process.env.RESEND_API_KEY || process.env.EMAIL_PROVIDER === 'resend') {
+      this.provider = new ResendEmailProvider();
     } else {
       this.provider = new GmailEmailProvider();
     }
