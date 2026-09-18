@@ -1,3 +1,9 @@
+import dns from 'dns';
+try {
+  dns.setDefaultResultOrder('ipv4first');
+} catch {
+  // Ignore in older Node environments
+}
 import nodemailer, { Transporter } from 'nodemailer';
 import { IEmailProvider, SendEmailOptions, EmailResult } from './email.types';
 
@@ -14,40 +20,29 @@ export class GmailEmailProvider implements IEmailProvider {
 
   constructor() {
     this.host = process.env.SMTP_HOST || 'smtp.gmail.com';
-    this.port = parseInt(process.env.SMTP_PORT || '465', 10);
-    this.secure = process.env.SMTP_SECURE === 'true' || this.port === 465;
+    this.port = parseInt(process.env.SMTP_PORT || '587', 10);
+    this.secure = process.env.SMTP_SECURE === 'true';
     this.user = process.env.SMTP_USER?.trim();
     // Strip any accidental spaces from the 16-character Google App Password
     this.password = process.env.SMTP_PASSWORD?.replace(/\s+/g, '').trim();
     this.from = process.env.MAIL_FROM?.trim() || `Rumilcar App <${this.user || 'soporte@rumilcar.com'}>`;
 
     if (this.isConfigured()) {
-      // Use 'service: gmail' which handles cloud egress and ports automatically (bypassing cloud 465 blocks)
-      if (this.host === 'smtp.gmail.com' || this.user?.endsWith('@gmail.com')) {
-        this.transporter = nodemailer.createTransport({
-          service: 'gmail',
-          auth: {
-            user: this.user,
-            pass: this.password,
-          },
-          connectionTimeout: 15000,
-          greetingTimeout: 15000,
-          socketTimeout: 20000,
-        });
-      } else {
-        this.transporter = nodemailer.createTransport({
-          host: this.host,
-          port: this.port,
-          secure: this.secure,
-          auth: {
-            user: this.user,
-            pass: this.password,
-          },
-          connectionTimeout: 15000,
-          greetingTimeout: 15000,
-          socketTimeout: 20000,
-        });
-      }
+      // Force IPv4 (family: 4) to eliminate ENETUNREACH IPv6 routing errors on cloud hosts like Render
+      this.transporter = nodemailer.createTransport({
+        host: 'smtp.gmail.com',
+        port: 587,
+        secure: false,
+        requireTLS: true,
+        family: 4,
+        auth: {
+          user: this.user,
+          pass: this.password,
+        },
+        connectionTimeout: 15000,
+        greetingTimeout: 15000,
+        socketTimeout: 20000,
+      } as any);
     }
   }
 
@@ -74,12 +69,13 @@ export class GmailEmailProvider implements IEmailProvider {
           port: 587,
           secure: false,
           requireTLS: true,
+          family: 4,
           auth: {
             user: this.user,
             pass: this.password,
           },
           connectionTimeout: 10000,
-        });
+        } as any);
         await fallback.verify();
         this.transporter = fallback;
         return { success: true };
@@ -130,12 +126,13 @@ export class GmailEmailProvider implements IEmailProvider {
           port: 587,
           secure: false,
           requireTLS: true,
+          family: 4,
           auth: {
             user: this.user,
             pass: this.password,
           },
           connectionTimeout: 15000,
-        });
+        } as any);
 
         const fallbackInfo = await fallbackTransporter.sendMail({
           from: this.from,
