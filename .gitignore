@@ -10,3 +10,5 @@ NOTAS_SUPABASE.txt
 .DS_Store
 Thumbs.db
 *.tsbuildinfo
+backups/
+server/backups/

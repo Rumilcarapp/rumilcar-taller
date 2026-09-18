@@ -28,17 +28,25 @@
   --color-text-primary: #F5F5F5;
   --color-text-secondary: #A0A0A0;
   --color-text-muted: #666666;
+  --color-text-main: #F5F5F5;
   --color-text-inverse: #0A0A0A;
 
   /* === Colors: Semantic === */
   --color-success: #22C55E;
   --color-success-bg: rgba(34, 197, 94, 0.12);
+  --color-success-light: rgba(34, 197, 94, 0.15);
   --color-warning: #F59E0B;
   --color-warning-bg: rgba(245, 158, 11, 0.12);
+  --color-warning-light: rgba(245, 158, 11, 0.15);
   --color-error: #EF4444;
   --color-error-bg: rgba(239, 68, 68, 0.12);
+  --color-danger: #EF4444;
+  --color-danger-hover: #DC2626;
+  --color-danger-light: rgba(239, 68, 68, 0.15);
+  --color-danger-subtle: rgba(239, 68, 68, 0.08);
   --color-info: #3B82F6;
   --color-info-bg: rgba(59, 130, 246, 0.12);
+  --color-info-light: rgba(59, 130, 246, 0.15);
 
   /* === Typography === */
   --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -125,6 +133,22 @@
   --color-text-muted: #9CA3AF;
   --color-text-main: #111827;
   --color-text-inverse: #FFFFFF;
+
+  --color-success: #16A34A;
+  --color-success-bg: rgba(22, 163, 74, 0.1);
+  --color-success-light: rgba(22, 163, 74, 0.12);
+  --color-warning: #D97706;
+  --color-warning-bg: rgba(217, 119, 6, 0.1);
+  --color-warning-light: rgba(217, 119, 6, 0.12);
+  --color-error: #DC2626;
+  --color-error-bg: rgba(220, 38, 38, 0.1);
+  --color-danger: #DC2626;
+  --color-danger-hover: #B91C1C;
+  --color-danger-light: rgba(220, 38, 38, 0.12);
+  --color-danger-subtle: rgba(220, 38, 38, 0.06);
+  --color-info: #2563EB;
+  --color-info-bg: rgba(37, 99, 235, 0.1);
+  --color-info-light: rgba(37, 99, 235, 0.12);
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.05);

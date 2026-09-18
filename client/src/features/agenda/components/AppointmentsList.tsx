@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button, Badge, EmptyState } from '../../../components/ui';
 import { Clock, Eye, Edit, X, User } from 'lucide-react';
 import { AppointmentDrawer } from './AppointmentDrawer';
@@ -19,9 +20,28 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
   onEditClick,
   onUpdateStatus
 }) => {
+  const navigate = useNavigate();
   const [viewingApt, setViewingApt] = useState<any>(null);
   const [cancelingAptId, setCancelingAptId] = useState<string | null>(null);
   const [statusDropdownAptId, setStatusDropdownAptId] = useState<string | null>(null);
+
+  const handleConvertToWorkOrder = (apt: any) => {
+    if (!apt) return;
+    setViewingApt(null);
+    navigate('/ordenes/nueva', {
+      state: {
+        fromAppointment: {
+          clientId: apt.clientId,
+          clientName: apt.clientName,
+          vehicleId: apt.vehicleId,
+          vehicleDesc: apt.vehicleDesc,
+          serviceMotif: apt.service,
+          mechanicId: apt.mechanicId,
+          mechanicName: apt.mechanic,
+        }
+      }
+    });
+  };
 
   const dateStr = selectedDate.toISOString().split('T')[0];
   const dayAppointments = appointments
@@ -144,7 +164,7 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
       <AppointmentDrawer 
         appointment={viewingApt} 
         onClose={() => setViewingApt(null)} 
-        onConvertToWO={() => alert('Convertir a OT - Fase 4')}
+        onConvertToWO={() => handleConvertToWorkOrder(viewingApt)}
       />
     </div>
   );

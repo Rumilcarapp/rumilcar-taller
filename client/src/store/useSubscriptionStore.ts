@@ -342,7 +342,7 @@ export const useSubscriptionStore = create<SubscriptionState>()(
           const trialEnds = new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000);
           set({
             subscription: {
-              workshopId: workshopId || 'default-workshop',
+              workshopId: workshopId || '',
               plan: 'TRIAL',
               status: 'TRIALING',
               trialStartedAt: now.toISOString(),
@@ -431,7 +431,7 @@ export const useSubscriptionStore = create<SubscriptionState>()(
 
         // Also update admin workshops if local
         const adminList = get().adminWorkshops;
-        const currentWorkshopId = sub?.workshopId || 'default-workshop';
+        const currentWorkshopId = sub?.workshopId || '';
         const updatedAdminList = adminList.map((w) => {
           if (w.workshopId === currentWorkshopId) {
             return {
@@ -467,67 +467,31 @@ export const useSubscriptionStore = create<SubscriptionState>()(
             }
           }
         } catch {
-          // Fallback to local
+          // Si no hay respuesta del servidor o está desconectado, no inventar talleres demo
         }
 
-        // Mock list for SuperAdmin testing
-        const sub = get().subscription;
-        const pending = sub?.payments.filter((p) => p.status === 'PENDING') || [];
-        const localList: AdminWorkshopItem[] = [
-          {
-            workshopId: sub?.workshopId || 'ws-1',
-            workshopName: 'Multiservicios Rumilcar',
-            email: 'admin@rumilcar.com',
-            phone: '0414-1112233',
-            ownerName: 'Administrador (Dueño)',
-            createdAt: sub?.trialStartedAt || new Date().toISOString(),
-            plan: sub?.plan || 'TRIAL',
-            status: sub?.status || 'TRIALING',
-            daysRemaining: sub?.daysRemaining ?? 15,
-            isTrial: sub?.isTrial ?? true,
-            stats: { orders: 12, clients: 18, mechanics: 3 },
-            pendingPayments: pending,
-          },
-          {
-            workshopId: 'ws-demo-2',
-            workshopName: 'Auto Frenos Caracas C.A.',
-            email: 'contacto@autofrenos.com',
-            phone: '0424-5551234',
-            ownerName: 'Alejandro Morales',
-            createdAt: new Date(Date.now() - 40 * 86400000).toISOString(),
-            plan: 'PRO',
-            status: 'ACTIVE',
-            daysRemaining: 22,
-            isTrial: false,
-            stats: { orders: 48, clients: 65, mechanics: 5 },
-            pendingPayments: [],
-          },
-          {
-            workshopId: 'ws-demo-3',
-            workshopName: 'Electro Auto Express',
-            email: 'taller@electroauto.com',
-            phone: '0412-9988776',
-            ownerName: 'Roberto Gómez',
-            createdAt: new Date(Date.now() - 14 * 86400000).toISOString(),
-            plan: 'TRIAL',
-            status: 'TRIALING',
-            daysRemaining: 1,
-            isTrial: true,
-            stats: { orders: 8, clients: 12, mechanics: 2 },
-            pendingPayments: [],
-          },
-        ];
+        const currentList = get().adminWorkshops.filter(
+          (w) => !['ws-demo-2', 'ws-demo-3'].includes(w.workshopId)
+        );
 
         set({
-          adminWorkshops: localList,
+          adminWorkshops: currentList,
           adminKpis: {
-            totalWorkshops: localList.length,
-            activePaid: localList.filter((w) => w.status === 'ACTIVE').length,
-            trialing: localList.filter((w) => w.isTrial).length,
-            expiringSoon: localList.filter((w) => w.daysRemaining <= 3 && w.daysRemaining >= 0).length,
-            pendingReview: localList.reduce((acc, w) => acc + w.pendingPayments.length, 0),
-            mrrUSD: 39,
+            totalWorkshops: currentList.length,
+            activePaid: currentList.filter((w) => w.status === 'ACTIVE').length,
+            trialing: currentList.filter((w) => w.isTrial).length,
+            expiringSoon: currentList.filter((w) => w.daysRemaining <= 3 && w.daysRemaining >= 0).length,
+            pendingReview: currentList.reduce((acc, w) => acc + w.pendingPayments.length, 0),
+            mrrUSD: currentList.reduce((acc, w) => {
+              if (w.status === 'ACTIVE') {
+                if (w.plan === 'BASIC') return acc + 19;
+                if (w.plan === 'PRO') return acc + 39;
+                if (w.plan === 'ELITE') return acc + 79;
+              }
+              return acc;
+            }, 0),
           },
+          isLoading: false,
         });
       },
 

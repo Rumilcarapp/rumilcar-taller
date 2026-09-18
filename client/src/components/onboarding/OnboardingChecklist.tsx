@@ -81,7 +81,6 @@ export const OnboardingChecklist: React.FC = () => {
     completeStep,
     isCleanSlate,
     clearAllMockData,
-    loadMockData,
   } = useOnboardingStore();
 
   const user = useAuthStore((s) => s.user);
@@ -131,7 +130,7 @@ export const OnboardingChecklist: React.FC = () => {
 
         <div className="onboarding-checklist-actions">
           {/* Quick toggle clean slate */}
-          {!isCleanSlate ? (
+          {!isCleanSlate && (
             <button
               type="button"
               onClick={() => {
@@ -152,36 +151,12 @@ export const OnboardingChecklist: React.FC = () => {
                 fontWeight: 700,
                 cursor: 'pointer',
               }}
-              title="Borra todos los datos ficticios"
+              title="Reiniciar lista de pasos"
             >
-              <Trash2 size={13} /> Limpiar datos de prueba
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => {
-                if (window.confirm('¿Deseas cargar algunos ejemplos de prueba para practicar?')) {
-                  loadMockData();
-                }
-              }}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                padding: '6px 12px',
-                borderRadius: '6px',
-                background: 'rgba(59, 130, 246, 0.1)',
-                border: '1px solid rgba(59, 130, 246, 0.25)',
-                color: '#3b82f6',
-                fontSize: '11px',
-                fontWeight: 700,
-                cursor: 'pointer',
-              }}
-              title="Carga datos ficticios para practicar"
-            >
-              <Database size={13} /> Cargar ejemplos
+              <Trash2 size={13} /> Reiniciar pasos
             </button>
           )}
+
 
           <button
             type="button"

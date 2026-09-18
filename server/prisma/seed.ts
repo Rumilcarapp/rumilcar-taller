@@ -4,73 +4,50 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('Seeding database...');
+  const isProduction = process.env.NODE_ENV === 'production';
+  console.log(`[Seed] Entorno: ${process.env.NODE_ENV || 'development'}`);
 
-  const passwordHash = await bcrypt.hash('123456', 10);
+  if (isProduction) {
+    console.log('[Seed] Modo producción detectado: Se omite la creación de datos ficticios o cuentas de prueba.');
+    console.log('[Seed] Verificando cuenta de SuperAdmin de la plataforma...');
 
-  // Create workshop
-  const workshop = await prisma.workshop.create({
-    data: {
-      name: 'Taller Don Pedro',
-      legalName: 'Inversiones Don Pedro C.A.',
-      taxId: 'J-12345678-9',
-      address: 'Av. Principal, Caracas, Venezuela',
-      email: 'contacto@tallerdonpedro.com',
-      phone: '0212-5551234',
-      anchorCurrency: 'USD',
-      usdtSpread: 2,
-      paymentMethods: {
-        createMany: {
-          data: [
-            { method: 'CASH_USD', isEnabled: true },
-            { method: 'CASH_VES', isEnabled: true },
-            { method: 'PAGO_MOVIL', isEnabled: true },
-            { method: 'BANK_TRANSFER', isEnabled: true },
-            { method: 'ZELLE', isEnabled: true },
-            { method: 'USDT_WALLET', isEnabled: true },
-            { method: 'POS_DEBIT', isEnabled: false },
-          ],
-        },
-      },
-    },
-  });
-
-  // Create admin user
-  await prisma.user.create({
-    data: {
-      workshopId: workshop.id,
-      name: 'Admin',
-      email: 'admin@taller.com',
-      passwordHash,
-      role: 'OWNER',
-    },
-  });
-
-  // Create mechanics
-  const mechanicData = [
-    { name: 'Carlos Martinez', specialty: 'Mecanica general', phone: '0412-5551234' },
-    { name: 'Pedro Rodriguez', specialty: 'Electricidad automotriz', phone: '0414-5554567' },
-    { name: 'Luis Garcia', specialty: 'Frenos y suspension', phone: '0424-5557890' },
-  ];
-
-  for (const m of mechanicData) {
-    await prisma.mechanic.create({
-      data: { ...m, workshopId: workshop.id },
+    const superAdminEmail = 'luarkpadilla@gmail.com';
+    const existingSuperAdmin = await prisma.user.findUnique({
+      where: { email: superAdminEmail },
     });
+
+    if (!existingSuperAdmin) {
+      console.log(`[Seed] Inicializando taller central SaaS para SuperAdmin: ${superAdminEmail}`);
+      const centralWorkshop = await prisma.workshop.create({
+        data: {
+          name: 'Rumilcar Central (SaaS)',
+          email: superAdminEmail,
+          phone: '04241550550',
+        },
+      });
+
+      const superAdminPass = process.env.SUPERADMIN_INITIAL_PASSWORD || 'RumilcarSaaS@2026';
+      const passwordHash = await bcrypt.hash(superAdminPass, 10);
+
+      await prisma.user.create({
+        data: {
+          workshopId: centralWorkshop.id,
+          name: 'Luark Padilla',
+          email: superAdminEmail,
+          passwordHash,
+          role: 'SUPERADMIN',
+        },
+      });
+      console.log('[Seed] SuperAdmin inicializado correctamente.');
+    } else {
+      console.log('[Seed] Cuenta SuperAdmin ya existe y está activa.');
+    }
+
+    console.log('[Seed] Proceso completado de forma segura sin datos demo.');
+    return;
   }
 
-  // Set initial exchange rate
-  await prisma.exchangeRate.create({
-    data: {
-      workshopId: workshop.id,
-      currency: 'VES',
-      rateToAnchor: 36.5,
-      source: 'manual',
-    },
-  });
-
-  console.log('Seed completed!');
-  console.log('Login: admin@taller.com / 123456');
+  console.log('[Seed] Entorno de desarrollo: Verificando datos iniciales.');
 }
 
 main()

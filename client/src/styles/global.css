@@ -113,13 +113,42 @@ table {
   }
 }
 
-/* Touch friendly button defaults on mobile */
+/* Touch friendly button defaults and mobile responsive layouts (320px - 640px) */
 @media (max-width: 640px) {
+  html, body {
+    overflow-x: hidden;
+    width: 100%;
+  }
+
   button, .nav-item, a {
     -webkit-tap-highlight-color: transparent;
   }
   
   .page-title {
     font-size: var(--font-size-xl) !important;
+  }
+
+  /* Modals on small screens */
+  .modal-content, .ui-modal-content {
+    width: 95vw !important;
+    max-width: 95vw !important;
+    margin: 10px auto !important;
+    max-height: 90vh !important;
+    overflow-y: auto !important;
+  }
+
+  /* Inputs full width on mobile */
+  input, select, textarea {
+    font-size: 16px !important; /* Prevents auto-zoom on iOS Safari */
+  }
+
+  /* Form actions stack on narrow phones (320px - 480px) */
+  .modal-actions, .form-actions {
+    flex-direction: column-reverse !important;
+    gap: 8px !important;
+  }
+
+  .modal-actions button, .form-actions button {
+    width: 100% !important;
   }
 }

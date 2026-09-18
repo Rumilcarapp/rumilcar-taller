@@ -1034,6 +1034,19 @@ subscriptionsRouter.post('/admin/impersonate', authenticate, requireSuperAdmin, 
       { expiresIn: '4h' }
     );
 
+    // Registrar en auditoría de seguridad
+    await prisma.auditLog.create({
+      data: {
+        workshopId: workshop.id,
+        userId: req.userId || null,
+        action: 'SUPERADMIN_IMPERSONATION',
+        entity: 'WORKSHOP',
+        entityId: workshop.id,
+        ipAddress: req.ip || (req.socket ? req.socket.remoteAddress : null),
+        details: `SuperAdmin (${req.userEmail || req.userId}) inició sesión de suplantación en taller ${workshop.name} (${workshop.id})`,
+      },
+    });
+
     res.json({
       message: `Sesión iniciada como ${workshop.name}`,
       token,

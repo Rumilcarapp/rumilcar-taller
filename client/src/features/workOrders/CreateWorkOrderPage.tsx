@@ -72,6 +72,47 @@ export const CreateWorkOrderPage: React.FC = () => {
     }
   }, [selectedVehicle]);
 
+  // Pre-load data when converted directly from an appointment in Agenda
+  useEffect(() => {
+    const fromApt = (location.state as any)?.fromAppointment;
+    if (fromApt && !id) {
+      if (fromApt.clientName) {
+        setSelectedClient({
+          id: fromApt.clientId || 'cli-apt',
+          nombre: fromApt.clientName.split(' ')[0] || fromApt.clientName,
+          apellido: fromApt.clientName.split(' ').slice(1).join(' ') || '',
+          documento: '',
+          telefono: '',
+        });
+      }
+      if (fromApt.vehicleDesc) {
+        const parts = fromApt.vehicleDesc.split('-');
+        const plate = parts.length > 1 ? parts[parts.length - 1].trim() : '';
+        const makeModel = parts[0].trim().split(' ');
+        setSelectedVehicle({
+          id: fromApt.vehicleId || 'veh-apt',
+          placa: plate || fromApt.vehicleDesc,
+          marca: makeModel[0] || 'Vehículo',
+          modelo: makeModel.slice(1).join(' ') || '',
+        });
+      }
+      if (fromApt.serviceMotif) {
+        setServices([
+          {
+            id: 'svc-' + Date.now(),
+            name: fromApt.serviceMotif,
+            description: 'Servicio programado desde la agenda',
+            price: 0,
+            currency: 'USD',
+          },
+        ]);
+      }
+      if (fromApt.mechanicName) {
+        setMechanicId(fromApt.mechanicName);
+      }
+    }
+  }, [location.state, id]);
+
   const handleSaveClient = (client: any) => {
     setSelectedClient(client);
     setClientSearch('');

@@ -171,23 +171,7 @@ export const LoginPage: React.FC = () => {
         return;
       }
     } catch {
-      // Remote call failed (offline mode)
-      const found = users.find(
-        (u) => u.email.toLowerCase() === cleanEmail && u.password === password
-      );
-
-      if (found) {
-        if (!found.isActive) {
-          setError('Este usuario se encuentra inactivo. Contacte al administrador.');
-          setLoading(false);
-          return;
-        }
-        handleLoginUser(found);
-        setLoading(false);
-        return;
-      }
-
-      setError('No se pudo conectar con el servidor de autenticación. Verifica tu conexión a internet.');
+      setError('No se pudo conectar con el servidor de autenticación. Por favor verifica tu conexión a internet.');
       setLoading(false);
     }
   };
@@ -281,47 +265,15 @@ export const LoginPage: React.FC = () => {
         return;
       } else {
         const errData = await res.json().catch(() => ({ error: '' }));
-        if (errData.error) {
-          setError(errData.error);
-          setLoading(false);
-          return;
-        }
+        setError(errData.error || 'Error al registrar el taller. Por favor verifica los datos e intenta nuevamente.');
+        setLoading(false);
+        return;
       }
     } catch {
-      // In case server is offline/unreachable, register locally
+      setError('No se pudo conectar con el servidor para registrar tu taller. Por favor verifica tu conexión a internet.');
+      setLoading(false);
+      return;
     }
-
-    // Local registration fallback
-    setSuccessMsg('¡Taller creado con éxito! Iniciando sesión...');
-    const newUserId = 'usr-' + Date.now();
-    addUser({
-      name: ownerName.trim(),
-      email: regEmail.trim().toLowerCase(),
-      password: regPassword,
-      phone: regPhone.trim(),
-      role: 'OWNER',
-      isActive: true,
-    });
-
-    // Reset workshop profile store to a clean state for this new workshop
-    useWorkshopStore.getState().resetToCleanProfile(workshopName.trim());
-    useWorkshopStore.getState().updateWorkshop({
-      ownerName: ownerName.trim(),
-      email: regEmail.trim().toLowerCase(),
-      phone: regPhone.trim(),
-    });
-
-    setTimeout(() => {
-      handleLoginUser({
-        id: newUserId,
-        name: ownerName.trim(),
-        email: regEmail.trim().toLowerCase(),
-        role: 'OWNER',
-        phone: regPhone.trim(),
-        workshopId: 'ws-' + Date.now(),
-        workshopName: workshopName.trim(),
-      });
-    }, 700);
   };
 
   const handleRequestResetLink = async (e?: React.FormEvent) => {

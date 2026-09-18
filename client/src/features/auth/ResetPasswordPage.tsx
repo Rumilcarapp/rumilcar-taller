@@ -76,9 +76,10 @@ export const ResetPasswordPage: React.FC = () => {
         }
       } catch {
         if (!isMounted) return;
-        // In case verify endpoint is unavailable, allow the user to still attempt the reset form
-        setTokenValid(true);
+        setTokenValid(false);
+        setVerifyError('No se pudo verificar la validez del enlace debido a un problema de conexión con el servidor. Por favor verifica tu conexión e intenta nuevamente.');
       } finally {
+
         if (isMounted) setIsVerifying(false);
       }
     }
