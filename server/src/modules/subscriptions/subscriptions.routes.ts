@@ -258,17 +258,15 @@ subscriptionsRouter.get('/admin/workshops', authenticate, requireSuperAdmin, asy
   try {
     const workshops = await prisma.workshop.findMany({
       where: {
-        // Exclude platform SuperAdmin accounts and internal/test profiles from client workshop counts
+        // Exclude platform SuperAdmin accounts from client workshop counts
         users: {
           none: {
             role: 'SUPERADMIN',
           },
         },
-        NOT: [
-          { name: { contains: 'Rumilcar Central', mode: 'insensitive' } },
-          { email: { in: ['luarkpadilla@gmail.com', 'redes.multiserviciosrumilcar@gmail.com'] } },
-          { users: { some: { email: { in: ['luarkpadilla@gmail.com', 'redes.multiserviciosrumilcar@gmail.com'] } } } },
-        ],
+        name: {
+          not: 'Rumilcar Central (SaaS)',
+        },
       },
       include: {
         users: {
