@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useSubscriptionStore, AdminWorkshopItem, SubscriptionPlanKey } from '../../store/useSubscriptionStore';
 import {
@@ -98,8 +99,53 @@ export const SuperAdminWorkshopsPage: React.FC = () => {
     replaceVariables: replaceWAVariables,
   } = useSuperAdminWhatsAppStore();
 
-  // Action Menu Dropdown state
+  // Action Menu Dropdown state (Portal)
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const [menuCoords, setMenuCoords] = useState<{ top: number; right: number } | null>(null);
+
+  const handleToggleMenu = (e: React.MouseEvent<HTMLButtonElement>, w: AdminWorkshopItem) => {
+    e.stopPropagation();
+    if (activeMenuId === w.workshopId) {
+      setActiveMenuId(null);
+      setMenuCoords(null);
+      return;
+    }
+    const rect = e.currentTarget.getBoundingClientRect();
+    const menuEstimatedHeight = 285;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const openUpwards = spaceBelow < menuEstimatedHeight && rect.top > menuEstimatedHeight;
+
+    setMenuCoords({
+      top: openUpwards ? Math.max(10, rect.top - menuEstimatedHeight - 4) : rect.bottom + 4,
+      right: Math.max(10, window.innerWidth - rect.right),
+    });
+    setActiveMenuId(w.workshopId);
+  };
+
+  useEffect(() => {
+    const handleCloseMenu = () => {
+      if (activeMenuId) {
+        setActiveMenuId(null);
+        setMenuCoords(null);
+      }
+    };
+    window.addEventListener('scroll', handleCloseMenu, true);
+    window.addEventListener('resize', handleCloseMenu);
+    window.addEventListener('click', handleCloseMenu);
+    return () => {
+      window.removeEventListener('scroll', handleCloseMenu, true);
+      window.removeEventListener('resize', handleCloseMenu);
+      window.removeEventListener('click', handleCloseMenu);
+    };
+  }, [activeMenuId]);
+
+  // Feedback toast message
+  const [toastMessage, setToastMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const showToast = (type: 'success' | 'error', text: string) => {
+    setToastMessage({ type, text });
+    setTimeout(() => setToastMessage(null), 4000);
+  };
 
   // WhatsApp Support Modal state
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
@@ -121,26 +167,10 @@ export const SuperAdminWorkshopsPage: React.FC = () => {
     text: '',
   });
 
-  // Feedback toast message
-  const [toastMessage, setToastMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-
   useEffect(() => {
     fetchAdminWorkshops();
   }, []);
 
-  // Close open dropdown menu when clicking anywhere outside
-  useEffect(() => {
-    const handleDocumentClick = () => {
-      setActiveMenuId(null);
-    };
-    window.addEventListener('click', handleDocumentClick);
-    return () => window.removeEventListener('click', handleDocumentClick);
-  }, []);
-
-  const showToast = (type: 'success' | 'error', text: string) => {
-    setToastMessage({ type, text });
-    setTimeout(() => setToastMessage(null), 4000);
-  };
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -666,7 +696,7 @@ export const SuperAdminWorkshopsPage: React.FC = () => {
                       </td>
 
                       <td>
-                        <div style={{ fontWeight: 600, color: '#ffffff' }}>{w.ownerName}</div>
+                        <div style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{w.ownerName}</div>
                         <div className="saas-wtable-meta">{w.email}</div>
                         {w.phone && <div className="saas-wtable-meta">{w.phone}</div>}
                       </td>
@@ -712,7 +742,7 @@ export const SuperAdminWorkshopsPage: React.FC = () => {
                       </td>
 
                       <td>
-                        <div style={{ fontSize: '13px', fontWeight: 600 }}>
+                        <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
                           {w.stats?.mechanics || 1} mecánico(s)
                         </div>
                         <div className="saas-wtable-meta">
@@ -744,10 +774,7 @@ export const SuperAdminWorkshopsPage: React.FC = () => {
                           <button
                             type="button"
                             className={`saas-action-trigger-btn ${activeMenuId === w.workshopId ? 'active' : ''}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActiveMenuId(activeMenuId === w.workshopId ? null : w.workshopId);
-                            }}
+                            onClick={(e) => handleToggleMenu(e, w)}
                             title="Desplegar acciones de soporte para este taller"
                           >
                             <SlidersHorizontal size={13} />
@@ -757,108 +784,6 @@ export const SuperAdminWorkshopsPage: React.FC = () => {
                               className={`chevron-icon ${activeMenuId === w.workshopId ? 'open' : ''}`}
                             />
                           </button>
-
-                          {activeMenuId === w.workshopId && (
-                            <>
-                              <div
-                                className="saas-dropdown-overlay"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setActiveMenuId(null);
-                                }}
-                              />
-                              <div
-                                className="saas-action-dropdown-menu"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                {/* WhatsApp */}
-                                <button
-                                  type="button"
-                                  className="saas-dropdown-item wa-item"
-                                  onClick={() => {
-                                    setActiveMenuId(null);
-                                    handleOpenWhatsAppModal(w);
-                                  }}
-                                  title="Enviar mensaje de soporte por WhatsApp con plantilla"
-                                >
-                                  <MessageCircle size={15} color="#25D366" />
-                                  <span>Soporte WhatsApp</span>
-                                </button>
-
-                                {/* Reset Password */}
-                                <button
-                                  type="button"
-                                  className="saas-dropdown-item"
-                                  onClick={() => {
-                                    setActiveMenuId(null);
-                                    handleOpenPasswordModal(w);
-                                  }}
-                                  title="Restablecer clave maestra del dueño"
-                                >
-                                  <Key size={15} color="#f59e0b" />
-                                  <span>Restablecer Clave</span>
-                                </button>
-
-                                {/* Toggle Suspend/Activate */}
-                                <button
-                                  type="button"
-                                  className={`saas-dropdown-item ${isSuspended ? 'success-item' : 'danger-item'}`}
-                                  onClick={() => {
-                                    setActiveMenuId(null);
-                                    handleToggleStatus(w);
-                                  }}
-                                  title={isSuspended ? 'Reactivar acceso al software' : 'Suspender acceso'}
-                                >
-                                  {isSuspended ? <Play size={15} color="#10b981" /> : <Pause size={15} color="#ef4444" />}
-                                  <span>{isSuspended ? 'Reactivar Acceso' : 'Suspender Acceso'}</span>
-                                </button>
-
-                                {/* Edit Details */}
-                                <button
-                                  type="button"
-                                  className="saas-dropdown-item"
-                                  onClick={() => {
-                                    setActiveMenuId(null);
-                                    handleOpenEditModal(w);
-                                  }}
-                                  title="Editar datos del taller"
-                                >
-                                  <Edit size={15} color="#60a5fa" />
-                                  <span>Editar Datos</span>
-                                </button>
-
-                                {/* Direct link to Membresías */}
-                                <button
-                                  type="button"
-                                  className="saas-dropdown-item"
-                                  onClick={() => {
-                                    setActiveMenuId(null);
-                                    navigate('/admin/membresias');
-                                  }}
-                                  title="Gestionar pagos y membresía"
-                                >
-                                  <ShieldCheck size={15} color="#a855f7" />
-                                  <span>Membresías y Pagos</span>
-                                </button>
-
-                                <div className="saas-dropdown-divider" />
-
-                                {/* Modo Ver como Taller (Impersonation) */}
-                                <button
-                                  type="button"
-                                  className="saas-dropdown-item impersonate-item"
-                                  onClick={() => {
-                                    setActiveMenuId(null);
-                                    handleImpersonate(w);
-                                  }}
-                                  title="Entrar al software como este Taller (Supervisión)"
-                                >
-                                  <Eye size={15} color="#0ea5e9" />
-                                  <span>Supervisar Taller</span>
-                                </button>
-                              </div>
-                            </>
-                          )}
                         </div>
                       </td>
                     </tr>
@@ -869,6 +794,129 @@ export const SuperAdminWorkshopsPage: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {/* Action Menu Portal (Nunca recortado por overflow ni scroll) */}
+      {activeMenuId && menuCoords && (() => {
+        const w = filteredWorkshops.find((item) => item.workshopId === activeMenuId);
+        if (!w) return null;
+        const isSuspended = w.status === 'SUSPENDED' || w.status === 'PAST_DUE';
+
+        return createPortal(
+          <>
+            <div
+              className="saas-dropdown-overlay"
+              onClick={(e) => {
+                e.stopPropagation();
+                setActiveMenuId(null);
+                setMenuCoords(null);
+              }}
+            />
+            <div
+              className="saas-action-dropdown-menu portal-menu"
+              style={{
+                position: 'fixed',
+                top: `${menuCoords.top}px`,
+                right: `${menuCoords.right}px`,
+                zIndex: 99999,
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* WhatsApp */}
+              <button
+                type="button"
+                className="saas-dropdown-item wa-item"
+                onClick={() => {
+                  setActiveMenuId(null);
+                  setMenuCoords(null);
+                  handleOpenWhatsAppModal(w);
+                }}
+                title="Enviar mensaje de soporte por WhatsApp con plantilla"
+              >
+                <MessageCircle size={15} color="#25D366" />
+                <span>Soporte WhatsApp</span>
+              </button>
+
+              {/* Reset Password */}
+              <button
+                type="button"
+                className="saas-dropdown-item"
+                onClick={() => {
+                  setActiveMenuId(null);
+                  setMenuCoords(null);
+                  handleOpenPasswordModal(w);
+                }}
+                title="Restablecer clave maestra del dueño"
+              >
+                <Key size={15} color="#f59e0b" />
+                <span>Restablecer Clave</span>
+              </button>
+
+              {/* Toggle Suspend/Activate */}
+              <button
+                type="button"
+                className={`saas-dropdown-item ${isSuspended ? 'success-item' : 'danger-item'}`}
+                onClick={() => {
+                  setActiveMenuId(null);
+                  setMenuCoords(null);
+                  handleToggleStatus(w);
+                }}
+                title={isSuspended ? 'Reactivar acceso al software' : 'Suspender acceso'}
+              >
+                {isSuspended ? <Play size={15} color="#10b981" /> : <Pause size={15} color="#ef4444" />}
+                <span>{isSuspended ? 'Reactivar Acceso' : 'Suspender Acceso'}</span>
+              </button>
+
+              {/* Edit Details */}
+              <button
+                type="button"
+                className="saas-dropdown-item"
+                onClick={() => {
+                  setActiveMenuId(null);
+                  setMenuCoords(null);
+                  handleOpenEditModal(w);
+                }}
+                title="Editar datos del taller"
+              >
+                <Edit size={15} color="#60a5fa" />
+                <span>Editar Datos</span>
+              </button>
+
+              {/* Direct link to Membresías */}
+              <button
+                type="button"
+                className="saas-dropdown-item"
+                onClick={() => {
+                  setActiveMenuId(null);
+                  setMenuCoords(null);
+                  navigate('/admin/membresias');
+                }}
+                title="Gestionar pagos y membresía"
+              >
+                <ShieldCheck size={15} color="#a855f7" />
+                <span>Membresías y Pagos</span>
+              </button>
+
+              <div className="saas-dropdown-divider" />
+
+              {/* Modo Ver como Taller (Impersonation) */}
+              <button
+                type="button"
+                className="saas-dropdown-item impersonate-item"
+                onClick={() => {
+                  setActiveMenuId(null);
+                  setMenuCoords(null);
+                  handleImpersonate(w);
+                }}
+                title="Entrar al software como este Taller (Supervisión)"
+              >
+                <Eye size={15} color="#0ea5e9" />
+                <span>Supervisar Taller</span>
+              </button>
+            </div>
+          </>,
+          document.body
+        );
+      })()}
 
       {/* MODAL 1: REGISTRAR NUEVO TALLER CLIENTE */}
       {showCreateModal && (
