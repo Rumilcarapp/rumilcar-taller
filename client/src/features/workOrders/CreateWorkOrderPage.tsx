@@ -13,6 +13,7 @@ import { OrderSummary } from './components/OrderSummary';
 import { handlePrintOrder, handleWhatsAppShare } from '../../lib/orderActions';
 import { useWorkOrderStore } from '../../store/useWorkOrderStore';
 import { useClientStore } from '../../store/useClientStore';
+import { useVehicleStore } from '../../store/useVehicleStore';
 import { capitalizeWords } from '../../lib/stringUtils';
 import './CreateWorkOrderPage.css';
 
@@ -22,7 +23,13 @@ export const CreateWorkOrderPage: React.FC = () => {
   const location = useLocation();
   const isBudget = location.pathname.includes('/presupuestos');
   const { workOrders, updateWorkOrder } = useWorkOrderStore();
-  const { clients } = useClientStore();
+  const { clients, fetchClients } = useClientStore();
+  const { vehicles, fetchVehicles } = useVehicleStore();
+
+  useEffect(() => {
+    fetchClients().catch(() => {});
+    fetchVehicles().catch(() => {});
+  }, [fetchClients, fetchVehicles]);
   
   // Modals state
   const [showClientModal, setShowClientModal] = useState(false);
@@ -254,7 +261,7 @@ export const CreateWorkOrderPage: React.FC = () => {
           <ArrowLeft size={20} />
           <span>Volver</span>
         </button>
-        <h1 className="page-title">{id ? `EDITAR ${isBudget ? 'PRESUPUESTO' : 'ORDEN'} ` + id : `NUEVO ${isBudget ? 'PRESUPUESTO' : 'ORDEN DE TRABAJO'} `}</h1>
+        <h1 className="page-title">{id ? `EDITAR ${isBudget ? 'PRESUPUESTO' : 'ORDEN'} ` + id : (isBudget ? 'NUEVO PRESUPUESTO' : 'NUEVA ORDEN DE TRABAJO')}</h1>
         <div style={{ width: 80 }}></div>
       </div>
 
@@ -288,51 +295,67 @@ export const CreateWorkOrderPage: React.FC = () => {
                     <Input 
                       placeholder="Buscar cliente por nombre o cédula..." 
                       value={clientSearch} 
-                      onChange={(e) => setClientSearch(capitalizeWords(e.target.value))} 
+                      onChange={(e) => setClientSearch(e.target.value)} 
                       icon={<Info size={16} />}
                     />
                     <Button variant="outline" icon={<UserPlus size={18} />} onClick={() => setShowClientModal(true)}>NUEVO</Button>
                   </div>
-                  {clientSearch.length > 0 && (
-                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', marginTop: '4px', zIndex: 20, maxHeight: '220px', overflowY: 'auto', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-                      {clients
-                        .filter(c => 
-                          `${c.nombre || ''} ${c.apellido || ''}`.toLowerCase().includes(clientSearch.toLowerCase()) ||
-                          (c.documento && c.documento.toLowerCase().includes(clientSearch.toLowerCase()))
-                        )
-                        .slice(0, 5)
-                        .map(c => (
-                          <div
-                            key={c.id}
-                            style={{ padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-                            onClick={() => {
-                              setSelectedClient({
-                                ...c,
-                                nombre: capitalizeWords(c.nombre || ''),
-                                apellido: capitalizeWords(c.apellido || ''),
-                                documento: (c.documento || '').toUpperCase(),
-                              });
-                              setClientSearch('');
-                            }}
-                          >
-                            <div>
-                              <div style={{ fontWeight: 600, textTransform: 'capitalize' }}>
-                                {capitalizeWords(`${c.nombre} ${c.apellido || ''}`.trim())}
+                  {clientSearch.trim().length > 0 && (
+                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', marginTop: '4px', zIndex: 30, maxHeight: '240px', overflowY: 'auto', boxShadow: '0 8px 24px rgba(0,0,0,0.15)' }}>
+                      {(() => {
+                        const cleanQ = clientSearch.trim().toLowerCase();
+                        const cleanQAlpha = cleanQ.replace(/[^a-z0-9]/gi, '');
+                        const matches = clients.filter(c => {
+                          const fullName = `${c.nombre || ''} ${c.apellido || ''}`.toLowerCase();
+                          const doc = (c.documento || '').toLowerCase();
+                          const docAlpha = doc.replace(/[^a-z0-9]/gi, '');
+                          return fullName.includes(cleanQ) || 
+                                 doc.includes(cleanQ) || 
+                                 (cleanQAlpha.length >= 2 && docAlpha.includes(cleanQAlpha));
+                        });
+
+                        return (
+                          <>
+                            {matches.map(c => (
+                              <div
+                                key={c.id}
+                                style={{ padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                                onClick={() => {
+                                  setSelectedClient({
+                                    ...c,
+                                    nombre: capitalizeWords(c.nombre || ''),
+                                    apellido: capitalizeWords(c.apellido || ''),
+                                    documento: (c.documento || '').toUpperCase(),
+                                  });
+                                  setClientSearch('');
+                                }}
+                              >
+                                <div>
+                                  <div style={{ fontWeight: 600, textTransform: 'capitalize' }}>
+                                    {capitalizeWords(`${c.nombre} ${c.apellido || ''}`.trim())}
+                                  </div>
+                                  <div style={{ fontSize: 11, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>
+                                    {c.documento} {c.telefono ? `• ${c.telefono}` : ''}
+                                  </div>
+                                </div>
+                                <span style={{ fontSize: 12, color: 'var(--color-primary)', fontWeight: 600 }}>Seleccionar</span>
                               </div>
-                              <div style={{ fontSize: 11, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>
-                                {c.documento} {c.telefono ? `• ${c.telefono}` : ''}
+                            ))}
+                            {matches.length === 0 && (
+                              <div style={{ padding: '10px 14px', fontSize: 12, color: 'var(--color-text-muted)', borderBottom: '1px solid var(--color-border)' }}>
+                                No se encontraron clientes registrados con "{clientSearch}".
                               </div>
-                            </div>
-                            <span style={{ fontSize: 12, color: 'var(--color-primary)', fontWeight: 600 }}>Seleccionar</span>
-                          </div>
-                        ))}
-                      <button 
-                        style={{ width: '100%', padding: '12px 14px', textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-primary)', fontWeight: 600 }}
-                        onClick={() => setShowClientModal(true)}
-                      >
-                        <UserPlus size={16} />
-                        + Crear cliente "{clientSearch}"
-                      </button>
+                            )}
+                            <button 
+                              style={{ width: '100%', padding: '12px 14px', textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-primary)', fontWeight: 600 }}
+                              onClick={() => setShowClientModal(true)}
+                            >
+                              <UserPlus size={16} />
+                              + Crear nuevo cliente "{capitalizeWords(clientSearch.trim())}"
+                            </button>
+                          </>
+                        );
+                      })()}
                     </div>
                   )}
                 </div>
@@ -357,21 +380,97 @@ export const CreateWorkOrderPage: React.FC = () => {
                 <div style={{ position: 'relative' }}>
                   <div className="flex-row">
                     <Input 
-                      placeholder="Buscar vehiculo..." 
+                      placeholder="Buscar vehículo por placa, marca o modelo..." 
                       value={vehicleSearch} 
                       onChange={(e) => setVehicleSearch(e.target.value.toUpperCase())}
                     />
                     <Button variant="outline" icon={<Car size={18} />} onClick={() => setShowVehicleModal(true)}>NUEVO</Button>
                   </div>
-                  {vehicleSearch.length > 1 && (
-                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 100, background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', marginTop: '4px', zIndex: 10, padding: '4px' }}>
-                      <button 
-                        style={{ width: '100%', padding: '12px', textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-primary)' }}
-                        onClick={() => setShowVehicleModal(true)}
-                      >
-                        <Car size={16} />
-                        No encontrado. + Registrar placa "{vehicleSearch}"
-                      </button>
+                  
+                  {/* Suggestions for selected client's vehicles when search input is empty */}
+                  {selectedClient && vehicleSearch.trim().length === 0 && (() => {
+                    const clientVehicles = vehicles.filter(v => {
+                      const ownerDoc = (v.ownerDocumento || '').toUpperCase();
+                      const cDoc = (selectedClient.documento || '').toUpperCase();
+                      return ownerDoc === cDoc || ownerDoc.replace(/[^0-9]/g, '') === cDoc.replace(/[^0-9]/g, '');
+                    });
+                    if (clientVehicles.length === 0) return null;
+                    return (
+                      <div style={{ marginTop: '8px', padding: '8px 12px', background: 'var(--color-bg-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', marginBottom: '6px' }}>
+                          Vehículos registrados de este cliente:
+                        </div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                          {clientVehicles.map(v => (
+                            <button
+                              key={v.id || v.placa}
+                              type="button"
+                              style={{ padding: '6px 10px', background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', borderRadius: '6px', cursor: 'pointer', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-text-primary)' }}
+                              onClick={() => {
+                                setSelectedVehicle(v);
+                                setVehicleSearch('');
+                              }}
+                            >
+                              <Car size={14} color="var(--color-primary)" />
+                              <span>{v.marca} {v.modelo}</span>
+                              <span style={{ color: 'var(--color-text-muted)', fontSize: 11 }}>({v.placa})</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Dropdown for active vehicle search */}
+                  {vehicleSearch.trim().length > 0 && (
+                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', marginTop: '4px', zIndex: 30, maxHeight: '240px', overflowY: 'auto', boxShadow: '0 8px 24px rgba(0,0,0,0.15)' }}>
+                      {(() => {
+                        const cleanVQ = vehicleSearch.trim().toUpperCase();
+                        const matches = vehicles.filter(v => {
+                          const plate = (v.placa || '').toUpperCase();
+                          const makeModel = `${v.marca || ''} ${v.modelo || ''}`.toUpperCase();
+                          return plate.includes(cleanVQ) || makeModel.includes(cleanVQ);
+                        });
+
+                        return (
+                          <>
+                            {matches.map(v => (
+                              <div
+                                key={v.id || v.placa}
+                                style={{ padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                                onClick={() => {
+                                  setSelectedVehicle(v);
+                                  setVehicleSearch('');
+                                  if (!selectedClient && v.ownerDocumento) {
+                                    const owner = clients.find(c => (c.documento || '').toUpperCase() === (v.ownerDocumento || '').toUpperCase());
+                                    if (owner) setSelectedClient(owner);
+                                  }
+                                }}
+                              >
+                                <div>
+                                  <div style={{ fontWeight: 600 }}>{v.marca} {v.modelo}</div>
+                                  <div style={{ fontSize: 11, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>
+                                    Placa: {v.placa} {v.color ? `• Color: ${v.color}` : ''} {v.ano ? `• Año: ${v.ano}` : ''}
+                                  </div>
+                                </div>
+                                <span style={{ fontSize: 12, color: 'var(--color-primary)', fontWeight: 600 }}>Seleccionar</span>
+                              </div>
+                            ))}
+                            {matches.length === 0 && (
+                              <div style={{ padding: '10px 14px', fontSize: 12, color: 'var(--color-text-muted)', borderBottom: '1px solid var(--color-border)' }}>
+                                No se encontró ningún vehículo con placa o modelo "{vehicleSearch}".
+                              </div>
+                            )}
+                            <button 
+                              style={{ width: '100%', padding: '12px 14px', textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-primary)', fontWeight: 600 }}
+                              onClick={() => setShowVehicleModal(true)}
+                            >
+                              <Car size={16} />
+                              + Registrar nuevo vehículo "{vehicleSearch}"
+                            </button>
+                          </>
+                        );
+                      })()}
                     </div>
                   )}
                 </div>
