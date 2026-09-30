@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { api } from '../services/api';
+import { capitalizeWords } from '../lib/stringUtils';
 
 export interface Client {
   id: string;
@@ -29,11 +30,11 @@ export const useClientStore = create<ClientState>()(
           const data = await api.get('/clients');
           if (Array.isArray(data)) {
             const mapped: Client[] = data.map((c: any) => {
-              const parts = (c.name || '').trim().split(' ');
-              const nombre = parts[0] || '';
-              const apellido = parts.slice(1).join(' ') || '';
-              const taxId = c.taxId || '';
-              const type: 'persona' | 'empresa' = taxId.toUpperCase().startsWith('J') || taxId.toUpperCase().startsWith('G')
+              const parts = (c.name || '').trim().split(/\s+/);
+              const nombre = capitalizeWords(parts[0] || '');
+              const apellido = capitalizeWords(parts.slice(1).join(' ') || '');
+              const taxId = (c.taxId || '').toUpperCase();
+              const type: 'persona' | 'empresa' = taxId.startsWith('J') || taxId.startsWith('G')
                 ? 'empresa'
                 : 'persona';
 
@@ -54,20 +55,43 @@ export const useClientStore = create<ClientState>()(
         }
       },
       addClient: (client) => {
+        const cleanNombre = capitalizeWords(client.nombre || '');
+        const cleanApellido = capitalizeWords(client.apellido || '');
+        const cleanDocumento = (client.documento || '').toUpperCase();
+        const cleanClient: Client = {
+          ...client,
+          nombre: cleanNombre,
+          apellido: cleanApellido,
+          documento: cleanDocumento,
+        };
+
         set((state) => {
-          if (state.clients.some((c) => c.documento && c.documento === client.documento)) {
-            return state;
+          const exists = state.clients.some((c) => c.documento && c.documento === cleanDocumento);
+          if (exists) {
+            return {
+              clients: state.clients.map((c) =>
+                c.documento === cleanDocumento
+                  ? {
+                      ...c,
+                      nombre: cleanNombre,
+                      apellido: cleanApellido,
+                      telefono: cleanClient.telefono || c.telefono,
+                      direccion: cleanClient.direccion || c.direccion,
+                    }
+                  : c
+              ),
+            };
           }
-          return { clients: [client, ...state.clients] };
+          return { clients: [cleanClient, ...state.clients] };
         });
 
         // Sync with backend
-        const fullName = `${client.nombre} ${client.apellido || ''}`.trim();
+        const fullName = `${cleanNombre} ${cleanApellido}`.trim();
         api.post('/clients', {
           name: fullName,
-          taxId: client.documento || null,
-          phone: client.telefono || null,
-          address: client.direccion || null,
+          taxId: cleanDocumento || null,
+          phone: cleanClient.telefono || null,
+          address: cleanClient.direccion || null,
         }).then((saved) => {
           if (saved && saved.id) {
             set((state) => ({
@@ -77,18 +101,28 @@ export const useClientStore = create<ClientState>()(
         }).catch(() => {});
       },
       updateClient: (id, updated) => {
+        const cleanUpdated: Partial<Client> = {
+          ...updated,
+          ...(updated.nombre ? { nombre: capitalizeWords(updated.nombre) } : {}),
+          ...(updated.apellido !== undefined ? { apellido: capitalizeWords(updated.apellido) } : {}),
+          ...(updated.documento ? { documento: updated.documento.toUpperCase() } : {}),
+        };
+
         set((state) => ({
-          clients: state.clients.map((c) => (c.id === id ? { ...c, ...updated } : c)),
+          clients: state.clients.map((c) => (c.id === id ? { ...c, ...cleanUpdated } : c)),
         }));
 
         const existing = get().clients.find((c) => c.id === id);
         if (existing) {
-          const fullName = `${updated.nombre || existing.nombre} ${updated.apellido !== undefined ? updated.apellido : existing.apellido}`.trim();
+          const finalNombre = cleanUpdated.nombre || existing.nombre;
+          const finalApellido = cleanUpdated.apellido !== undefined ? cleanUpdated.apellido : existing.apellido;
+          const fullName = `${finalNombre} ${finalApellido}`.trim();
+
           api.put(`/clients/${id}`, {
             name: fullName,
-            taxId: updated.documento !== undefined ? updated.documento : existing.documento,
-            phone: updated.telefono !== undefined ? updated.telefono : existing.telefono,
-            address: updated.direccion !== undefined ? updated.direccion : existing.direccion,
+            taxId: cleanUpdated.documento !== undefined ? cleanUpdated.documento : existing.documento,
+            phone: cleanUpdated.telefono !== undefined ? cleanUpdated.telefono : existing.telefono,
+            address: cleanUpdated.direccion !== undefined ? cleanUpdated.direccion : existing.direccion,
           }).catch(() => {});
         }
       },
@@ -104,9 +138,14 @@ export const useClientStore = create<ClientState>()(
       name: 'rumilcar-clients-storage',
       onRehydrateStorage: () => (state) => {
         if (state && Array.isArray(state.clients)) {
-          state.clients = state.clients.filter(
-            (c) => !['CLI-001', 'CLI-002'].includes(c.id)
-          );
+          state.clients = state.clients
+            .filter((c) => !['CLI-001', 'CLI-002'].includes(c.id))
+            .map((c) => ({
+              ...c,
+              nombre: capitalizeWords(c.nombre || ''),
+              apellido: capitalizeWords(c.apellido || ''),
+              documento: (c.documento || '').toUpperCase(),
+            }));
         }
       },
     }

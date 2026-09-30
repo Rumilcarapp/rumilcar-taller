@@ -21,6 +21,11 @@ const createClientSchema = z.object({
 
 const updateClientSchema = createClientSchema.partial();
 
+function capitalizeWords(str: string): string {
+  if (!str) return '';
+  return str.replace(/(?:^|[\s\-])\p{L}/gu, (char) => char.toUpperCase());
+}
+
 // GET /api/clients - Get all clients belonging exclusively to this workshop
 clientsRouter.get('/', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -49,7 +54,13 @@ clientsRouter.get('/', async (req: AuthRequest, res: Response): Promise<void> =>
       orderBy: { createdAt: 'desc' },
     });
 
-    res.json(clients);
+    const formatted = clients.map(c => ({
+      ...c,
+      name: capitalizeWords(c.name),
+      taxId: c.taxId ? c.taxId.toUpperCase() : null,
+    }));
+
+    res.json(formatted);
   } catch (error: any) {
     console.error('Error fetching clients:', error);
     res.status(500).json({ error: 'Error al consultar clientes del taller' });
@@ -115,10 +126,11 @@ clientsRouter.post('/', async (req: AuthRequest, res: Response): Promise<void> =
       }
     }
 
+    const cleanName = capitalizeWords(name.trim());
     const client = await prisma.client.create({
       data: {
         workshopId,
-        name: name.trim(),
+        name: cleanName,
         email: email && email.trim() !== '' ? email.trim().toLowerCase() : null,
         phone: phone ? phone.trim() : null,
         taxId: taxId ? taxId.trim().toUpperCase() : null,
@@ -168,7 +180,7 @@ clientsRouter.put('/:id', async (req: AuthRequest, res: Response): Promise<void>
     const updated = await prisma.client.update({
       where: { id },
       data: {
-        name: data.name !== undefined ? data.name.trim() : undefined,
+        name: data.name !== undefined ? capitalizeWords(data.name.trim()) : undefined,
         email: data.email !== undefined ? (data.email ? data.email.trim().toLowerCase() : null) : undefined,
         phone: data.phone !== undefined ? (data.phone ? data.phone.trim() : null) : undefined,
         taxId: data.taxId !== undefined ? (data.taxId ? data.taxId.trim().toUpperCase() : null) : undefined,

@@ -6,6 +6,7 @@ import { useWorkOrderStore } from '../../store/useWorkOrderStore';
 import { Button, Card, EmptyState } from '../../components/ui';
 import { Plus, Search, User, FileText, ArrowRight } from 'lucide-react';
 import { ClientModal } from '../workOrders/components/ClientModal';
+import { capitalizeWords } from '../../lib/stringUtils';
 
 export const ClientsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -84,9 +85,9 @@ export const ClientsPage: React.FC = () => {
                       style={{ borderBottom: '1px solid var(--color-border)', cursor: 'pointer' }}
                       onClick={() => navigate(`/clientes/${client.id}`)}
                     >
-                      <td style={{ padding: '12px 8px', fontWeight: 500, color: 'var(--color-text-primary)' }}>
-                        {client.nombre} {client.apellido}
-                        {client.type === 'empresa' && <span style={{ marginLeft: '8px', fontSize: '10px', padding: '2px 6px', background: 'var(--color-bg-secondary)', borderRadius: '4px', color: 'var(--color-text-muted)' }}>Empresa</span>}
+                      <td style={{ padding: '12px 8px', fontWeight: 500, color: 'var(--color-text-primary)', textTransform: 'capitalize' }}>
+                        {capitalizeWords(`${client.nombre || ''} ${client.apellido || ''}`.trim())}
+                        {client.type === 'empresa' && <span style={{ marginLeft: '8px', fontSize: '10px', padding: '2px 6px', background: 'var(--color-bg-secondary)', borderRadius: '4px', color: 'var(--color-text-muted)', textTransform: 'none' }}>Empresa</span>}
                       </td>
                       <td style={{ padding: '12px 8px', color: 'var(--color-text-secondary)' }}>{client.documento}</td>
                       <td style={{ padding: '12px 8px', color: 'var(--color-text-secondary)' }}>{client.telefono ? `+58 ${client.telefono}` : '-'}</td>

@@ -12,6 +12,8 @@ import { PartLine, PartLineItem } from './components/PartLineItem';
 import { OrderSummary } from './components/OrderSummary';
 import { handlePrintOrder, handleWhatsAppShare } from '../../lib/orderActions';
 import { useWorkOrderStore } from '../../store/useWorkOrderStore';
+import { useClientStore } from '../../store/useClientStore';
+import { capitalizeWords } from '../../lib/stringUtils';
 import './CreateWorkOrderPage.css';
 
 export const CreateWorkOrderPage: React.FC = () => {
@@ -20,6 +22,7 @@ export const CreateWorkOrderPage: React.FC = () => {
   const location = useLocation();
   const isBudget = location.pathname.includes('/presupuestos');
   const { workOrders, updateWorkOrder } = useWorkOrderStore();
+  const { clients } = useClientStore();
   
   // Modals state
   const [showClientModal, setShowClientModal] = useState(false);
@@ -114,7 +117,12 @@ export const CreateWorkOrderPage: React.FC = () => {
   }, [location.state, id]);
 
   const handleSaveClient = (client: any) => {
-    setSelectedClient(client);
+    setSelectedClient({
+      ...client,
+      nombre: capitalizeWords(client.nombre || ''),
+      apellido: capitalizeWords(client.apellido || ''),
+      documento: (client.documento || '').toUpperCase(),
+    });
     setClientSearch('');
   };
 
@@ -264,8 +272,12 @@ export const CreateWorkOrderPage: React.FC = () => {
                       <Info size={16} />
                     </div>
                     <div>
-                      <div style={{ fontWeight: 600 }}>{selectedClient.nombre} {selectedClient.apellido}</div>
-                      <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{selectedClient.documento}</div>
+                      <div style={{ fontWeight: 600, textTransform: 'capitalize' }}>
+                        {capitalizeWords(`${selectedClient.nombre || ''} ${selectedClient.apellido || ''}`.trim())}
+                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>
+                        {(selectedClient.documento || '').toUpperCase()}
+                      </div>
                     </div>
                   </div>
                   <Button variant="outline" size="sm" onClick={() => setSelectedClient(null)}>Cambiar</Button>
@@ -274,21 +286,52 @@ export const CreateWorkOrderPage: React.FC = () => {
                 <div style={{ position: 'relative' }}>
                   <div className="flex-row">
                     <Input 
-                      placeholder="Buscar cliente..." 
+                      placeholder="Buscar cliente por nombre o cédula..." 
                       value={clientSearch} 
-                      onChange={(e) => setClientSearch(e.target.value)} 
+                      onChange={(e) => setClientSearch(capitalizeWords(e.target.value))} 
                       icon={<Info size={16} />}
                     />
                     <Button variant="outline" icon={<UserPlus size={18} />} onClick={() => setShowClientModal(true)}>NUEVO</Button>
                   </div>
-                  {clientSearch.length > 1 && (
-                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 100, background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', marginTop: '4px', zIndex: 10, padding: '4px' }}>
+                  {clientSearch.length > 0 && (
+                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', marginTop: '4px', zIndex: 20, maxHeight: '220px', overflowY: 'auto', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+                      {clients
+                        .filter(c => 
+                          `${c.nombre || ''} ${c.apellido || ''}`.toLowerCase().includes(clientSearch.toLowerCase()) ||
+                          (c.documento && c.documento.toLowerCase().includes(clientSearch.toLowerCase()))
+                        )
+                        .slice(0, 5)
+                        .map(c => (
+                          <div
+                            key={c.id}
+                            style={{ padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                            onClick={() => {
+                              setSelectedClient({
+                                ...c,
+                                nombre: capitalizeWords(c.nombre || ''),
+                                apellido: capitalizeWords(c.apellido || ''),
+                                documento: (c.documento || '').toUpperCase(),
+                              });
+                              setClientSearch('');
+                            }}
+                          >
+                            <div>
+                              <div style={{ fontWeight: 600, textTransform: 'capitalize' }}>
+                                {capitalizeWords(`${c.nombre} ${c.apellido || ''}`.trim())}
+                              </div>
+                              <div style={{ fontSize: 11, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>
+                                {c.documento} {c.telefono ? `• ${c.telefono}` : ''}
+                              </div>
+                            </div>
+                            <span style={{ fontSize: 12, color: 'var(--color-primary)', fontWeight: 600 }}>Seleccionar</span>
+                          </div>
+                        ))}
                       <button 
-                        style={{ width: '100%', padding: '12px', textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-primary)' }}
+                        style={{ width: '100%', padding: '12px 14px', textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-primary)', fontWeight: 600 }}
                         onClick={() => setShowClientModal(true)}
                       >
                         <UserPlus size={16} />
-                        No encontrado. + Crear cliente "{clientSearch}"
+                        + Crear cliente "{clientSearch}"
                       </button>
                     </div>
                   )}

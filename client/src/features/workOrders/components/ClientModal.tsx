@@ -12,8 +12,12 @@ interface ClientModalProps {
 
 export const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialName }) => {
   const [type, setType] = useState<'persona' | 'empresa'>('persona');
-  const [nombre, setNombre] = useState(initialName ? capitalizeWords(initialName) : '');
-  const [apellido, setApellido] = useState('');
+  const initialParts = (initialName || '').trim().split(/\s+/);
+  const initialFirstName = initialParts[0] ? capitalizeWords(initialParts[0]) : '';
+  const initialLastName = initialParts.slice(1).join(' ') ? capitalizeWords(initialParts.slice(1).join(' ')) : '';
+
+  const [nombre, setNombre] = useState(type === 'persona' && initialParts.length > 1 ? initialFirstName : (initialName ? capitalizeWords(initialName) : ''));
+  const [apellido, setApellido] = useState(type === 'persona' && initialParts.length > 1 ? initialLastName : '');
   const [docPrefix, setDocPrefix] = useState('V-');
   const [docNumber, setDocNumber] = useState('');
   const [telefono, setTelefono] = useState('');
@@ -97,6 +101,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initi
               className={`custom-input ${errors.nombre ? 'has-error' : ''}`}
               value={nombre}
               onChange={e => setNombre(capitalizeWords(e.target.value))}
+              onBlur={() => setNombre(capitalizeWords(nombre.trim()))}
               placeholder={type === 'persona' ? 'Ej: Juan Carlos' : 'Ej: Inversiones El Motor C.A.'}
               autoCapitalize="words"
               autoCorrect="off"
@@ -112,6 +117,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initi
                 className={`custom-input ${errors.apellido ? 'has-error' : ''}`}
                 value={apellido}
                 onChange={e => setApellido(capitalizeWords(e.target.value))}
+                onBlur={() => setApellido(capitalizeWords(apellido.trim()))}
                 placeholder="Ej: Pérez Rodríguez"
                 autoCapitalize="words"
                 autoCorrect="off"
