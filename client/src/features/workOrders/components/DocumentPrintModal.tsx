@@ -3,6 +3,7 @@ import { Modal, Button } from '../../../components/ui';
 import { WorkOrder } from '../../../store/useWorkOrderStore';
 import { useCashStore } from '../../../store/useCashStore';
 import { useWorkshopStore } from '../../../store/useWorkshopStore';
+import { useAuthStore } from '../../../stores/authStore';
 import { Printer, Send, Link, FileText, Receipt, Check } from 'lucide-react';
 import { normalizePhoneNumber, openWhatsApp } from '../../../lib/whatsapp';
 import './DocumentPrint.css';
@@ -22,6 +23,8 @@ export const DocumentPrintModal: React.FC<DocumentPrintModalProps> = ({
 }) => {
   const { exchangeRateVES } = useCashStore();
   const { workshop } = useWorkshopStore();
+  const { user } = useAuthStore();
+  const workshopDisplayName = (workshop?.name || user?.workshopName || 'Taller Mecánico').trim();
   const [format, setFormat] = useState<'LETTER' | 'TICKET'>('LETTER');
   const [copied, setCopied] = useState(false);
 
@@ -35,6 +38,10 @@ export const DocumentPrintModal: React.FC<DocumentPrintModalProps> = ({
   const pendingUSD = Math.max(0, totalUSD - paidUSD);
 
   const trackingUrl = `${window.location.origin}/rastreo/${order.id}`;
+
+  const clientDisplayName = [order.client?.nombre, order.client?.apellido].filter(Boolean).join(' ') || 'Cliente General';
+  const vehicleDisplayName = [order.vehicle?.marca, order.vehicle?.modelo].filter(Boolean).join(' ') || 'Vehículo no especificado';
+  const vehicleYear = order.vehicle?.año || order.vehicle?.ano;
 
   const handlePrint = () => {
     window.print();
@@ -55,7 +62,7 @@ export const DocumentPrintModal: React.FC<DocumentPrintModalProps> = ({
     }
 
     const docName = documentType === 'PRESUPUESTO' ? 'Presupuesto' : 'Orden de Trabajo';
-    const msg = `¡Hola ${order.client?.nombre || 'Estimado Cliente'}! 👋 Adjuntamos el detalle de su *${docName} #${order.id}* de Rumilcar Taller Mecánico.\n\n` +
+    const msg = `¡Hola ${order.client?.nombre || 'Estimado Cliente'}! 👋 Adjuntamos el detalle de su *${docName} #${order.id}* de ${workshopDisplayName}.\n\n` +
       `🚗 *Vehículo:* ${order.vehicle?.marca || ''} ${order.vehicle?.modelo || ''} (${order.vehicle?.placa || ''})\n` +
       `💰 *Total:* $${totalUSD.toFixed(2)} USD (Bs ${totalVES.toLocaleString('es-VE', { maximumFractionDigits: 0 })})\n` +
       (pendingUSD > 0 ? `⚠️ *Saldo pendiente:* $${pendingUSD.toFixed(2)} USD\n\n` : `✅ *Estado:* Totalmente cancelado\n\n`) +
@@ -156,10 +163,10 @@ export const DocumentPrintModal: React.FC<DocumentPrintModalProps> = ({
               <div className="doc-brand-logo">
                 <img src="/logo-tight.png" alt="Logo" className="doc-brand-img" />
                 <div>
-                  <div className="doc-brand-name">{workshop.name ? workshop.name.toUpperCase() : 'RUMILCAR TALLER'}</div>
-                  <div className="doc-brand-sub">{workshop.legalName ? workshop.legalName.toUpperCase() : 'SERVICIOS AUTOMOTRICES'}</div>
+                  <div className="doc-brand-name">{workshopDisplayName.toUpperCase()}</div>
+                  <div className="doc-brand-sub">{(workshop.legalName || 'SERVICIOS AUTOMOTRICES').toUpperCase()}</div>
                   <div style={{ fontSize: '11px', color: '#4b5563', marginTop: '2px' }}>
-                    RIF: {workshop.taxId || 'J-50123456-7'} • Tel: {workshop.phone || '(0414) 123-4567'} • {workshop.email || 'info@rumilcar.com'}
+                    {workshop.taxId ? `RIF: ${workshop.taxId} • ` : ''}Tel: {workshop.phone || user?.phone || 'No registrado'}{workshop.email || user?.email ? ` • ${workshop.email || user?.email}` : ''}
                   </div>
                   {workshop.address && (
                     <div style={{ fontSize: '11px', color: '#4b5563' }}>
@@ -185,17 +192,17 @@ export const DocumentPrintModal: React.FC<DocumentPrintModalProps> = ({
             <div className="doc-info-grid">
               <div className="doc-info-col">
                 <div className="doc-info-label">DATOS DEL CLIENTE</div>
-                <div className="doc-info-value">{order.client?.nombre} {order.client?.apellido}</div>
+                <div className="doc-info-value">{clientDisplayName}</div>
                 <div>CI / RIF: <strong>{order.client?.documento || 'No registrado'}</strong></div>
                 <div>Teléfono: <strong>{order.client?.telefono || 'No registrado'}</strong></div>
-                <div>Dirección: {order.client?.direccion || 'Valencia'}</div>
+                <div>Dirección: {order.client?.direccion || 'No registrada'}</div>
               </div>
 
               <div className="doc-info-col">
                 <div className="doc-info-label">DATOS DEL VEHÍCULO</div>
-                <div className="doc-info-value">{order.vehicle?.marca} {order.vehicle?.modelo} ({order.vehicle?.ano || 'N/A'})</div>
-                <div>Placa: <strong>{order.vehicle?.placa}</strong> • Color: {order.vehicle?.color || 'N/A'}</div>
-                <div>Kilometraje: <strong>{order.vehicle?.kilometraje || 45000} KM</strong></div>
+                <div className="doc-info-value">{vehicleDisplayName} {vehicleYear ? `(${vehicleYear})` : ''}</div>
+                <div>Placa: <strong>{order.vehicle?.placa || 'No registrada'}</strong> • Color: {order.vehicle?.color || 'N/D'}</div>
+                <div>Kilometraje: <strong>{order.vehicle?.kilometraje || order.vehicle?.km ? `${(order.vehicle?.kilometraje || order.vehicle?.km).toLocaleString()} KM` : 'N/D'}</strong></div>
                 <div>Mecánico Responsable: <strong>{order.mechanicName || 'Jefe de Taller'}</strong></div>
               </div>
             </div>
@@ -296,19 +303,19 @@ export const DocumentPrintModal: React.FC<DocumentPrintModalProps> = ({
           <div className="doc-paper-ticket">
             <div style={{ textAlign: 'center', borderBottom: '1px dashed #000', paddingBottom: '8px', marginBottom: '8px' }}>
               <img src="/logo-tight.png" alt="Logo" style={{ width: '32px', height: '32px', objectFit: 'contain', margin: '0 auto 4px', display: 'block' }} />
-              <div style={{ fontWeight: 800, fontSize: '15px' }}>{(workshop.name || 'RUMILCAR TALLER').toUpperCase()}</div>
-              <div>RIF: {workshop.taxId || 'J-50123456-7'}</div>
-              <div>Tel: {workshop.phone || '0414-1234567'}</div>
+              <div style={{ fontWeight: 800, fontSize: '15px' }}>{workshopDisplayName.toUpperCase()}</div>
+              {workshop.taxId && <div>RIF: {workshop.taxId}</div>}
+              <div>Tel: {workshop.phone || user?.phone || 'No registrado'}</div>
               <div style={{ fontWeight: 700, marginTop: '4px' }}>{typeLabels[documentType]}</div>
               <div style={{ fontSize: '14px', fontWeight: 800 }}>#{order.id}</div>
               <div>Fecha: {new Date(order.date).toLocaleDateString()}</div>
             </div>
 
             <div style={{ marginBottom: '8px', borderBottom: '1px dashed #000', paddingBottom: '8px' }}>
-              <div><strong>Cliente:</strong> {order.client?.nombre} {order.client?.apellido}</div>
-              <div><strong>CI/RIF:</strong> {order.client?.documento}</div>
-              <div><strong>Auto:</strong> {order.vehicle?.marca} {order.vehicle?.modelo}</div>
-              <div><strong>Placa:</strong> {order.vehicle?.placa}</div>
+              <div><strong>Cliente:</strong> {clientDisplayName}</div>
+              <div><strong>CI/RIF:</strong> {order.client?.documento || 'No registrado'}</div>
+              <div><strong>Auto:</strong> {vehicleDisplayName}</div>
+              <div><strong>Placa:</strong> {order.vehicle?.placa || 'No registrada'}</div>
             </div>
 
             <div style={{ marginBottom: '8px', borderBottom: '1px dashed #000', paddingBottom: '8px' }}>

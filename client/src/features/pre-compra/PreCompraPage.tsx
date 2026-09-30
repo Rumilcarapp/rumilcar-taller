@@ -10,6 +10,8 @@ import {
 } from '../../store/usePrePurchaseStore';
 import { useClientStore } from '../../store/useClientStore';
 import { useCashStore } from '../../store/useCashStore';
+import { useWorkshopStore } from '../../store/useWorkshopStore';
+import { useAuthStore } from '../../stores/authStore';
 import { Button, Card, EmptyState, Modal } from '../../components/ui';
 import { 
   SearchCheck, 
@@ -157,6 +159,12 @@ export const PreCompraPage: React.FC = () => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
+    const workshop = useWorkshopStore.getState().workshop;
+    const user = useAuthStore.getState().user;
+    const workshopName = (workshop?.name || user?.workshopName || 'Taller Mecánico').toUpperCase();
+    const workshopTaxId = workshop?.taxId || '';
+    const workshopPhone = workshop?.phone || user?.phone || '';
+
     const html = `
       <html>
         <head>
@@ -186,7 +194,8 @@ export const PreCompraPage: React.FC = () => {
           </div>
 
           <div class="header">
-            <h1>RUMILCAR TALLER MECÁNICO</h1>
+            <h1>${workshopName}</h1>
+            ${workshopTaxId ? `<p style="font-size: 13px; color: #4b5563; margin: 2px 0;">RIF: ${workshopTaxId}${workshopPhone ? ` • Tel: ${workshopPhone}` : ''}</p>` : ''}
             <p>INFORME DE INSPECCIÓN TÉCNICA DE PRE-COMPRA · <strong>${insp.id}</strong></p>
             <p style="font-size: 12px; color: #64748b;">Fecha: ${new Date(insp.date).toLocaleDateString()} | Mecánico Evaluador: ${insp.mechanicName}</p>
           </div>
@@ -198,17 +207,17 @@ export const PreCompraPage: React.FC = () => {
           <div class="meta-grid">
             <div class="card">
               <strong>SOLICITANTE:</strong><br>
-              ${insp.client?.nombre} ${insp.client?.apellido}<br>
-              C.I/RIF: ${insp.client?.documento}<br>
-              Teléfono: ${insp.client?.telefono || 'N/D'}<br>
+              ${insp.client?.nombre || 'Cliente'} ${insp.client?.apellido || ''}<br>
+              ${insp.client?.documento ? `C.I/RIF: ${insp.client.documento}<br>` : ''}
+              Teléfono: ${insp.client?.telefono || 'No registrado'}<br>
               <em>Traído por: ${insp.broughtBy || 'Mismo cliente'}</em>
             </div>
             <div class="card">
               <strong>VEHÍCULO EVALUADO:</strong><br>
-              ${insp.vehicle?.marca} ${insp.vehicle?.modelo} (${insp.vehicle?.year})<br>
+              ${insp.vehicle?.marca || 'Vehículo'} ${insp.vehicle?.modelo || ''} (${insp.vehicle?.year || 'Año N/D'})<br>
               Placa: ${insp.vehicle?.placa || 'Sin placa'}<br>
               Color: ${insp.vehicle?.color || 'N/D'}<br>
-              Kilometraje: ${insp.vehicle?.km?.toLocaleString() || 'N/D'} km
+              Kilometraje: ${insp.vehicle?.km ? insp.vehicle.km.toLocaleString() : 'N/D'} km
             </div>
           </div>
 
@@ -249,18 +258,22 @@ export const PreCompraPage: React.FC = () => {
     const phone = insp.client?.telefono;
     if (!phone) return alert('El cliente no tiene número de teléfono registrado.');
 
+    const workshop = useWorkshopStore.getState().workshop;
+    const user = useAuthStore.getState().user;
+    const workshopName = workshop?.name || user?.workshopName || 'nuestro taller mecánico';
+
     let cleanPhone = phone.replace(/[^0-9]/g, '');
     if (!cleanPhone.startsWith('58')) cleanPhone = '58' + cleanPhone;
 
     const verdictLabel = insp.verdict === 'APTO' ? '🟢 APTO PARA COMPRA' : insp.verdict === 'PRECAUCION' ? '🟡 COMPRAR CON PRECAUCIONES' : '🔴 NO RECOMENDADO';
 
-    const msg = `Hola *${insp.client?.nombre}*,\n\n` +
+    const msg = `Hola *${insp.client?.nombre || 'Estimado Cliente'}*,\n\n` +
       `Te enviamos el resumen de la *Inspección Pre-Compra* realizada a tu vehículo de interés:\n\n` +
-      `🚗 *${insp.vehicle?.marca} ${insp.vehicle?.modelo} (${insp.vehicle?.year})*\n` +
+      `🚗 *${insp.vehicle?.marca || ''} ${insp.vehicle?.modelo || ''} (${insp.vehicle?.year || 'Año N/D'})*\n` +
       `📋 Informe Nro: *${insp.id}*\n` +
       `🏆 Veredicto: *${verdictLabel}*\n\n` +
       `*Diagnóstico General:*\n_${insp.generalDiagnosis || 'Vehículo revisado exitosamente.'}_\n\n` +
-      `Gracias por confiar en *Rumilcar Taller Mecánico*. ¡Estamos a la orden!`;
+      `Gracias por confiar en *${workshopName}*. ¡Estamos a la orden!`;
 
     window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`, '_blank');
   };
