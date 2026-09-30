@@ -17,6 +17,14 @@ export const getOrderWhatsAppContext = (order: WorkOrder): WhatsAppContextData =
   const user = useAuthStore.getState().user;
   const currentWorkshopName = workshop?.name || user?.workshopName || 'Multiservicios Rumilcar';
 
+  const workshopPM = workshop?.paymentDetails?.pagoMovil;
+  const pagoMovilConfig = workshopPM && (workshopPM.banco || workshopPM.telefono) ? {
+    banco: workshopPM.banco || 'Banesco (0134)',
+    telefono: workshopPM.telefono || workshop.phone || '0414-1234567',
+    cedulaRif: workshopPM.cedulaRif || workshop.taxId || 'J-12345678-0',
+    titular: workshopPM.titular || workshop.name || 'Multiservicios Rumilcar',
+  } : undefined;
+
   return {
     clientName: order.client?.nombre,
     clientPhone: order.client?.telefono,
@@ -37,6 +45,7 @@ export const getOrderWhatsAppContext = (order: WorkOrder): WhatsAppContextData =
     parts: (order.parts || []).map(p => ({ name: p.name || 'Repuesto', quantity: p.quantity || 1, price: p.price || 0 })),
     trackingUrl: `${window.location.origin}/tracking/${order.id}`,
     workshopName: currentWorkshopName,
+    pagoMovil: pagoMovilConfig,
   };
 };
 

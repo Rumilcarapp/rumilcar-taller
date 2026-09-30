@@ -11,7 +11,7 @@ import {
   Sun, Moon, Palette, Building2, User, Globe, Phone, Mail, MapPin, FileText,
   Plus, Edit, UserCheck, UserX, Trash2,
   RefreshCw, DollarSign, Percent, CreditCard, Calendar,
-  LogIn, Wrench, LogOut, CheckCircle2, AlertCircle, Home, Check
+  LogIn, Wrench, LogOut, CheckCircle2, AlertCircle, Home, Check, Smartphone, Landmark, QrCode
 } from 'lucide-react';
 import './ProfilePage.css';
 
@@ -20,6 +20,7 @@ export const ProfilePage: React.FC = () => {
   const {
     workshop,
     updateWorkshop,
+    updatePaymentDetails,
     paymentMethods,
     togglePaymentMethod,
     lastSavedAt,
@@ -535,6 +536,197 @@ export const ProfilePage: React.FC = () => {
                     <span>{m.label}</span>
                   </label>
                 ))}
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* ===== CARD E: DATOS DE PAGO Y CUENTAS BANCARIAS DEL TALLER ===== */}
+        <Card
+          title="Datos de Pago y Cuentas Bancarias del Taller"
+          subtitle="Estos datos aparecerán automáticamente en tus mensajes de WhatsApp y presupuestos"
+          action={
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={<Check size={14} />}
+              onClick={() => triggerSaveFeedback('¡Datos de pago bancarios guardados con éxito!')}
+            >
+              Guardado Auto
+            </Button>
+          }
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            {/* Sección Pago Móvil */}
+            <div style={{ background: 'var(--color-bg-secondary)', padding: '16px', borderRadius: '10px', border: '1px solid var(--color-border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', color: 'var(--color-primary)', fontWeight: 800 }}>
+                <Smartphone size={18} />
+                <span>Datos para Pago Móvil (VES)</span>
+              </div>
+              <div className="form-grid">
+                <Input
+                  label="Banco"
+                  value={workshop.paymentDetails?.pagoMovil?.banco || ''}
+                  placeholder="Ej: Banesco (0134), Mercantil (0105), BDV (0102)..."
+                  onChange={e => updatePaymentDetails({
+                    pagoMovil: {
+                      ...(workshop.paymentDetails?.pagoMovil || { banco: '', telefono: '', cedulaRif: '', titular: '' }),
+                      banco: e.target.value
+                    }
+                  })}
+                />
+                <Input
+                  label="Teléfono Pago Móvil"
+                  value={workshop.paymentDetails?.pagoMovil?.telefono || ''}
+                  placeholder="Ej: 0414-1234567 / 0412-9876543"
+                  onChange={e => updatePaymentDetails({
+                    pagoMovil: {
+                      ...(workshop.paymentDetails?.pagoMovil || { banco: '', telefono: '', cedulaRif: '', titular: '' }),
+                      telefono: e.target.value
+                    }
+                  })}
+                />
+                <Input
+                  label="Cédula / RIF"
+                  value={workshop.paymentDetails?.pagoMovil?.cedulaRif || ''}
+                  placeholder="Ej: V-18234567 o J-12345678-0"
+                  onChange={e => updatePaymentDetails({
+                    pagoMovil: {
+                      ...(workshop.paymentDetails?.pagoMovil || { banco: '', telefono: '', cedulaRif: '', titular: '' }),
+                      cedulaRif: e.target.value.toUpperCase()
+                    }
+                  })}
+                />
+                <Input
+                  label="Nombre del Titular"
+                  value={workshop.paymentDetails?.pagoMovil?.titular || ''}
+                  placeholder="Ej: Multiservicios Rumilcar C.A. / Juan Pérez"
+                  onChange={e => updatePaymentDetails({
+                    pagoMovil: {
+                      ...(workshop.paymentDetails?.pagoMovil || { banco: '', telefono: '', cedulaRif: '', titular: '' }),
+                      titular: e.target.value
+                    }
+                  })}
+                />
+              </div>
+            </div>
+
+            {/* Sección Transferencia Bancaria */}
+            <div style={{ background: 'var(--color-bg-secondary)', padding: '16px', borderRadius: '10px', border: '1px solid var(--color-border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', color: '#3b82f6', fontWeight: 800 }}>
+                <Landmark size={18} />
+                <span>Datos para Transferencia Bancaria Nacional</span>
+              </div>
+              <div className="form-grid">
+                <Input
+                  label="Banco"
+                  value={workshop.paymentDetails?.transferencia?.banco || ''}
+                  placeholder="Ej: Banesco, Banco de Venezuela, Provincial..."
+                  onChange={e => updatePaymentDetails({
+                    transferencia: {
+                      ...(workshop.paymentDetails?.transferencia || { banco: '', numeroCuenta: '', cedulaRif: '', titular: '' }),
+                      banco: e.target.value
+                    }
+                  })}
+                />
+                <Input
+                  label="Número de Cuenta (20 dígitos)"
+                  value={workshop.paymentDetails?.transferencia?.numeroCuenta || ''}
+                  placeholder="0134-XXXX-XX-XXXXXXXXXX"
+                  onChange={e => updatePaymentDetails({
+                    transferencia: {
+                      ...(workshop.paymentDetails?.transferencia || { banco: '', numeroCuenta: '', cedulaRif: '', titular: '' }),
+                      numeroCuenta: e.target.value
+                    }
+                  })}
+                />
+                <Input
+                  label="RIF / Cédula"
+                  value={workshop.paymentDetails?.transferencia?.cedulaRif || ''}
+                  placeholder="Ej: J-12345678-0"
+                  onChange={e => updatePaymentDetails({
+                    transferencia: {
+                      ...(workshop.paymentDetails?.transferencia || { banco: '', numeroCuenta: '', cedulaRif: '', titular: '' }),
+                      cedulaRif: e.target.value.toUpperCase()
+                    }
+                  })}
+                />
+                <Input
+                  label="Nombre / Razón Social del Titular"
+                  value={workshop.paymentDetails?.transferencia?.titular || ''}
+                  placeholder="Ej: Multiservicios Rumilcar C.A."
+                  onChange={e => updatePaymentDetails({
+                    transferencia: {
+                      ...(workshop.paymentDetails?.transferencia || { banco: '', numeroCuenta: '', cedulaRif: '', titular: '' }),
+                      titular: e.target.value
+                    }
+                  })}
+                />
+              </div>
+            </div>
+
+            {/* Sección Zelle & Binance / USDT */}
+            <div className="form-grid">
+              <div style={{ background: 'var(--color-bg-secondary)', padding: '16px', borderRadius: '10px', border: '1px solid var(--color-border)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', color: '#8b5cf6', fontWeight: 800 }}>
+                  <CreditCard size={18} />
+                  <span>Zelle (USD)</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <Input
+                    label="Correo Electrónico Zelle"
+                    value={workshop.paymentDetails?.zelle?.email || ''}
+                    placeholder="pagos@taller.com"
+                    onChange={e => updatePaymentDetails({
+                      zelle: {
+                        ...(workshop.paymentDetails?.zelle || { email: '', titular: '' }),
+                        email: e.target.value
+                      }
+                    })}
+                  />
+                  <Input
+                    label="Nombre del Titular Zelle"
+                    value={workshop.paymentDetails?.zelle?.titular || ''}
+                    placeholder="Ej: Nombre Empresa / Persona"
+                    onChange={e => updatePaymentDetails({
+                      zelle: {
+                        ...(workshop.paymentDetails?.zelle || { email: '', titular: '' }),
+                        titular: e.target.value
+                      }
+                    })}
+                  />
+                </div>
+              </div>
+
+              <div style={{ background: 'var(--color-bg-secondary)', padding: '16px', borderRadius: '10px', border: '1px solid var(--color-border)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', color: '#f59e0b', fontWeight: 800 }}>
+                  <QrCode size={18} />
+                  <span>Binance Pay / USDT</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <Input
+                    label="Binance Pay ID o Correo Binance"
+                    value={workshop.paymentDetails?.binanceUSDT?.payIdOrEmail || ''}
+                    placeholder="Ej: 123456789 o binance@taller.com"
+                    onChange={e => updatePaymentDetails({
+                      binanceUSDT: {
+                        ...(workshop.paymentDetails?.binanceUSDT || { payIdOrEmail: '', red: 'TRC-20 / Binance Pay' }),
+                        payIdOrEmail: e.target.value
+                      }
+                    })}
+                  />
+                  <Input
+                    label="Red / Protocolo"
+                    value={workshop.paymentDetails?.binanceUSDT?.red || ''}
+                    placeholder="Ej: Binance Pay / Tron (TRC-20)"
+                    onChange={e => updatePaymentDetails({
+                      binanceUSDT: {
+                        ...(workshop.paymentDetails?.binanceUSDT || { payIdOrEmail: '', red: 'TRC-20 / Binance Pay' }),
+                        red: e.target.value
+                      }
+                    })}
+                  />
+                </div>
               </div>
             </div>
           </div>

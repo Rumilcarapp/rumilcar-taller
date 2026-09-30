@@ -8,6 +8,29 @@ export interface PaymentMethodConfig {
   enabled: boolean;
 }
 
+export interface WorkshopPaymentDetails {
+  pagoMovil: {
+    banco: string;
+    telefono: string;
+    cedulaRif: string;
+    titular: string;
+  };
+  transferencia: {
+    banco: string;
+    numeroCuenta: string;
+    cedulaRif: string;
+    titular: string;
+  };
+  zelle: {
+    email: string;
+    titular: string;
+  };
+  binanceUSDT: {
+    payIdOrEmail: string;
+    red: string;
+  };
+}
+
 export interface WorkshopProfile {
   name: string;
   legalName: string;
@@ -20,6 +43,7 @@ export interface WorkshopProfile {
   anchorCurrency: 'USD' | 'VES';
   usdtSpread: string;
   logoUrl?: string;
+  paymentDetails?: WorkshopPaymentDetails;
   createdAt: string;
   lastLogin: string;
 }
@@ -30,11 +54,35 @@ interface WorkshopState {
   lastSavedAt: string | null;
   isSaving: boolean;
   updateWorkshop: (updates: Partial<WorkshopProfile>) => void;
+  updatePaymentDetails: (details: Partial<WorkshopPaymentDetails>) => void;
   togglePaymentMethod: (key: string) => void;
   setPaymentMethods: (methods: PaymentMethodConfig[]) => void;
   resetToCleanProfile: (customName?: string) => void;
   fetchWorkshop: () => Promise<void>;
 }
+
+export const DEFAULT_WORKSHOP_PAYMENT_DETAILS: WorkshopPaymentDetails = {
+  pagoMovil: {
+    banco: '',
+    telefono: '',
+    cedulaRif: '',
+    titular: '',
+  },
+  transferencia: {
+    banco: '',
+    numeroCuenta: '',
+    cedulaRif: '',
+    titular: '',
+  },
+  zelle: {
+    email: '',
+    titular: '',
+  },
+  binanceUSDT: {
+    payIdOrEmail: '',
+    red: 'TRC-20 (Tron) / Binance Pay',
+  },
+};
 
 const DEFAULT_WORKSHOP: WorkshopProfile = {
   name: 'Multiservicios Rumilcar',
@@ -47,6 +95,7 @@ const DEFAULT_WORKSHOP: WorkshopProfile = {
   phone: '',
   anchorCurrency: 'USD',
   usdtSpread: '0',
+  paymentDetails: DEFAULT_WORKSHOP_PAYMENT_DETAILS,
   createdAt: new Date().toLocaleDateString('es-VE'),
   lastLogin: 'Hoy',
 };
@@ -121,6 +170,18 @@ export const useWorkshopStore = create<WorkshopState>()(
             set({ isSaving: false });
           }
         }, 800);
+      },
+      updatePaymentDetails: (details) => {
+        set((state) => ({
+          workshop: {
+            ...state.workshop,
+            paymentDetails: {
+              ...(state.workshop.paymentDetails || DEFAULT_WORKSHOP_PAYMENT_DETAILS),
+              ...details,
+            },
+          },
+          lastSavedAt: new Date().toISOString(),
+        }));
       },
       togglePaymentMethod: (key) => {
         const nextMethods = get().paymentMethods.map((m) =>

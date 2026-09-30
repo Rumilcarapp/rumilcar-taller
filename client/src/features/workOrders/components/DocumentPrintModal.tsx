@@ -274,6 +274,44 @@ export const DocumentPrintModal: React.FC<DocumentPrintModalProps> = ({
               </div>
             </div>
 
+            {/* Datos de Pago del Taller */}
+            {workshop.paymentDetails && (workshop.paymentDetails.pagoMovil?.telefono || workshop.paymentDetails.transferencia?.numeroCuenta || workshop.paymentDetails.zelle?.email) && (
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '10px 14px', marginBottom: '12px', fontSize: '11px', lineHeight: 1.4 }}>
+                <strong style={{ display: 'block', color: '#1e293b', marginBottom: '4px', textTransform: 'uppercase', fontSize: '10px', letterSpacing: '0.5px' }}>
+                  Datos de Pago / Cuentas Bancarias:
+                </strong>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px' }}>
+                  {workshop.paymentDetails.pagoMovil?.telefono && (
+                    <div>
+                      <span style={{ fontWeight: 700, color: '#dc2626' }}>Pago Móvil: </span>
+                      {workshop.paymentDetails.pagoMovil.banco ? `${workshop.paymentDetails.pagoMovil.banco} • ` : ''}
+                      Tel: {workshop.paymentDetails.pagoMovil.telefono} • CI/RIF: {workshop.paymentDetails.pagoMovil.cedulaRif}
+                      {workshop.paymentDetails.pagoMovil.titular ? ` (${workshop.paymentDetails.pagoMovil.titular})` : ''}
+                    </div>
+                  )}
+                  {workshop.paymentDetails.transferencia?.numeroCuenta && (
+                    <div>
+                      <span style={{ fontWeight: 700, color: '#2563eb' }}>Transferencia: </span>
+                      {workshop.paymentDetails.transferencia.banco ? `${workshop.paymentDetails.transferencia.banco} • ` : ''}
+                      Cta: {workshop.paymentDetails.transferencia.numeroCuenta} • RIF: {workshop.paymentDetails.transferencia.cedulaRif}
+                    </div>
+                  )}
+                  {workshop.paymentDetails.zelle?.email && (
+                    <div>
+                      <span style={{ fontWeight: 700, color: '#7c3aed' }}>Zelle: </span>
+                      {workshop.paymentDetails.zelle.email} {workshop.paymentDetails.zelle.titular ? `(${workshop.paymentDetails.zelle.titular})` : ''}
+                    </div>
+                  )}
+                  {workshop.paymentDetails.binanceUSDT?.payIdOrEmail && (
+                    <div>
+                      <span style={{ fontWeight: 700, color: '#d97706' }}>Binance USDT: </span>
+                      {workshop.paymentDetails.binanceUSDT.payIdOrEmail}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Terms and Warranties */}
             <div className="doc-terms-box">
               <strong>TÉRMINOS Y CONDICIONES DE GARANTÍA:</strong>
@@ -348,6 +386,14 @@ export const DocumentPrintModal: React.FC<DocumentPrintModalProps> = ({
                 <span>${pendingUSD.toFixed(2)} USD</span>
               </div>
             </div>
+
+            {workshop.paymentDetails?.pagoMovil?.telefono && (
+              <div style={{ marginBottom: '8px', borderBottom: '1px dashed #000', paddingBottom: '6px', fontSize: '10px' }}>
+                <div style={{ fontWeight: 800 }}>PAGO MÓVIL:</div>
+                <div>{workshop.paymentDetails.pagoMovil.banco ? `${workshop.paymentDetails.pagoMovil.banco} | ` : ''}Tel: {workshop.paymentDetails.pagoMovil.telefono}</div>
+                <div>RIF/CI: {workshop.paymentDetails.pagoMovil.cedulaRif}</div>
+              </div>
+            )}
 
             <div style={{ textAlign: 'center', fontSize: '10px' }}>
               <div>Consulte el estado en vivo de su vehículo:</div>
