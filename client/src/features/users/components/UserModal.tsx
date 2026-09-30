@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Modal, Button } from '../../../components/ui';
 import { useUserManagementStore, ManagedUser } from '../../../store/useUserManagementStore';
 import { useAuthStore } from '../../../stores/authStore';
+import { capitalizeWords } from '../../../lib/stringUtils';
 
 interface UserModalProps {
   isOpen: boolean;
@@ -16,7 +17,7 @@ export const UserModal: React.FC<UserModalProps> = ({
 }) => {
   const { roles, addUser, updateUser, deleteUser, addAuditLog } = useUserManagementStore();
 
-  const [name, setName] = useState(initialUser?.name || '');
+  const [name, setName] = useState(initialUser?.name ? capitalizeWords(initialUser.name) : '');
   const [email, setEmail] = useState(initialUser?.email || '');
   const [phone, setPhone] = useState(initialUser?.phone || '');
   const [role, setRole] = useState(initialUser?.role || 'RECEPTIONIST');
@@ -29,10 +30,11 @@ export const UserModal: React.FC<UserModalProps> = ({
     }
 
     const currentUser = useAuthStore.getState().user;
+    const cleanName = capitalizeWords(name.trim());
 
     if (initialUser) {
       updateUser(initialUser.id, {
-        name,
+        name: cleanName,
         email,
         phone,
         role,
@@ -46,12 +48,12 @@ export const UserModal: React.FC<UserModalProps> = ({
         userRole: currentUser?.role || 'OWNER',
         action: 'Actualización de Gestor',
         module: 'users',
-        details: `Se actualizaron los datos del gestor/empleado ${name} (${email})`,
+        details: `Se actualizaron los datos del gestor/empleado ${cleanName} (${email})`,
       });
     } else {
       addUser({
         workshopId: currentUser?.workshopId,
-        name,
+        name: cleanName,
         email,
         phone,
         role,
@@ -65,7 +67,7 @@ export const UserModal: React.FC<UserModalProps> = ({
         userRole: currentUser?.role || 'OWNER',
         action: 'Creación de Gestor',
         module: 'users',
-        details: `Se registró el nuevo gestor/empleado ${name} (${email}) con rol ${role}`,
+        details: `Se registró el nuevo gestor/empleado ${cleanName} (${email}) con rol ${role}`,
       });
     }
 
@@ -82,8 +84,11 @@ export const UserModal: React.FC<UserModalProps> = ({
             required
             placeholder="Ej: Carlos Silva"
             value={name}
-            onChange={(e) => setName(e.target.value)}
-            style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-bg-surface)', fontSize: '13px' }}
+            onChange={(e) => setName(capitalizeWords(e.target.value))}
+            autoCapitalize="words"
+            autoCorrect="off"
+            spellCheck={false}
+            style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-bg-surface)', fontSize: '13px', textTransform: 'capitalize' }}
           />
         </div>
 

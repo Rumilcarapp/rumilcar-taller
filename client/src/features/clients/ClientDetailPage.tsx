@@ -4,6 +4,7 @@ import { useClientStore } from '../../store/useClientStore';
 import { useVehicleStore } from '../../store/useVehicleStore';
 import { useWorkOrderStore } from '../../store/useWorkOrderStore';
 import { Button, Card, Input } from '../../components/ui';
+import { capitalizeWords } from '../../lib/stringUtils';
 import { ArrowLeft, Car, FileText, Plus, Phone, MapPin, User, Settings } from 'lucide-react';
 import { VehicleModal } from '../workOrders/components/VehicleModal';
 import { WorkOrderListCard } from '../workOrders/components/WorkOrderListCard';
@@ -42,7 +43,12 @@ export const ClientDetailPage: React.FC = () => {
   const outstandingBalance = activeOrders.reduce((acc, wo) => acc + (wo.totalUSD || 0), 0);
 
   const handleUpdateProfile = () => {
-    updateClient(client.id, { nombre, apellido, telefono, direccion });
+    updateClient(client.id, { 
+      nombre: capitalizeWords(nombre.trim()), 
+      apellido: client.type === 'persona' ? capitalizeWords(apellido.trim()) : '', 
+      telefono, 
+      direccion 
+    });
     setIsEditing(false);
     alert('Datos del cliente actualizados!');
   };
@@ -68,8 +74,22 @@ export const ClientDetailPage: React.FC = () => {
           <Card title="Perfil del Cliente">
             {isEditing ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <Input label="Nombre / Razon Social" value={nombre} onChange={e => setNombre(e.target.value)} />
-                {client.type === 'persona' && <Input label="Apellido" value={apellido} onChange={e => setApellido(e.target.value)} />}
+                <Input 
+                  label="Nombre / Razon Social" 
+                  value={nombre} 
+                  onChange={e => setNombre(capitalizeWords(e.target.value))} 
+                  autoCapitalize="words"
+                  style={{ textTransform: 'capitalize' }}
+                />
+                {client.type === 'persona' && (
+                  <Input 
+                    label="Apellido" 
+                    value={apellido} 
+                    onChange={e => setApellido(capitalizeWords(e.target.value))} 
+                    autoCapitalize="words"
+                    style={{ textTransform: 'capitalize' }}
+                  />
+                )}
                 <Input label="Telefono" value={telefono} onChange={e => setTelefono(e.target.value)} />
                 <Input label="Direccion" value={direccion} onChange={e => setDireccion(e.target.value)} />
                 <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Modal, Button } from '../../../components/ui';
 import { useClientStore } from '../../../store/useClientStore';
+import { capitalizeWords } from '../../../lib/stringUtils';
 import './Modals.css';
 
 interface ClientModalProps {
@@ -11,7 +12,7 @@ interface ClientModalProps {
 
 export const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initialName }) => {
   const [type, setType] = useState<'persona' | 'empresa'>('persona');
-  const [nombre, setNombre] = useState(initialName || '');
+  const [nombre, setNombre] = useState(initialName ? capitalizeWords(initialName) : '');
   const [apellido, setApellido] = useState('');
   const [docPrefix, setDocPrefix] = useState('V-');
   const [docNumber, setDocNumber] = useState('');
@@ -41,7 +42,17 @@ export const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initi
 
   const handleSave = () => {
     if (validate()) {
-      const clientData = { id: 'CLI-' + Date.now().toString().slice(-6), type, nombre, apellido: type === 'persona' ? apellido : '', documento: docPrefix+docNumber, telefono, direccion };
+      const cleanNombre = capitalizeWords(nombre.trim());
+      const cleanApellido = type === 'persona' ? capitalizeWords(apellido.trim()) : '';
+      const clientData = { 
+        id: 'CLI-' + Date.now().toString().slice(-6), 
+        type, 
+        nombre: cleanNombre, 
+        apellido: cleanApellido, 
+        documento: docPrefix + docNumber.trim(), 
+        telefono: telefono.trim(), 
+        direccion: direccion.trim() 
+      };
       useClientStore.getState().addClient(clientData);
       if (onSave) onSave(clientData);
       onClose();
@@ -85,7 +96,12 @@ export const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initi
             <input 
               className={`custom-input ${errors.nombre ? 'has-error' : ''}`}
               value={nombre}
-              onChange={e => setNombre(e.target.value)}
+              onChange={e => setNombre(capitalizeWords(e.target.value))}
+              placeholder={type === 'persona' ? 'Ej: Juan Carlos' : 'Ej: Inversiones El Motor C.A.'}
+              autoCapitalize="words"
+              autoCorrect="off"
+              spellCheck={false}
+              style={{ textTransform: 'capitalize' }}
             />
             {errors.nombre && <span className="error-text">{errors.nombre}</span>}
           </div>
@@ -95,7 +111,12 @@ export const ClientModal: React.FC<ClientModalProps> = ({ onClose, onSave, initi
               <input 
                 className={`custom-input ${errors.apellido ? 'has-error' : ''}`}
                 value={apellido}
-                onChange={e => setApellido(e.target.value)}
+                onChange={e => setApellido(capitalizeWords(e.target.value))}
+                placeholder="Ej: Pérez Rodríguez"
+                autoCapitalize="words"
+                autoCorrect="off"
+                spellCheck={false}
+                style={{ textTransform: 'capitalize' }}
               />
               {errors.apellido && <span className="error-text">{errors.apellido}</span>}
             </div>
