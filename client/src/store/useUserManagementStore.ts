@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { useAuthStore } from '../stores/authStore';
 
 export type AppRoleKey = 'OWNER' | 'ADMIN' | 'RECEPTIONIST' | 'MECHANIC' | 'CASHIER' | 'INVENTORY' | string;
 
@@ -41,6 +42,7 @@ export interface RoleDefinition {
 
 export interface ManagedUser {
   id: string;
+  workshopId?: string;
   name: string;
   email: string;
   phone?: string;
@@ -53,11 +55,12 @@ export interface ManagedUser {
 
 export interface AuditLog {
   id: string;
+  workshopId?: string;
   userId: string;
   userName: string;
   userRole: string;
   action: string;
-  module: AppModuleKey | 'auth' | 'settings';
+  module: AppModuleKey | 'auth' | 'settings' | 'users' | 'caja' | 'workOrders' | 'inventory';
   details: string;
   timestamp: string;
 }
@@ -244,7 +247,6 @@ const DEFAULT_USERS: ManagedUser[] = [];
 
 const DEFAULT_AUDIT_LOGS: AuditLog[] = [];
 
-
 export const useUserManagementStore = create<UserManagementState>()(
   persist(
     (set, get) => ({
@@ -252,61 +254,131 @@ export const useUserManagementStore = create<UserManagementState>()(
       roles: DEFAULT_ROLES,
       auditLogs: DEFAULT_AUDIT_LOGS,
 
-      addUser: (user) => set((state) => ({
-        users: [
-          {
-            ...user,
-            id: 'usr-' + Date.now(),
-            createdAt: new Date().toISOString(),
-          },
-          ...state.users,
-        ],
-      })),
+      addUser: (user) => {
+        const currentWorkshopId = user.workshopId || useAuthStore.getState().user?.workshopId || '';
+        set((state) => ({
+          users: [
+            {
+              ...user,
+              workshopId: currentWorkshopId,
+              id: 'usr-' + Date.now(),
+              createdAt: new Date().toISOString(),
+            },
+            ...state.users,
+          ],
+        }));
+      },
 
       updateUser: (id, updates) => set((state) => ({
         users: state.users.map((u) => (u.id === id ? { ...u, ...updates } : u)),
       })),
 
-      toggleUserStatus: (id) => set((state) => ({
-        users: state.users.map((u) => (u.id === id ? { ...u, isActive: !u.isActive } : u)),
-      })),
+      toggleUserStatus: (id) => {
+        const state = get();
+        const targetUser = state.users.find((u) => u.id === id);
+        const currentUser = useAuthStore.getState().user;
+        const newStatus = targetUser ? !targetUser.isActive : false;
+
+        set({
+          users: state.users.map((u) => (u.id === id ? { ...u, isActive: !u.isActive } : u)),
+        });
+
+        if (targetUser) {
+          get().addAuditLog({
+            workshopId: targetUser.workshopId || currentUser?.workshopId,
+            userId: currentUser?.id || 'admin',
+            userName: currentUser?.name || 'Administrador',
+            userRole: currentUser?.role || 'OWNER',
+            action: newStatus ? 'Activación de Gestor' : 'Desactivación de Gestor',
+            module: 'users',
+            details: `${newStatus ? 'Habilitó' : 'Deshabilitó'} el acceso al sistema para ${targetUser.name} (${targetUser.email})`,
+          });
+        }
+      },
 
       deleteUser: (id) => set((state) => ({
         users: state.users.filter((u) => u.id !== id),
       })),
 
-      updateRolePermissions: (roleId, module, perms) => set((state) => ({
-        roles: state.roles.map((r) => {
-          if (r.id !== roleId) return r;
-          const currentModulePerms = r.permissions[module] || { view: false, create: false, edit: false, delete: false };
-          return {
-            ...r,
-            permissions: {
-              ...r.permissions,
-              [module]: { ...currentModulePerms, ...perms },
-            },
-          };
-        }),
-      })),
+      updateRolePermissions: (roleId, module, perms) => {
+        const state = get();
+        const currentUser = useAuthStore.getState().user;
+        const role = state.roles.find((r) => r.id === roleId);
+
+        set({
+          roles: state.roles.map((r) => {
+            if (r.id !== roleId) return r;
+            const currentModulePerms = r.permissions[module] || { view: false, create: false, edit: false, delete: false };
+            return {
+              ...r,
+              permissions: {
+                ...r.permissions,
+                [module]: { ...currentModulePerms, ...perms },
+              },
+            };
+          }),
+        });
+
+        if (role) {
+          const keys = Object.entries(perms)
+            .map(([k, v]) => `${k}: ${v ? 'Permitido' : 'Bloqueado'}`)
+            .join(', ');
+          get().addAuditLog({
+            workshopId: currentUser?.workshopId,
+            userId: currentUser?.id || 'admin',
+            userName: currentUser?.name || 'Administrador',
+            userRole: currentUser?.role || 'OWNER',
+            action: 'Modificación de Permisos',
+            module: 'users',
+            details: `Ajustó permisos del rol ${role.name} en módulo "${module}": [${keys}]`,
+          });
+        }
+      },
 
       addCustomRole: (role) => set((state) => ({
         roles: [...state.roles, role],
       })),
 
-      deleteCustomRole: (roleId) => set((state) => ({
-        roles: state.roles.filter((r) => r.id !== roleId),
-      })),
+      deleteCustomRole: (roleId) => {
+        const state = get();
+        const roleToDelete = state.roles.find((r) => r.id === roleId);
+        const currentUser = useAuthStore.getState().user;
 
-      addAuditLog: (log) => set((state) => ({
-        auditLogs: [
-          {
-            ...log,
-            id: 'log-' + Date.now(),
-            timestamp: new Date().toISOString(),
-          },
-          ...state.auditLogs.slice(0, 99), // Keep latest 100 logs
-        ],
-      })),
+        set({
+          roles: state.roles.filter((r) => r.id !== roleId),
+        });
+
+        if (roleToDelete) {
+          get().addAuditLog({
+            workshopId: currentUser?.workshopId,
+            userId: currentUser?.id || 'admin',
+            userName: currentUser?.name || 'Administrador',
+            userRole: currentUser?.role || 'OWNER',
+            action: 'Eliminación de Rol',
+            module: 'users',
+            details: `Se eliminó el rol personalizado: ${roleToDelete.name}`,
+          });
+        }
+      },
+
+      addAuditLog: (log) => {
+        const currentUser = useAuthStore.getState().user;
+        const currentWorkshopId = log.workshopId || currentUser?.workshopId || '';
+        set((state) => ({
+          auditLogs: [
+            {
+              ...log,
+              workshopId: currentWorkshopId,
+              userId: log.userId || currentUser?.id || 'anon',
+              userName: log.userName || currentUser?.name || 'Usuario',
+              userRole: log.userRole || currentUser?.role || 'OWNER',
+              id: 'log-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+              timestamp: new Date().toISOString(),
+            },
+            ...state.auditLogs.slice(0, 199), // Keep latest 200 logs
+          ],
+        }));
+      },
 
       hasPermission: (roleId, module, action) => {
         if (roleId === 'SUPERADMIN' || roleId === 'OWNER') return true;
@@ -342,6 +414,15 @@ export const useUserManagementStore = create<UserManagementState>()(
         }
         if (state && Array.isArray(state.auditLogs)) {
           state.auditLogs = state.auditLogs.map((l) => {
+            // Retrofit workshopId if missing on legacy logs
+            if (!l.workshopId) {
+              if (l.userRole === 'SUPERADMIN' || l.details?.includes('Rumilcar Central') || l.userName?.includes('Luark')) {
+                return { ...l, workshopId: '19c1bb78-46e2-4434-b629-33f2cae7d00c' };
+              }
+              if (l.details?.includes('Multiservicios Rumilcar') || l.userName?.includes('Daniel')) {
+                return { ...l, workshopId: '0ea6fc7a-889d-46ad-8efa-a8e3f4831e89' };
+              }
+            }
             if (l.userName.includes('Don Pedro')) {
               return { ...l, userName: 'Administrador (Dueño)' };
             }

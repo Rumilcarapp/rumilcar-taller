@@ -129,6 +129,7 @@ export const LoginPage: React.FC = () => {
     );
 
     addAuditLog({
+      workshopId: incomingWorkshopId || userToLogin.workshopId || '',
       userId: userToLogin.id,
       userName: userToLogin.name,
       userRole: userToLogin.role || 'OWNER',

@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { useInventoryStore } from './useInventoryStore';
 import { useCashStore, PaymentMethod } from './useCashStore';
+import { useUserManagementStore } from './useUserManagementStore';
+import { useAuthStore } from '../stores/authStore';
 import { persist } from 'zustand/middleware';
 import { api } from '../services/api';
 
@@ -128,6 +130,17 @@ export const useWorkOrderStore = create<WorkOrderState>()(
       },
       addWorkOrder: (order) => {
         set((state) => ({ workOrders: [order, ...state.workOrders] }));
+
+        const currentUser = useAuthStore.getState().user;
+        useUserManagementStore.getState().addAuditLog({
+          workshopId: currentUser?.workshopId,
+          userId: currentUser?.id || 'gestor',
+          userName: currentUser?.name || 'Gestor',
+          userRole: currentUser?.role || 'ASESOR',
+          action: 'Creación de Orden de Trabajo',
+          module: 'workOrders',
+          details: `Creó orden #${order.id} (${order.status}) para cliente ${order.client?.nombre || 'General'} - Monto: $${Number(order.totalUSD || 0).toFixed(2)} USD`,
+        });
 
         // Map items for backend
         const items = [
@@ -258,6 +271,17 @@ export const useWorkOrderStore = create<WorkOrderState>()(
         const updatedPayments = [...(wo.payments || []), ...paymentsData];
         const primaryMethod = updatedPayments.length === 1 ? updatedPayments[0].method : 'Mixto';
 
+        const currentUser = useAuthStore.getState().user;
+        useUserManagementStore.getState().addAuditLog({
+          workshopId: currentUser?.workshopId,
+          userId: currentUser?.id || 'cajero',
+          userName: currentUser?.name || 'Cajero',
+          userRole: currentUser?.role || 'CASHIER',
+          action: 'Cobro y Cierre de Orden',
+          module: 'workOrders',
+          details: `Cobró y finalizó orden #${wo.id} - Total: $${Number(wo.totalUSD || 0).toFixed(2)} USD`,
+        });
+
         set({
           workOrders: state.workOrders.map(w =>
             w.id === id
@@ -313,6 +337,17 @@ export const useWorkOrderStore = create<WorkOrderState>()(
           status,
           ...((status === 'Listo' || status === 'Finalizado') && { deliveredAt: new Date().toISOString() }),
         }).catch(() => {});
+
+        const currentUser = useAuthStore.getState().user;
+        useUserManagementStore.getState().addAuditLog({
+          workshopId: currentUser?.workshopId,
+          userId: currentUser?.id || 'gestor',
+          userName: currentUser?.name || 'Gestor',
+          userRole: currentUser?.role || 'MECANICO',
+          action: 'Cambio de Estado de Orden',
+          module: 'workOrders',
+          details: `Cambió estado de la orden #${id} a "${status}"`,
+        });
 
         return {
           workOrders: state.workOrders.map(w => 

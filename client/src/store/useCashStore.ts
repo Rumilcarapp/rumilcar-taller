@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { api } from '../services/api';
+import { useUserManagementStore } from './useUserManagementStore';
+import { useAuthStore } from '../stores/authStore';
 
 export type PaymentMethod = 'Efectivo' | 'Pago Movil' | 'Transferencia' | 'Zelle' | 'USDT' | 'Punto de Venta';
 
@@ -198,6 +200,17 @@ export const useCashStore = create<CashState>()(
           initialUSD: initialBalance,
           initialVES: 0,
         }).catch(() => {});
+
+        const currentUser = useAuthStore.getState().user;
+        useUserManagementStore.getState().addAuditLog({
+          workshopId: currentUser?.workshopId,
+          userId: currentUser?.id || 'cajero',
+          userName: currentUser?.name || 'Cajero',
+          userRole: currentUser?.role || 'CASHIER',
+          action: 'Apertura de Caja',
+          module: 'cashRegister',
+          details: `Apertura de turno de caja con fondo inicial de $${initialBalance.toFixed(2)} USD`,
+        });
       },
       closeBox: () => {
         set(() => ({
@@ -255,6 +268,17 @@ export const useCashStore = create<CashState>()(
           actualVES: (reportedBalances['Pago Movil'] || 0) * (state.exchangeRateVES || 1),
           notes: notes || undefined,
         }).catch(() => {});
+
+        const currentUser = useAuthStore.getState().user;
+        useUserManagementStore.getState().addAuditLog({
+          workshopId: currentUser?.workshopId,
+          userId: currentUser?.id || 'cajero',
+          userName: currentUser?.name || 'Cajero',
+          userRole: currentUser?.role || 'CASHIER',
+          action: 'Cierre y Arqueo de Caja',
+          module: 'cashRegister',
+          details: `Cierre de caja con balance reportado de $${closureRecord.closingBalanceUSD.toFixed(2)} USD (Diferencia: $${closureRecord.totalDifferenceUSD.toFixed(2)} USD)`,
+        });
 
         return closureRecord;
       },

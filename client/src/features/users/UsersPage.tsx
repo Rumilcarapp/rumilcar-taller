@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Button, Card } from '../../components/ui';
 import { 
   useUserManagementStore, 
@@ -6,6 +6,7 @@ import {
   AppRoleKey, 
   AppModuleKey 
 } from '../../store/useUserManagementStore';
+import { useAuthStore } from '../../stores/authStore';
 import { UserModal } from './components/UserModal';
 import { RoleModal } from './components/RoleModal';
 import { 
@@ -46,6 +47,9 @@ const MODULE_LABELS: { key: AppModuleKey; label: string; icon: string; category:
 ];
 
 export const UsersPage: React.FC = () => {
+  const currentUser = useAuthStore((s) => s.user);
+  const currentWorkshopId = currentUser?.workshopId || '';
+
   const { 
     users, 
     roles, 
@@ -65,7 +69,29 @@ export const UsersPage: React.FC = () => {
 
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
 
-  const activeUsersCount = users.filter((u) => u.isActive).length;
+  // Filter users belonging to current workshop
+  const workshopUsers = users.filter((u) => !u.workshopId || u.workshopId === currentWorkshopId);
+
+  // Filter audit logs strictly to current workshop and exclude superadmin logs from client accounts
+  const workshopAuditLogs = auditLogs.filter((log) => {
+    // If not superadmin, never show superadmin or SaaS central logs
+    if (currentUser?.role !== 'SUPERADMIN') {
+      if (
+        log.userRole === 'SUPERADMIN' ||
+        log.userName?.toLowerCase().includes('luark') ||
+        log.details?.includes('Rumilcar Central')
+      ) {
+        return false;
+      }
+    }
+    // Match workshop ID if present
+    if (log.workshopId && currentWorkshopId && log.workshopId !== currentWorkshopId) {
+      return false;
+    }
+    return true;
+  });
+
+  const activeUsersCount = workshopUsers.filter((u) => u.isActive).length;
   const currentRoleDef = roles.find((r) => r.id === selectedRoleForPermissions) || roles[0];
 
   const handleTogglePerm = (module: AppModuleKey, action: 'view' | 'create' | 'edit' | 'delete') => {
@@ -121,9 +147,9 @@ export const UsersPage: React.FC = () => {
         <Card>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
-              <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Total de Usuarios</div>
-              <div style={{ fontSize: '24px', fontWeight: 800, color: 'var(--color-primary)', marginTop: '4px' }}>{users.length}</div>
-              <div style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Cuentas registradas</div>
+              <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Total de Gestores</div>
+              <div style={{ fontSize: '24px', fontWeight: 800, color: 'var(--color-primary)', marginTop: '4px' }}>{workshopUsers.length}</div>
+              <div style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Personal del taller</div>
             </div>
             <div style={{ padding: '8px', borderRadius: '8px', background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6' }}>
               <Users size={20} />
@@ -161,8 +187,8 @@ export const UsersPage: React.FC = () => {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
               <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Acciones Registradas</div>
-              <div style={{ fontSize: '24px', fontWeight: 800, color: '#f59e0b', marginTop: '4px' }}>{auditLogs.length}</div>
-              <div style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Eventos en auditoría</div>
+              <div style={{ fontSize: '24px', fontWeight: 800, color: '#f59e0b', marginTop: '4px' }}>{workshopAuditLogs.length}</div>
+              <div style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Eventos de este taller</div>
             </div>
             <div style={{ padding: '8px', borderRadius: '8px', background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b' }}>
               <Activity size={20} />
@@ -192,7 +218,7 @@ export const UsersPage: React.FC = () => {
             fontSize: '13px'
           }}
         >
-          <Users size={16} /> Gestores & Empleados ({users.length})
+          <Users size={16} /> Gestores & Empleados ({workshopUsers.length})
         </button>
 
         <button
@@ -236,7 +262,7 @@ export const UsersPage: React.FC = () => {
             fontSize: '13px'
           }}
         >
-          <Clock size={16} /> Registro de Auditoría ({auditLogs.length})
+          <Clock size={16} /> Registro de Auditoría ({workshopAuditLogs.length})
         </button>
       </div>
 
@@ -256,7 +282,14 @@ export const UsersPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {users.map((u) => {
+                {workshopUsers.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--color-text-muted)' }}>
+                      No hay gestores o empleados adicionales registrados para este taller.
+                    </td>
+                  </tr>
+                ) : (
+                  workshopUsers.map((u) => {
                   const roleObj = roles.find((r) => r.id === u.role);
                   return (
                     <tr key={u.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
@@ -333,7 +366,7 @@ export const UsersPage: React.FC = () => {
                       </td>
                     </tr>
                   );
-                })}
+                }))}
               </tbody>
             </table>
           </div>
@@ -483,26 +516,44 @@ export const UsersPage: React.FC = () => {
       {activeTab === 'auditoria' && (
         <Card>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <h3 style={{ margin: '0 0 10px 0', fontSize: '15px', fontWeight: 700 }}>Actividades Recientes de los Gestores</h3>
-            {auditLogs.map((log) => (
-              <div key={log.id} style={{ padding: '12px', borderRadius: '8px', border: '1px solid var(--color-border)', background: 'var(--color-bg-subtle, rgba(0,0,0,0.02))' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontWeight: 700, fontSize: '13px' }}>{log.userName}</span>
-                    <span style={{ fontSize: '10px', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)' }}>
-                      {log.userRole}
-                    </span>
-                    <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-primary)' }}>{log.action}</span>
-                  </div>
-                  <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
-                    {new Date(log.timestamp).toLocaleDateString()} {new Date(log.timestamp).toLocaleTimeString()}
-                  </span>
-                </div>
-                <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '4px' }}>
-                  {log.details}
-                </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+              <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700 }}>Actividades Recientes de los Gestores</h3>
+              <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
+                {currentUser?.workshopName ? `Taller: ${currentUser.workshopName}` : 'Auditoría interna'}
+              </span>
+            </div>
+
+            {workshopAuditLogs.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '36px 16px', color: 'var(--color-text-muted)' }}>
+                <Clock size={36} style={{ opacity: 0.35, marginBottom: '8px', color: 'var(--color-primary)' }} />
+                <p style={{ margin: 0, fontWeight: 700, fontSize: '14px', color: 'var(--color-text-primary)' }}>
+                  No hay actividades registradas aún para este taller
+                </p>
+                <p style={{ margin: '6px auto 0 auto', fontSize: '12px', maxWidth: '440px', lineHeight: 1.4 }}>
+                  Las acciones de inicio de sesión de gestores, creación de cuentas, órdenes de trabajo y operaciones de caja se registrarán aquí en tiempo real de forma exclusiva para tu taller.
+                </p>
               </div>
-            ))}
+            ) : (
+              workshopAuditLogs.map((log) => (
+                <div key={log.id} style={{ padding: '12px', borderRadius: '8px', border: '1px solid var(--color-border)', background: 'var(--color-bg-subtle, rgba(0,0,0,0.02))' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontWeight: 700, fontSize: '13px' }}>{log.userName}</span>
+                      <span style={{ fontSize: '10px', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)' }}>
+                        {log.userRole}
+                      </span>
+                      <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-primary)' }}>{log.action}</span>
+                    </div>
+                    <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
+                      {new Date(log.timestamp).toLocaleDateString()} {new Date(log.timestamp).toLocaleTimeString()}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '4px' }}>
+                    {log.details}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </Card>
       )}

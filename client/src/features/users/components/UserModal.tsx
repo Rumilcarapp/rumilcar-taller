@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Modal, Button } from '../../../components/ui';
 import { useUserManagementStore, ManagedUser } from '../../../store/useUserManagementStore';
+import { useAuthStore } from '../../../stores/authStore';
 
 interface UserModalProps {
   isOpen: boolean;
@@ -27,6 +28,8 @@ export const UserModal: React.FC<UserModalProps> = ({
       return alert('Por favor completa el nombre y correo electrónico.');
     }
 
+    const currentUser = useAuthStore.getState().user;
+
     if (initialUser) {
       updateUser(initialUser.id, {
         name,
@@ -37,15 +40,17 @@ export const UserModal: React.FC<UserModalProps> = ({
       });
 
       addAuditLog({
-        userId: 'admin',
-        userName: 'Administrador',
-        userRole: 'ADMIN',
-        action: 'Actualización de Usuario',
+        workshopId: currentUser?.workshopId,
+        userId: currentUser?.id || 'admin',
+        userName: currentUser?.name || 'Administrador',
+        userRole: currentUser?.role || 'OWNER',
+        action: 'Actualización de Gestor',
         module: 'users',
-        details: `Se actualizaron los datos del usuario ${name} (${email})`,
+        details: `Se actualizaron los datos del gestor/empleado ${name} (${email})`,
       });
     } else {
       addUser({
+        workshopId: currentUser?.workshopId,
         name,
         email,
         phone,
@@ -54,12 +59,13 @@ export const UserModal: React.FC<UserModalProps> = ({
       });
 
       addAuditLog({
-        userId: 'admin',
-        userName: 'Administrador',
-        userRole: 'ADMIN',
-        action: 'Creación de Usuario',
+        workshopId: currentUser?.workshopId,
+        userId: currentUser?.id || 'admin',
+        userName: currentUser?.name || 'Administrador',
+        userRole: currentUser?.role || 'OWNER',
+        action: 'Creación de Gestor',
         module: 'users',
-        details: `Se registró el nuevo usuario ${name} (${email}) con rol ${role}`,
+        details: `Se registró el nuevo gestor/empleado ${name} (${email}) con rol ${role}`,
       });
     }
 
@@ -145,14 +151,16 @@ export const UserModal: React.FC<UserModalProps> = ({
               type="button"
               onClick={() => {
                 if (window.confirm(`¿Estás seguro de que deseas eliminar permanentemente la cuenta de ${initialUser.name}?`)) {
+                  const currentUser = useAuthStore.getState().user;
                   deleteUser(initialUser.id);
                   addAuditLog({
-                    userId: 'admin',
-                    userName: 'Administrador',
-                    userRole: 'ADMIN',
-                    action: 'Eliminación de Usuario',
+                    workshopId: currentUser?.workshopId,
+                    userId: currentUser?.id || 'admin',
+                    userName: currentUser?.name || 'Administrador',
+                    userRole: currentUser?.role || 'OWNER',
+                    action: 'Eliminación de Gestor',
                     module: 'users',
-                    details: `Se eliminó la cuenta del personal/gestor: ${initialUser.name} (${initialUser.email})`,
+                    details: `Se eliminó la cuenta del gestor/empleado: ${initialUser.name} (${initialUser.email})`,
                   });
                   onClose();
                 }

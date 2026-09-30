@@ -1,6 +1,7 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Modal, Button } from '../../../components/ui';
 import { useUserManagementStore, AppModuleKey, ModulePermissions } from '../../../store/useUserManagementStore';
+import { useAuthStore } from '../../../stores/authStore';
 
 interface RoleModalProps {
   isOpen: boolean;
@@ -38,6 +39,7 @@ export const RoleModal: React.FC<RoleModalProps> = ({ isOpen, onClose }) => {
     e.preventDefault();
     if (!name.trim()) return alert('Por favor ingresa un nombre para el rol.');
 
+    const currentUser = useAuthStore.getState().user;
     const roleId = 'ROLE_' + name.toUpperCase().replace(/\s+/g, '_');
 
     addCustomRole({
@@ -50,10 +52,11 @@ export const RoleModal: React.FC<RoleModalProps> = ({ isOpen, onClose }) => {
     });
 
     addAuditLog({
-      userId: 'admin',
-      userName: 'Administrador',
-      userRole: 'ADMIN',
-      action: 'Creación de Rol',
+      workshopId: currentUser?.workshopId,
+      userId: currentUser?.id || 'admin',
+      userName: currentUser?.name || 'Administrador',
+      userRole: currentUser?.role || 'OWNER',
+      action: 'Creación de Rol Personalizado',
       module: 'users',
       details: `Se creó el rol personalizado: ${name}`,
     });
