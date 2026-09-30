@@ -150,6 +150,7 @@ export interface WhatsAppContextData {
   customNote?: string;
   workshopName?: string;
   trackingUrl?: string;
+  googleReviewUrl?: string;
   pagoMovil?: {
     banco: string;
     telefono: string;
@@ -277,10 +278,18 @@ export function buildWhatsAppMessage(type: WhatsAppTemplateType, ctx: WhatsAppCo
     }
 
     case 'POST_VENTA': {
-      return `Hola *${client}*, esperamos que estés excelente. 👋\n\n` +
+      let msg = `Hola *${client}*, esperamos que estés excelente. 👋\n\n` +
         `Te escribimos de *${workshop}* para saber cómo se ha comportado tu *${vehDesc}* tras los trabajos realizados recientemente.\n\n` +
-        `Tu satisfacción y la seguridad de tu auto son nuestra prioridad número 1. Si sientes algún detalle o requieres una revisión preventiva de cortesía, ¡las puertas del taller están abiertas!\n\n` +
-        `¡Que tengas un excelente día!`;
+        `Tu satisfacción y la seguridad de tu auto son nuestra prioridad número 1. Si sientes algún detalle o requieres una revisión preventiva de cortesía, ¡las puertas del taller están abiertas!\n\n`;
+
+      if (ctx.googleReviewUrl) {
+        msg += `⭐ *¿Nos apoyarías con tu opinión?*\n` +
+          `Tu reseña de 5 estrellas nos ayuda muchísimo a seguir creciendo. Puedes calificar tu experiencia aquí:\n` +
+          `${ctx.googleReviewUrl}\n\n`;
+      }
+
+      msg += `¡Que tengas un excelente día!`;
+      return msg;
     }
 
     case 'LIBRE':

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useWorkOrderStore } from '../../store/useWorkOrderStore';
 import { useCashStore } from '../../store/useCashStore';
+import { useWorkshopStore } from '../../store/useWorkshopStore';
 import { DocumentPrintModal } from '../workOrders/components/DocumentPrintModal';
 import { 
   Wrench, 
@@ -14,7 +15,8 @@ import {
   ShieldCheck,
   ChevronRight,
   Car,
-  PhoneCall
+  PhoneCall,
+  Star
 } from 'lucide-react';
 import './TrackingPage.css';
 
@@ -218,6 +220,31 @@ export const TrackingPage: React.FC = () => {
 
           {/* Action Buttons */}
           <div className="tracking-actions">
+            {useWorkshopStore.getState().workshop.googleReviewUrl && (
+              <a
+                href={useWorkshopStore.getState().workshop.googleReviewUrl}
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  padding: '12px 16px',
+                  borderRadius: '10px',
+                  background: 'linear-gradient(135deg, #4285F4 0%, #1a73e8 100%)',
+                  color: '#ffffff',
+                  fontWeight: 700,
+                  fontSize: '13px',
+                  textDecoration: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  boxShadow: '0 4px 12px rgba(66, 133, 244, 0.25)'
+                }}
+              >
+                <Star size={16} fill="#FBBC05" color="#FBBC05" />
+                <span>¿Satisfecho con el servicio? Califícanos 5★ en Google</span>
+              </a>
+            )}
+
             <a
               href={`https://wa.me/584141234567?text=${encodeURIComponent(`Hola, quisiera consultar sobre mi orden #${order.id} del vehículo ${order.vehicle?.marca} ${order.vehicle?.modelo} (${order.vehicle?.placa})`)}`}
               target="_blank"

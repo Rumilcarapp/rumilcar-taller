@@ -44,6 +44,7 @@ export interface WorkshopProfile {
   usdtSpread: string;
   logoUrl?: string;
   paymentDetails?: WorkshopPaymentDetails;
+  googleReviewUrl?: string;
   createdAt: string;
   lastLogin: string;
 }

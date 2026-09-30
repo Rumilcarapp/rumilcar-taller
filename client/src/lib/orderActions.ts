@@ -46,6 +46,7 @@ export const getOrderWhatsAppContext = (order: WorkOrder): WhatsAppContextData =
     trackingUrl: `${window.location.origin}/tracking/${order.id}`,
     workshopName: currentWorkshopName,
     pagoMovil: pagoMovilConfig,
+    googleReviewUrl: workshop?.googleReviewUrl || undefined,
   };
 };
 
