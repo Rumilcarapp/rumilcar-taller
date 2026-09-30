@@ -110,7 +110,9 @@
 }
 
 .profile-currency-card,
-.profile-mechanics-card {
+.profile-payment-details-card,
+.profile-mechanics-card,
+.profile-integrations-card {
   grid-column: 1 / -1;
 }
 
@@ -313,9 +315,9 @@
 
 /* Integrations */
 .integrations-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--space-4);
 }
 
 .integration-item {

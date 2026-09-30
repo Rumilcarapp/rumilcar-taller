@@ -544,7 +544,8 @@ export const ProfilePage: React.FC = () => {
         {/* ===== CARD E: DATOS DE PAGO Y CUENTAS BANCARIAS DEL TALLER ===== */}
         <Card
           title="Datos de Pago y Cuentas Bancarias del Taller"
-          subtitle="Estos datos aparecerán automáticamente en tus mensajes de WhatsApp y presupuestos"
+          subtitle="Estos datos aparecerán automáticamente en tus mensajes de WhatsApp, facturas y comprobantes"
+          className="profile-payment-details-card"
           action={
             <Button
               variant="secondary"
@@ -556,18 +557,18 @@ export const ProfilePage: React.FC = () => {
             </Button>
           }
         >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
             {/* Sección Pago Móvil */}
-            <div style={{ background: 'var(--color-bg-secondary)', padding: '16px', borderRadius: '10px', border: '1px solid var(--color-border)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', color: 'var(--color-primary)', fontWeight: 800 }}>
+            <div style={{ background: 'var(--color-bg-secondary)', padding: '18px', borderRadius: '10px', border: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-primary)', fontWeight: 800 }}>
                 <Smartphone size={18} />
                 <span>Datos para Pago Móvil (VES)</span>
               </div>
-              <div className="form-grid">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <Input
                   label="Banco"
                   value={workshop.paymentDetails?.pagoMovil?.banco || ''}
-                  placeholder="Ej: Banesco (0134), Mercantil (0105), BDV (0102)..."
+                  placeholder="Ej: Banesco (0134), Mercantil (0105), BDV..."
                   onChange={e => updatePaymentDetails({
                     pagoMovil: {
                       ...(workshop.paymentDetails?.pagoMovil || { banco: '', telefono: '', cedulaRif: '', titular: '' }),
@@ -612,12 +613,12 @@ export const ProfilePage: React.FC = () => {
             </div>
 
             {/* Sección Transferencia Bancaria */}
-            <div style={{ background: 'var(--color-bg-secondary)', padding: '16px', borderRadius: '10px', border: '1px solid var(--color-border)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', color: '#3b82f6', fontWeight: 800 }}>
+            <div style={{ background: 'var(--color-bg-secondary)', padding: '18px', borderRadius: '10px', border: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#3b82f6', fontWeight: 800 }}>
                 <Landmark size={18} />
                 <span>Datos para Transferencia Bancaria Nacional</span>
               </div>
-              <div className="form-grid">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <Input
                   label="Banco"
                   value={workshop.paymentDetails?.transferencia?.banco || ''}
@@ -665,98 +666,68 @@ export const ProfilePage: React.FC = () => {
               </div>
             </div>
 
-            {/* Sección Zelle & Binance / USDT */}
-            <div className="form-grid">
-              <div style={{ background: 'var(--color-bg-secondary)', padding: '16px', borderRadius: '10px', border: '1px solid var(--color-border)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', color: '#8b5cf6', fontWeight: 800 }}>
-                  <CreditCard size={18} />
-                  <span>Zelle (USD)</span>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <Input
-                    label="Correo Electrónico Zelle"
-                    value={workshop.paymentDetails?.zelle?.email || ''}
-                    placeholder="pagos@taller.com"
-                    onChange={e => updatePaymentDetails({
-                      zelle: {
-                        ...(workshop.paymentDetails?.zelle || { email: '', titular: '' }),
-                        email: e.target.value
-                      }
-                    })}
-                  />
-                  <Input
-                    label="Nombre del Titular Zelle"
-                    value={workshop.paymentDetails?.zelle?.titular || ''}
-                    placeholder="Ej: Nombre Empresa / Persona"
-                    onChange={e => updatePaymentDetails({
-                      zelle: {
-                        ...(workshop.paymentDetails?.zelle || { email: '', titular: '' }),
-                        titular: e.target.value
-                      }
-                    })}
-                  />
-                </div>
+            {/* Sección Zelle (USD) */}
+            <div style={{ background: 'var(--color-bg-secondary)', padding: '18px', borderRadius: '10px', border: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#8b5cf6', fontWeight: 800 }}>
+                <CreditCard size={18} />
+                <span>Zelle (USD)</span>
               </div>
-
-              <div style={{ background: 'var(--color-bg-secondary)', padding: '16px', borderRadius: '10px', border: '1px solid var(--color-border)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', color: '#f59e0b', fontWeight: 800 }}>
-                  <QrCode size={18} />
-                  <span>Binance Pay / USDT</span>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <Input
-                    label="Binance Pay ID o Correo Binance"
-                    value={workshop.paymentDetails?.binanceUSDT?.payIdOrEmail || ''}
-                    placeholder="Ej: 123456789 o binance@taller.com"
-                    onChange={e => updatePaymentDetails({
-                      binanceUSDT: {
-                        ...(workshop.paymentDetails?.binanceUSDT || { payIdOrEmail: '', red: 'TRC-20 / Binance Pay' }),
-                        payIdOrEmail: e.target.value
-                      }
-                    })}
-                  />
-                  <Input
-                    label="Red / Protocolo"
-                    value={workshop.paymentDetails?.binanceUSDT?.red || ''}
-                    placeholder="Ej: Binance Pay / Tron (TRC-20)"
-                    onChange={e => updatePaymentDetails({
-                      binanceUSDT: {
-                        ...(workshop.paymentDetails?.binanceUSDT || { payIdOrEmail: '', red: 'TRC-20 / Binance Pay' }),
-                        red: e.target.value
-                      }
-                    })}
-                  />
-                </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <Input
+                  label="Correo Electrónico Zelle"
+                  value={workshop.paymentDetails?.zelle?.email || ''}
+                  placeholder="pagos@taller.com"
+                  onChange={e => updatePaymentDetails({
+                    zelle: {
+                      ...(workshop.paymentDetails?.zelle || { email: '', titular: '' }),
+                      email: e.target.value
+                    }
+                  })}
+                />
+                <Input
+                  label="Nombre del Titular Zelle"
+                  value={workshop.paymentDetails?.zelle?.titular || ''}
+                  placeholder="Ej: Nombre Empresa / Persona"
+                  onChange={e => updatePaymentDetails({
+                    zelle: {
+                      ...(workshop.paymentDetails?.zelle || { email: '', titular: '' }),
+                      titular: e.target.value
+                    }
+                  })}
+                />
               </div>
             </div>
-          </div>
-        </Card>
 
-        {/* ===== CARD E: INTEGRACIONES ===== */}
-        <Card title="Integraciones">
-          <div className="integrations-list">
-            <div className="integration-item">
-              <div className="integration-icon integration-whatsapp">
-                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            {/* Sección Binance Pay / USDT */}
+            <div style={{ background: 'var(--color-bg-secondary)', padding: '18px', borderRadius: '10px', border: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#f59e0b', fontWeight: 800 }}>
+                <QrCode size={18} />
+                <span>Binance Pay / USDT</span>
               </div>
-              <div className="integration-info">
-                <span className="integration-name">WhatsApp Business</span>
-                <span className="integration-desc">Envía recordatorios y notificaciones a tus clientes</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <Input
+                  label="Binance Pay ID o Correo Binance"
+                  value={workshop.paymentDetails?.binanceUSDT?.payIdOrEmail || ''}
+                  placeholder="Ej: 123456789 o binance@taller.com"
+                  onChange={e => updatePaymentDetails({
+                    binanceUSDT: {
+                      ...(workshop.paymentDetails?.binanceUSDT || { payIdOrEmail: '', red: 'TRC-20 / Binance Pay' }),
+                      payIdOrEmail: e.target.value
+                    }
+                  })}
+                />
+                <Input
+                  label="Red / Protocolo"
+                  value={workshop.paymentDetails?.binanceUSDT?.red || ''}
+                  placeholder="Ej: Binance Pay / Tron (TRC-20)"
+                  onChange={e => updatePaymentDetails({
+                    binanceUSDT: {
+                      ...(workshop.paymentDetails?.binanceUSDT || { payIdOrEmail: '', red: 'TRC-20 / Binance Pay' }),
+                      red: e.target.value
+                    }
+                  })}
+                />
               </div>
-              <Badge variant="success" dot>Conectado</Badge>
-              <Button variant="ghost" size="sm">Configurar</Button>
-            </div>
-
-            <div className="integration-item">
-              <div className="integration-icon integration-google">
-                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-              </div>
-              <div className="integration-info">
-                <span className="integration-name">Google My Business</span>
-                <span className="integration-desc">Gestiona tu presencia en Google Maps</span>
-              </div>
-              <Badge variant="default">Desconectado</Badge>
-              <Button variant="secondary" size="sm">Conectar</Button>
             </div>
           </div>
         </Card>
@@ -910,6 +881,35 @@ export const ProfilePage: React.FC = () => {
             </div>
           </div>
         </Card>
+        {/* ===== CARD I: INTEGRACIONES ===== */}
+        <Card title="Integraciones y Canales" className="profile-integrations-card">
+          <div className="integrations-list">
+            <div className="integration-item">
+              <div className="integration-icon integration-whatsapp">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+              </div>
+              <div className="integration-info">
+                <span className="integration-name">WhatsApp Business</span>
+                <span className="integration-desc">Envía recordatorios y notificaciones a tus clientes</span>
+              </div>
+              <Badge variant="success" dot>Conectado</Badge>
+              <Button variant="ghost" size="sm">Configurar</Button>
+            </div>
+
+            <div className="integration-item">
+              <div className="integration-icon integration-google">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+              </div>
+              <div className="integration-info">
+                <span className="integration-name">Google My Business</span>
+                <span className="integration-desc">Gestiona tu presencia en Google Maps</span>
+              </div>
+              <Badge variant="default">Desconectado</Badge>
+              <Button variant="secondary" size="sm">Conectar</Button>
+            </div>
+          </div>
+        </Card>
+
       </div>
 
       {/* ===== BANNER INFERIOR: LISTO PARA VOLVER AL INICIO ===== */}
