@@ -11,6 +11,7 @@ import {
 import { useClientStore } from '../../store/useClientStore';
 import { useCashStore } from '../../store/useCashStore';
 import { useWorkshopStore } from '../../store/useWorkshopStore';
+import { usePersonnelStore } from '../../store/usePersonnelStore';
 import { useAuthStore } from '../../stores/authStore';
 import { Button, Card, EmptyState, Modal } from '../../components/ui';
 import { 
@@ -38,6 +39,8 @@ export const PreCompraPage: React.FC = () => {
   const { inspections, addInspection, updateInspection, deleteInspection } = usePrePurchaseStore();
   const { clients } = useClientStore();
   const { exchangeRateVES } = useCashStore();
+  const { personnel } = usePersonnelStore();
+  const defaultMechanic = personnel.find(p => p.isActive)?.name || 'Jefe de Taller';
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('TODOS');
@@ -69,7 +72,7 @@ export const PreCompraPage: React.FC = () => {
   const [verdict, setVerdict] = useState<VerdictType>('APTO');
   const [priceUSD, setPriceUSD] = useState<number>(45.00);
   const [currency, setCurrency] = useState<'USD' | 'VES' | 'USDT'>('USD');
-  const [mechanicName, setMechanicName] = useState('Carlos P.');
+  const [mechanicName, setMechanicName] = useState(defaultMechanic);
 
   // Print / View Report Modal
   const [selectedInspectionForReport, setSelectedInspectionForReport] = useState<PrePurchaseInspection | null>(null);
@@ -93,7 +96,7 @@ export const PreCompraPage: React.FC = () => {
     setVerdict('APTO');
     setPriceUSD(45.00);
     setCurrency('USD');
-    setMechanicName('Carlos P.');
+    setMechanicName(defaultMechanic);
     setShowWizardModal(true);
   };
 

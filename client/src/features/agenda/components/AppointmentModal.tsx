@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Modal, Button, Input } from '../../../components/ui';
 import { Calendar, Clock, User, Car, Wrench, FileText, Info, AlertTriangle } from 'lucide-react';
+import { usePersonnelStore } from '../../../store/usePersonnelStore';
 import './AppointmentModal.css';
 
 interface AppointmentModalProps {
@@ -11,6 +12,13 @@ interface AppointmentModalProps {
 }
 
 export const AppointmentModal: React.FC<AppointmentModalProps> = ({ selectedDate, onClose, onSave, editData }) => {
+  const { personnel, fetchPersonnel } = usePersonnelStore();
+  const activePersonnel = personnel.filter(p => p.isActive);
+
+  useEffect(() => {
+    fetchPersonnel().catch(() => {});
+  }, [fetchPersonnel]);
+
   const [isDirty, setIsDirty] = useState(false);
   
   const [client, setClient] = useState(editData?.clientName || '');
@@ -80,7 +88,7 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({ selectedDate
       date: startDate,
       clientName: client,
       vehicleDesc: vehicle,
-      mechanic: mechanic === '1' ? 'Carlos M.' : mechanic === '2' ? 'Pedro R.' : null,
+      mechanic: mechanic || null,
       service: service,
       modality,
       internalNotes: notes,
@@ -159,8 +167,11 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({ selectedDate
               <User size={16} />
               <select value={mechanic} onChange={e => handleFieldChange(setMechanic, e.target.value)}>
                 <option value="">Sin asignar</option>
-                <option value="1">Carlos M.</option>
-                <option value="2">Pedro R.</option>
+                {activePersonnel.map(p => (
+                  <option key={p.id} value={p.name}>
+                    {p.name} {p.specialty ? `(${p.specialty})` : ''}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
