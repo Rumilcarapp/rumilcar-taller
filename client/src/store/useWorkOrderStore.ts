@@ -29,6 +29,7 @@ export interface WorkOrder {
   deliveredAt?: string;
   totalUSD: number;
   status: OrderStatus;
+  orderNumber?: number;
   mechanicName?: string;
   partsDeducted?: boolean;
   paymentMethod?: PaymentMethod | 'Mixto';
@@ -118,6 +119,7 @@ export const useWorkOrderStore = create<WorkOrderState>()(
                 deliveredAt: o.deliveredAt,
                 totalUSD: o.totalAnchor || 0,
                 status: statusMapFromBackend[o.status] || 'Recibido',
+                orderNumber: o.orderNumber,
                 inspectionNotes: o.inspectionNotes || '',
                 notes: o.notes || '',
               };

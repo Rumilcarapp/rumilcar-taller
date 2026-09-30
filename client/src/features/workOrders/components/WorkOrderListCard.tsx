@@ -71,6 +71,10 @@ export const WorkOrderListCard: React.FC<Props> = ({
   const totalPaid = (order.payments || []).reduce((acc, p) => acc + (p.amountUSD || 0), 0);
   const pendingUSD = Math.max(0, (order.totalUSD || 0) - totalPaid);
 
+  const displayId = order.orderNumber 
+    ? `#OT-${order.orderNumber}`
+    : (order.id.length > 10 ? `#${order.id.slice(0, 8)}...` : `#${order.id}`);
+
   return (
     <>
       <div 
@@ -83,7 +87,9 @@ export const WorkOrderListCard: React.FC<Props> = ({
         {/* Col 1: ID, Date, Status */}
         <div className="wo-col-identity">
           <div className="wo-id-badge-row">
-            <span className="wo-id">#{order.id}</span>
+            <span className="wo-id" title={`Orden completa: #${order.id}`}>
+              {displayId}
+            </span>
             <span className={`wo-badge status-${order.status.replace(/\s+/g, '').toLowerCase()}`}>
               {order.status}
             </span>

@@ -1,7 +1,7 @@
-﻿/* Modern, Spacious Work Order List Card Styles with Optimized Responsive Columns */
+/* Modern, Spacious Work Order List Card Styles with Optimized Responsive Columns */
 .wo-list-card {
   display: grid;
-  grid-template-columns: 180px minmax(220px, 2fr) 130px 115px auto;
+  grid-template-columns: minmax(130px, 160px) minmax(200px, 2fr) 130px 115px auto;
   align-items: center;
   gap: 16px;
   background: var(--color-bg-surface);
@@ -16,7 +16,7 @@
 
 @media (max-width: 1280px) {
   .wo-list-card {
-    grid-template-columns: 165px minmax(200px, 1.8fr) 115px 105px auto;
+    grid-template-columns: 130px minmax(180px, 1.8fr) 115px 105px auto;
     gap: 12px;
     padding: 12px 14px;
   }
@@ -41,6 +41,7 @@
   flex-direction: column;
   gap: 4px;
   min-width: 0;
+  overflow: hidden;
 }
 
 .wo-id-badge-row {
@@ -48,14 +49,18 @@
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
+  max-width: 100%;
 }
 
 .wo-id {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--color-text-primary);
   font-weight: 800;
   white-space: nowrap;
   letter-spacing: -0.2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .wo-date {
