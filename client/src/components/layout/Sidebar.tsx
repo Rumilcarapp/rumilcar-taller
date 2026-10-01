@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Wrench, Calendar, FileText, Stethoscope,
   ClipboardCheck, Car, Users, Package, ShoppingCart,
   Wallet, CarFront, Truck, CreditCard, HeartHandshake,
-  BarChart3, UserCircle, ChevronLeft, ChevronRight, ShieldCheck, LogOut, X, Sparkles, Building2, LifeBuoy, Settings
+  BarChart3, UserCircle, ChevronLeft, ChevronRight, ShieldCheck, LogOut, X, Sparkles, Building2, LifeBuoy, Settings, Briefcase
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { useUserManagementStore, AppModuleKey } from '../../store/useUserManagementStore';
@@ -39,7 +39,7 @@ const navSections: { label: string; items: NavItemConfig[] }[] = [
   {
     label: 'Finanzas',
     items: [
-      { path: '/inventario', icon: Package, label: 'Inventario', module: 'inventory' },
+      { path: '/inventario', icon: Briefcase, label: 'Servicios y Repuestos', module: 'inventory' },
       { path: '/pos', icon: ShoppingCart, label: 'Punto de Venta', module: 'pos' },
       { path: '/caja', icon: Wallet, label: 'Caja & Finanzas', module: 'cashRegister' },
     ],

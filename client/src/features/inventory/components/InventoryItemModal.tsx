@@ -9,7 +9,7 @@ interface Props {
 }
 
 export const InventoryItemModal: React.FC<Props> = ({ onClose, onSave, initialItem }) => {
-  const [tipo, setTipo] = useState<'PRODUCTO' | 'SERVICIO'>('PRODUCTO');
+  const [tipo, setTipo] = useState<'PRODUCTO' | 'SERVICIO'>('SERVICIO');
   const [nombre, setNombre] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [categoria, setCategoria] = useState('');
@@ -62,7 +62,7 @@ export const InventoryItemModal: React.FC<Props> = ({ onClose, onSave, initialIt
   return (
     <Modal 
       isOpen={true} 
-      title={initialItem ? 'Editar Item de Inventario' : 'Nuevo Item de Inventario'} 
+      title={initialItem ? 'Editar Servicio o Repuesto' : 'Nuevo Servicio o Repuesto'} 
       onClose={onClose}
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>

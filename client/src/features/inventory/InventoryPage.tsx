@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useInventoryStore, InventoryItem } from '../../store/useInventoryStore';
 import { Button, Card, EmptyState } from '../../components/ui';
-import { Plus, Search, Package, Edit2, Trash2 } from 'lucide-react';
+import { Plus, Search, Briefcase, Edit2, Trash2 } from 'lucide-react';
 import { InventoryItemModal } from './components/InventoryItemModal';
 
 export const InventoryPage: React.FC = () => {
@@ -40,11 +40,11 @@ export const InventoryPage: React.FC = () => {
     <div className="page-enter" style={{ padding: '24px', maxWidth: '1100px', margin: '0 auto' }}>
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <div>
-          <h1 className="page-title">Inventario de Productos y Servicios</h1>
-          <p className="page-subtitle">Gestiona repuestos físicos, consumibles y mano de obra del taller en un solo lugar.</p>
+          <h1 className="page-title">Servicios y Repuestos</h1>
+          <p className="page-subtitle">Gestiona servicios de taller, mano de obra técnica especializada y catálogo de repuestos.</p>
         </div>
         <Button onClick={() => { setEditingItem(undefined); setShowModal(true); }} icon={<Plus size={18} />}>
-          Nuevo Item
+          Nuevo Servicio / Repuesto
         </Button>
       </div>
 
@@ -91,10 +91,10 @@ export const InventoryPage: React.FC = () => {
 
         {filteredItems.length === 0 ? (
           <EmptyState
-            icon={<Package size={48} />}
-            title="No se encontraron artículos"
-            description="Registra repuestos físicos o mano de obra técnica para iniciar con tu inventario."
-            action={{ label: "Crear primer artículo", onClick: () => { setEditingItem(undefined); setShowModal(true); } }}
+            icon={<Briefcase size={48} />}
+            title="No se encontraron registros"
+            description="Registra servicios de mano de obra técnica o repuestos para utilizarlos en tus órdenes de trabajo."
+            action={{ label: "Crear primer registro", onClick: () => { setEditingItem(undefined); setShowModal(true); } }}
           />
         ) : (
           <div className="table-responsive">
