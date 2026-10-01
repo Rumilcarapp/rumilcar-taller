@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, Button, Input, Badge, Modal } from '../../components/ui';
 import { useThemeStore } from '../../store/themeStore';
@@ -11,7 +11,8 @@ import {
   Sun, Moon, Palette, Building2, User, Globe, Phone, Mail, MapPin, FileText,
   Plus, Edit, UserCheck, UserX, Trash2,
   RefreshCw, DollarSign, Percent, CreditCard, Calendar,
-  LogIn, Wrench, LogOut, CheckCircle2, AlertCircle, Home, Check, Smartphone, Landmark, QrCode, Star, ExternalLink
+  LogIn, Wrench, LogOut, CheckCircle2, AlertCircle, Home, Check, Smartphone, Landmark, QrCode, Star, ExternalLink,
+  Camera, Upload, Image as ImageIcon
 } from 'lucide-react';
 import './ProfilePage.css';
 
@@ -121,6 +122,71 @@ export const ProfilePage: React.FC = () => {
   const triggerSaveFeedback = (msg = '¡Datos guardados con éxito!') => {
     setSaveSuccessMsg(msg);
     setTimeout(() => setSaveSuccessMsg(null), 3000);
+  };
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor selecciona un archivo de imagen válido (PNG, JPG, WebP o SVG).');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('La imagen no debe superar los 5MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        // Optimize and resize via canvas to ensure light payload (~30-60KB)
+        const canvas = document.createElement('canvas');
+        const MAX_SIZE = 500;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_SIZE) {
+            height = Math.round((height * MAX_SIZE) / width);
+            width = MAX_SIZE;
+          }
+        } else {
+          if (height > MAX_SIZE) {
+            width = Math.round((width * MAX_SIZE) / height);
+            height = MAX_SIZE;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          ctx.drawImage(img, 0, 0, width, height);
+          const optimizedDataUrl = canvas.toDataURL('image/png');
+          updateWorkshop({ logoUrl: optimizedDataUrl });
+          triggerSaveFeedback('¡Logotipo del taller actualizado correctamente!');
+        }
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+    // Reset file input value to allow selecting same file again
+    e.target.value = '';
+  };
+
+  const handleRemoveLogo = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (confirm('¿Deseas restablecer el logotipo al predeterminado de Rumilcar?')) {
+      updateWorkshop({ logoUrl: '' });
+      triggerSaveFeedback('Logotipo restablecido al predeterminado');
+    }
   };
 
   // Personnel Handlers
@@ -250,12 +316,108 @@ export const ProfilePage: React.FC = () => {
       {/* ===== HEADER ===== */}
       <div className="profile-header-card">
         <div className="profile-header-left">
-          <div className="profile-logo-container" style={{ background: 'var(--color-bg-tertiary)', border: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px' }}>
-            <img src="/logo-tight.png" alt="Logo Taller" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+          {/* Input oculto para subir archivo de logo */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            accept="image/png,image/jpeg,image/webp,image/svg+xml"
+            style={{ display: 'none' }}
+            onChange={handleLogoUpload}
+          />
+
+          <div 
+            className="profile-logo-container" 
+            onClick={() => fileInputRef.current?.click()}
+            title="Haz clic para subir o cambiar el logotipo de tu taller"
+            style={{ 
+              background: 'var(--color-bg-tertiary)', 
+              border: '2px solid var(--color-border)', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              padding: '6px',
+              position: 'relative',
+              cursor: 'pointer',
+              overflow: 'hidden'
+            }}
+          >
+            <img 
+              src={workshop.logoUrl || '/logo-tight.png'} 
+              alt="Logo Taller" 
+              style={{ width: '100%', height: '100%', objectFit: 'contain' }} 
+            />
+            {/* Overlay al pasar el mouse */}
+            <div 
+              className="logo-hover-overlay"
+              style={{
+                position: 'absolute',
+                inset: 0,
+                background: 'rgba(0, 0, 0, 0.55)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#ffffff',
+                fontSize: '11px',
+                fontWeight: 600,
+                opacity: 0,
+                transition: 'opacity 0.2s ease',
+                gap: '2px'
+              }}
+            >
+              <Camera size={18} />
+              <span>Cambiar</span>
+            </div>
           </div>
+
           <div className="profile-header-info">
             <h1 className="profile-workshop-name">{workshop.name || 'Mi Taller Mecánico'}</h1>
             <p className="profile-tax-id">RIF: {workshop.taxId || 'Sin RIF'}</p>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  color: 'var(--color-primary)',
+                  background: 'transparent',
+                  border: 'none',
+                  padding: '0',
+                  cursor: 'pointer'
+                }}
+              >
+                <Upload size={12} /> {workshop.logoUrl ? 'Cambiar logotipo' : 'Subir logotipo'}
+              </button>
+
+              {workshop.logoUrl && (
+                <>
+                  <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>•</span>
+                  <button
+                    type="button"
+                    onClick={handleRemoveLogo}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      color: 'var(--color-danger, #ef4444)',
+                      background: 'transparent',
+                      border: 'none',
+                      padding: '0',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Restablecer
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         </div>
 

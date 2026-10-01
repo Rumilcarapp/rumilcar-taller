@@ -92,8 +92,9 @@ export const handlePrintOrder = (order: WorkOrder) => {
   const vehicleColor = order.vehicle?.color ? `Color: ${order.vehicle.color}` : '';
 
   const docTitle = order.status === 'Presupuesto' ? 'Presupuesto de Servicio' : 'Factura / Nota de Entrega';
-  const orderIdentifier = order.id ? `Orden #${order.id}` : 'Orden Borrador';
+  const orderIdentifier = order.orderNumber ? `Orden #OT-${order.orderNumber}` : (order.id ? `Orden #${order.id.length > 10 ? order.id.slice(0, 8) : order.id}` : 'Orden Borrador');
   const displayDate = order.date ? new Date(order.date).toLocaleDateString('es-VE') : new Date().toLocaleDateString('es-VE');
+  const workshopLogo = workshop?.logoUrl || '';
 
   const html = `
     <html>
@@ -129,6 +130,7 @@ export const handlePrintOrder = (order: WorkOrder) => {
         </div>
         
         <div class="header">
+          ${workshopLogo ? `<img src="${workshopLogo}" alt="Logo" style="max-height: 65px; max-width: 170px; object-fit: contain; margin-bottom: 8px; display: inline-block;" /><br>` : ''}
           <h1>${workshopName}</h1>
           ${workshopLegalName ? `<div class="header-sub" style="font-weight: 600;">${workshopLegalName}</div>` : ''}
           ${workshopTaxId ? `<div class="header-sub">RIF: ${workshopTaxId}</div>` : ''}

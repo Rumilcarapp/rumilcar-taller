@@ -31,6 +31,17 @@
   border-radius: var(--radius-lg);
   overflow: hidden;
   flex-shrink: 0;
+  position: relative;
+  transition: all var(--transition-fast);
+}
+
+.profile-logo-container:hover {
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 3px var(--color-primary-subtle);
+}
+
+.profile-logo-container:hover .logo-hover-overlay {
+  opacity: 1 !important;
 }
 
 .profile-logo-placeholder {

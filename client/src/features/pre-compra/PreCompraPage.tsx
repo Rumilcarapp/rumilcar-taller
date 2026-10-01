@@ -167,6 +167,7 @@ export const PreCompraPage: React.FC = () => {
     const workshopName = (workshop?.name || user?.workshopName || 'Taller Mecánico').toUpperCase();
     const workshopTaxId = workshop?.taxId || '';
     const workshopPhone = workshop?.phone || user?.phone || '';
+    const workshopLogo = workshop?.logoUrl || '';
 
     const html = `
       <html>
@@ -197,6 +198,7 @@ export const PreCompraPage: React.FC = () => {
           </div>
 
           <div class="header">
+            ${workshopLogo ? `<img src="${workshopLogo}" alt="Logo" style="max-height: 60px; max-width: 160px; object-fit: contain; margin-bottom: 8px; display: inline-block;" /><br>` : ''}
             <h1>${workshopName}</h1>
             ${workshopTaxId ? `<p style="font-size: 13px; color: #4b5563; margin: 2px 0;">RIF: ${workshopTaxId}${workshopPhone ? ` • Tel: ${workshopPhone}` : ''}</p>` : ''}
             <p>INFORME DE INSPECCIÓN TÉCNICA DE PRE-COMPRA · <strong>${insp.id}</strong></p>

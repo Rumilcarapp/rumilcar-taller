@@ -42,6 +42,8 @@ export const DocumentPrintModal: React.FC<DocumentPrintModalProps> = ({
   const clientDisplayName = [order.client?.nombre, order.client?.apellido].filter(Boolean).join(' ') || 'Cliente General';
   const vehicleDisplayName = [order.vehicle?.marca, order.vehicle?.modelo].filter(Boolean).join(' ') || 'Vehículo no especificado';
   const vehicleYear = order.vehicle?.año || order.vehicle?.ano;
+  const displayOrderId = order.orderNumber ? `OT-${order.orderNumber}` : (order.id.length > 10 ? order.id.slice(0, 8) : order.id);
+  const workshopLogo = workshop?.logoUrl || '/logo-tight.png';
 
   const handlePrint = () => {
     window.print();
@@ -161,7 +163,7 @@ export const DocumentPrintModal: React.FC<DocumentPrintModalProps> = ({
             {/* Header */}
             <div className="doc-header-row">
               <div className="doc-brand-logo">
-                <img src="/logo-tight.png" alt="Logo" className="doc-brand-img" />
+                <img src={workshopLogo} alt={workshopDisplayName} className="doc-brand-img" />
                 <div>
                   <div className="doc-brand-name">{workshopDisplayName.toUpperCase()}</div>
                   <div className="doc-brand-sub">{(workshop.legalName || 'SERVICIOS AUTOMOTRICES').toUpperCase()}</div>
@@ -178,7 +180,7 @@ export const DocumentPrintModal: React.FC<DocumentPrintModalProps> = ({
 
               <div className="doc-number-box">
                 <div className="doc-type-title">{typeLabels[documentType]}</div>
-                <div className="doc-number">#{order.id}</div>
+                <div className="doc-number">#{displayOrderId}</div>
                 <div className="doc-date">
                   Fecha: <strong>{new Date(order.date).toLocaleDateString()}</strong>
                 </div>
@@ -340,12 +342,12 @@ export const DocumentPrintModal: React.FC<DocumentPrintModalProps> = ({
         {format === 'TICKET' && (
           <div className="doc-paper-ticket">
             <div style={{ textAlign: 'center', borderBottom: '1px dashed #000', paddingBottom: '8px', marginBottom: '8px' }}>
-              <img src="/logo-tight.png" alt="Logo" style={{ width: '32px', height: '32px', objectFit: 'contain', margin: '0 auto 4px', display: 'block' }} />
+              <img src={workshopLogo} alt="Logo" style={{ maxHeight: '42px', maxWidth: '90px', objectFit: 'contain', margin: '0 auto 6px', display: 'block' }} />
               <div style={{ fontWeight: 800, fontSize: '15px' }}>{workshopDisplayName.toUpperCase()}</div>
               {workshop.taxId && <div>RIF: {workshop.taxId}</div>}
               <div>Tel: {workshop.phone || user?.phone || 'No registrado'}</div>
               <div style={{ fontWeight: 700, marginTop: '4px' }}>{typeLabels[documentType]}</div>
-              <div style={{ fontSize: '14px', fontWeight: 800 }}>#{order.id}</div>
+              <div style={{ fontSize: '14px', fontWeight: 800 }}>#{displayOrderId}</div>
               <div>Fecha: {new Date(order.date).toLocaleDateString()}</div>
             </div>
 

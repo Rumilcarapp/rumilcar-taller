@@ -134,6 +134,7 @@ export const useWorkshopStore = create<WorkshopState>()(
                 website: data.website || state.workshop.website,
                 phone: data.phone || state.workshop.phone,
                 email: data.email || state.workshop.email,
+                logoUrl: data.logoUrl !== undefined ? (data.logoUrl || '') : state.workshop.logoUrl,
                 anchorCurrency: data.anchorCurrency || state.workshop.anchorCurrency,
                 usdtSpread: data.usdtSpread !== undefined ? String(data.usdtSpread) : state.workshop.usdtSpread,
               },
@@ -163,6 +164,7 @@ export const useWorkshopStore = create<WorkshopState>()(
               website: current.website,
               phone: current.phone,
               email: current.email,
+              logoUrl: current.logoUrl || null,
               anchorCurrency: current.anchorCurrency,
               usdtSpread: parseFloat(current.usdtSpread) || 0,
             });
