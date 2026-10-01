@@ -35,7 +35,7 @@ export const getOrderWhatsAppContext = (order: WorkOrder): WhatsAppContextData =
       year: order.vehicle?.año || order.vehicle?.ano,
       color: order.vehicle?.color,
     },
-    orderId: order.id,
+    orderId: order.orderNumber ? `OT-${order.orderNumber}` : (order.id.length > 10 ? order.id.slice(0, 8) : order.id),
     status: order.status,
     totalUSD: order.totalUSD || 0,
     paidUSD: paid,

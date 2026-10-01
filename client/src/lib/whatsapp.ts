@@ -191,12 +191,13 @@ export function buildWhatsAppMessage(type: WhatsAppTemplateType, ctx: WhatsAppCo
         ? ctx.balancePendingUSD
         : Math.max(0, (ctx.totalUSD || 0) - (ctx.paidUSD || 0));
 
-      let msg = `¡Hola *${client}*! 👋🚗\n\n` +
-        `Te saludamos de *${workshop}* para informarte que tu vehículo *${vehDesc}*${orderTag} ya se encuentra *COMPLETAMENTE LISTO* para su retiro en nuestras instalaciones. ✅\n\n`;
+      let msg = `¡Hola, *${client}*! 👋🚗\n\n` +
+        `Te saludamos de *${workshop}*. Nos alegra informarte que los trabajos en tu *${vehDesc}*${orderTag} han concluido exitosamente y tu auto ya se encuentra *LISTO PARA RETIRO*. ✅\n\n`;
 
       if (pending > 0) {
-        msg += `💰 *Saldo pendiente a cancelar:* *$${pending.toFixed(2)} USD*${formatVES(pending)}\n` +
-          `Métodos de pago recibidos: Divisas en efectivo, Zelle, USDT o Pago Móvil.\n\n`;
+        msg += `💳 *Estado de cuenta:*\n` +
+          `• Saldo pendiente: *$${pending.toFixed(2)} USD*${formatVES(pending)}\n` +
+          `• Métodos aceptados: Efectivo, Pago Móvil, Zelle o USDT.\n\n`;
       } else {
         msg += `✨ Tu orden se encuentra *100% saldada*.\n\n`;
       }
@@ -205,17 +206,21 @@ export function buildWhatsAppMessage(type: WhatsAppTemplateType, ctx: WhatsAppCo
         msg += `📝 *Nota del taller:* ${ctx.customNote}\n\n`;
       }
 
-      msg += `📍 Horario de entrega: Lunes a Viernes de 8:00 AM a 5:00 PM.\n` +
-        `¡Gracias por confiar en el equipo de ${workshop}!`;
+      if (ctx.trackingUrl) {
+        msg += `📱 *Revisión digital:* ${ctx.trackingUrl}\n\n`;
+      }
+
+      msg += `📍 *Horario de entrega:* Lunes a Viernes de 8:00 AM a 5:00 PM.\n` +
+        `Si deseas coordinar tu hora de llegada o requieres asistencia adicional, por favor respóndenos a este mensaje. ¡Gracias por confiar en *${workshop}*! 🙌`;
       return msg;
     }
 
     case 'PRESUPUESTO': {
-      let msg = `Estimado(a) *${client}*,\n\n` +
-        `Le saludamos de *${workshop}*. Le compartimos el presupuesto detallado para su vehículo *${vehDesc}*${orderTag}:\n\n`;
+      let msg = `Estimado(a) *${client}*, un cordial saludo de *${workshop}* 🔧\n\n` +
+        `Compartimos contigo la propuesta de servicio y cotización para tu *${vehDesc}*${orderTag}:\n\n`;
 
       if (ctx.services && ctx.services.length > 0) {
-        msg += `🔧 *SERVICIOS Y MANO DE OBRA:*\n`;
+        msg += `🛠️ *SERVICIOS Y MANO DE OBRA:*\n`;
         ctx.services.forEach(s => {
           msg += `• ${s.name}: $${(s.price || 0).toFixed(2)}\n`;
         });
@@ -234,15 +239,17 @@ export function buildWhatsAppMessage(type: WhatsAppTemplateType, ctx: WhatsAppCo
       const total = ctx.totalUSD || 0;
       msg += `💵 *TOTAL ESTIMADO: $${total.toFixed(2)} USD*${formatVES(total)}\n\n`;
 
-      if (ctx.trackingUrl) {
-        msg += `📱 Puede consultar la orden en vivo aquí:\n${ctx.trackingUrl}\n\n`;
-      }
-
       if (ctx.customNote) {
         msg += `ℹ️ *Observaciones:* ${ctx.customNote}\n\n`;
       }
 
-      msg += `Por favor responda este mensaje para autorizar el inicio de los trabajos. ¡Estamos a su orden!`;
+      msg += `🛡️ _Todos nuestros trabajos cuentan con garantía de servicio y repuestos certificados._\n\n`;
+
+      if (ctx.trackingUrl) {
+        msg += `📱 *Ver detalle y fotos en vivo:* ${ctx.trackingUrl}\n\n`;
+      }
+
+      msg += `✅ *Para autorizar el inicio de los trabajos*, solo respóndenos a este mensaje confirmando tu aprobación. ¡Estamos a tu orden!`;
       return msg;
     }
 
@@ -251,50 +258,56 @@ export function buildWhatsAppMessage(type: WhatsAppTemplateType, ctx: WhatsAppCo
         ? ctx.balancePendingUSD
         : Math.max(0, (ctx.totalUSD || 0) - (ctx.paidUSD || 0));
 
-      let msg = `Hola *${client}*, un cordial saludo de *${workshop}* 🚗.\n\n` +
-        `Le recordamos amablemente que mantiene un saldo pendiente de *$${pending.toFixed(2)} USD*${formatVES(pending)} ` +
-        `correspondiente a los servicios prestados a su vehículo *${vehDesc}*${orderTag}.\n\n` +
+      let msg = `Hola, *${client}*, esperamos te encuentres muy bien. Te contactamos del equipo de *${workshop}* 🚗\n\n` +
+        `Te compartimos el balance actualizado correspondiente a los servicios realizados a tu *${vehDesc}*${orderTag}:\n\n` +
+        `💰 *Monto pendiente:* *$${pending.toFixed(2)} USD*${formatVES(pending)}\n\n` +
         `📲 *DATOS PARA PAGO MÓVIL:*\n` +
         `• Banco: *${pm.banco}*\n` +
         `• Teléfono: *${pm.telefono}*\n` +
         `• Cédula / RIF: *${pm.cedulaRif}*\n` +
         `• Titular: *${pm.titular}*\n\n` +
-        `Si realiza el pago en Bolívares o vía Zelle/USDT, por favor envíenos el capture por este medio para registrar su abono. ¡Muchas gracias! 🙏`;
+        `_(Si prefieres cancelar vía Zelle, USDT o Efectivo en taller, avísanos para darte los datos correspondientes)._\n\n` +
+        `📸 Una vez realizado el pago, por favor compártenos el comprobante o captura por este mismo chat para procesarlo en tu cuenta. ¡Muchas gracias por tu puntualidad! 🙏`;
       return msg;
     }
 
     case 'AVANCE': {
-      let msg = `Hola *${client}*! 🛠️ Le informamos sobre el avance de su vehículo *${vehDesc}*${orderTag}:\n\n` +
-        `Estado actual: *${ctx.status || 'En Reparación'}*\n\n`;
+      let msg = `¡Hola, *${client}*! 🛠️ Te saludamos de *${workshop}*.\n\n` +
+        `Queremos ponerte al día sobre los avances de tu *${vehDesc}*${orderTag}:\n\n` +
+        `🔄 *Estado actual:* *${ctx.status || 'En Reparación'}*\n\n`;
 
       if (ctx.customNote) {
-        msg += `Detalles: ${ctx.customNote}\n\n`;
+        msg += `📝 *Detalle del avance:* ${ctx.customNote}\n\n`;
       } else {
-        msg += `Los trabajos continúan según el cronograma acordado. Le mantendremos informado tan pronto concluyan las pruebas.\n\n`;
+        msg += `Los trabajos técnicos continúan avanzando según el plan de servicio establecido.\n\n`;
       }
 
-      msg += `Cualquier consulta no dude en escribirnos por este chat. Saludos, equipo *${workshop}*.`;
+      if (ctx.trackingUrl) {
+        msg += `📱 *Sigue el proceso en tiempo real (fotos y fases):*\n${ctx.trackingUrl}\n\n`;
+      }
+
+      msg += `Nuestro equipo técnico continúa trabajando para garantizar el mejor rendimiento y seguridad de tu auto. Cualquier consulta, estamos a tu orden. 👨‍🔧`;
       return msg;
     }
 
     case 'POST_VENTA': {
-      let msg = `Hola *${client}*, esperamos que estés excelente. 👋\n\n` +
-        `Te escribimos de *${workshop}* para saber cómo se ha comportado tu *${vehDesc}* tras los trabajos realizados recientemente.\n\n` +
-        `Tu satisfacción y la seguridad de tu auto son nuestra prioridad número 1. Si sientes algún detalle o requieres una revisión preventiva de cortesía, ¡las puertas del taller están abiertas!\n\n`;
+      let msg = `¡Hola, *${client}*! Esperamos que estés teniendo un excelente día. 👋\n\n` +
+        `Te escribimos de *${workshop}* para saber cómo ha respondido tu *${vehDesc}* tras el servicio realizado recientemente.\n\n` +
+        `Tu tranquilidad y seguridad en la vía son nuestra máxima prioridad. Recuerda que cuentas con nuestra garantía de servicio; si necesitas cualquier ajuste o chequeo preventivo, ¡las puertas de nuestro taller están abiertas para ti! 🚘\n\n`;
 
       if (ctx.googleReviewUrl) {
-        msg += `⭐ *¿Nos apoyarías con tu opinión?*\n` +
-          `Tu reseña de 5 estrellas nos ayuda muchísimo a seguir creciendo. Puedes calificar tu experiencia aquí:\n` +
-          `${ctx.googleReviewUrl}\n\n`;
+        msg += `⭐ *¿Nos regalarías 1 minuto de tu opinión?*\n` +
+          `Si tu experiencia fue positiva, una calificación de 5 estrellas en Google nos ayuda enormemente a seguir creciendo como taller de confianza:\n` +
+          `👉 ${ctx.googleReviewUrl}\n\n`;
       }
 
-      msg += `¡Que tengas un excelente día!`;
+      msg += `¡Gracias por formar parte de la familia *${workshop}*! Que tengas una excelente semana.`;
       return msg;
     }
 
     case 'LIBRE':
     default: {
-      return `Hola *${client}*, le saludamos de *${workshop}* referente a su vehículo *${vehDesc}*${orderTag}. ${ctx.customNote || '¿En qué podemos ayudarle el día de hoy?'}`;
+      return `¡Hola, *${client}*! Te saludamos de *${workshop}* referente a tu vehículo *${vehDesc}*${orderTag}.\n\n${ctx.customNote || '¿En qué podemos ayudarte el día de hoy? Estamos a tu orden.'}`;
     }
   }
 }

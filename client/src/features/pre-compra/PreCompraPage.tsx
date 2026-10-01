@@ -268,15 +268,25 @@ export const PreCompraPage: React.FC = () => {
     let cleanPhone = phone.replace(/[^0-9]/g, '');
     if (!cleanPhone.startsWith('58')) cleanPhone = '58' + cleanPhone;
 
-    const verdictLabel = insp.verdict === 'APTO' ? '🟢 APTO PARA COMPRA' : insp.verdict === 'PRECAUCION' ? '🟡 COMPRAR CON PRECAUCIONES' : '🔴 NO RECOMENDADO';
+    const inspCode = insp.id ? (insp.id.length > 10 ? `#${insp.id.slice(0, 8)}` : `#${insp.id}`) : '';
+    const verdictLabel = insp.verdict === 'APTO' 
+      ? '🟢 APTO PARA COMPRA' 
+      : insp.verdict === 'PRECAUCION' 
+        ? '🟡 COMPRAR CON PRECAUCIONES' 
+        : '🔴 NO RECOMENDADO';
 
-    const msg = `Hola *${insp.client?.nombre || 'Estimado Cliente'}*,\n\n` +
-      `Te enviamos el resumen de la *Inspección Pre-Compra* realizada a tu vehículo de interés:\n\n` +
-      `🚗 *${insp.vehicle?.marca || ''} ${insp.vehicle?.modelo || ''} (${insp.vehicle?.year || 'Año N/D'})*\n` +
-      `📋 Informe Nro: *${insp.id}*\n` +
-      `🏆 Veredicto: *${verdictLabel}*\n\n` +
-      `*Diagnóstico General:*\n_${insp.generalDiagnosis || 'Vehículo revisado exitosamente.'}_\n\n` +
-      `Gracias por confiar en *${workshopName}*. ¡Estamos a la orden!`;
+    const clientName = insp.client?.nombre ? insp.client.nombre.trim() : 'Estimado Cliente';
+    const vehName = `${insp.vehicle?.marca || ''} ${insp.vehicle?.modelo || ''}`.trim() || 'Vehículo evaluado';
+    const yearStr = insp.vehicle?.year ? ` (${insp.vehicle.year})` : '';
+
+    const msg = `Hola, *${clientName}*, un cordial saludo de *${workshopName}* 🛡️\n\n` +
+      `Ya tenemos listo el informe técnico de la *Inspección Pre-Compra* realizada a tu vehículo de interés:\n\n` +
+      `🚗 *Vehículo:* *${vehName}${yearStr}*\n` +
+      `📋 *Informe Nro:* *${inspCode}*\n` +
+      `🏆 *Veredicto Técnico:* *${verdictLabel}*\n\n` +
+      `🔍 *Diagnóstico General:*\n_${insp.generalDiagnosis || 'Vehículo revisado y evaluado por nuestro equipo técnico.'}_\n\n` +
+      `Adjuntamos el informe detallado con la revisión integral de motor, transmisión, carrocería, suspensión y escaneo computarizado.\n\n` +
+      `¡Estamos a tu total disposición para asesorarte en tu decisión de compra! 🤝`;
 
     window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`, '_blank');
   };
