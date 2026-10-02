@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { Camera, Plus, X, UploadCloud } from 'lucide-react';
+import { Camera, Plus, X, UploadCloud, Smartphone } from 'lucide-react';
+import { CameraModal } from '../../../components/camera/CameraModal';
 import './PhotoUploader.css';
 
 export interface PhotoItem {
@@ -16,6 +17,7 @@ interface PhotoUploaderProps {
 
 export const PhotoUploader: React.FC<PhotoUploaderProps> = ({ photos: externalPhotos, onChange }) => {
   const [internalPhotos, setInternalPhotos] = useState<PhotoItem[]>([]);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const photos = externalPhotos !== undefined ? externalPhotos : internalPhotos;
@@ -48,6 +50,16 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({ photos: externalPh
     });
 
     if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleCameraCapture = (dataUrl: string, label?: string) => {
+    const newPhoto: PhotoItem = {
+      id: Date.now() + Math.random(),
+      label: label || `Inspección ${photos.length + 1}`,
+      url: dataUrl,
+      note: label || ''
+    };
+    updatePhotos([...photos, newPhoto]);
   };
 
   const handleRemove = (id: string | number) => {
@@ -104,16 +116,37 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({ photos: externalPh
           </div>
         ))}
         
+        {/* Button: Use Camera */}
+        <button 
+          className="photo-add-btn photo-cam-btn" 
+          onClick={() => setIsCameraOpen(true)}
+          type="button"
+          title="Tomar fotografía en vivo con la cámara"
+          style={{ borderColor: 'var(--color-primary)', background: 'rgba(220, 38, 38, 0.04)' }}
+        >
+          <Camera size={26} color="var(--color-primary)" />
+          <span style={{ color: 'var(--color-primary)' }}>TOMAR CON CÁMARA</span>
+        </button>
+
+        {/* Button: Upload File */}
         <button 
           className="photo-add-btn" 
           onClick={() => fileInputRef.current?.click()}
           type="button"
-          title="Tomar o seleccionar foto con cámara o archivo"
+          title="Subir fotos desde archivos o galería"
         >
-          <Camera size={24} />
-          <span>AGREGAR FOTO</span>
+          <UploadCloud size={24} />
+          <span>SUBIR ARCHIVO</span>
         </button>
       </div>
+
+      {/* Live Camera Viewfinder Modal */}
+      <CameraModal
+        isOpen={isCameraOpen}
+        onClose={() => setIsCameraOpen(false)}
+        onCapture={handleCameraCapture}
+        title="Tomar Foto de Inspección del Vehículo"
+      />
     </div>
   );
 };

@@ -1,0 +1,275 @@
+/* CameraModal.css - Premium In-App Camera Viewfinder for Inspections */
+.cam-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: camFadeIn 0.2s ease-out;
+}
+
+@keyframes camFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.cam-modal-container {
+  background: #111827;
+  color: #f9fafb;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 640px;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+}
+
+.cam-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(17, 24, 39, 0.95);
+}
+
+.cam-header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.cam-header-close {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #e5e7eb;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cam-header-close:hover {
+  background: rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+}
+
+/* Viewfinder Area */
+.cam-viewfinder {
+  position: relative;
+  width: 100%;
+  background: #000000;
+  aspect-ratio: 4 / 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.cam-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cam-preview-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+}
+
+/* Framing Grid Overlay */
+.cam-grid-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.cam-grid-cell {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.cam-target-crosshair {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 80px;
+  height: 80px;
+  border: 2px dashed rgba(255, 255, 255, 0.4);
+  border-radius: 12px;
+  pointer-events: none;
+}
+
+/* Flash Animation when taking photo */
+.cam-flash {
+  position: absolute;
+  inset: 0;
+  background: #ffffff;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.cam-flash.active {
+  animation: camFlashAnim 0.3s ease-out;
+}
+
+@keyframes camFlashAnim {
+  0% { opacity: 0.9; }
+  100% { opacity: 0; }
+}
+
+/* Quick Labels Bar */
+.cam-labels-bar {
+  padding: 10px 14px;
+  background: #1f2937;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cam-labels-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: #9ca3af;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.cam-chips-scroll {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.cam-chip {
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #d1d5db;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cam-chip:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}
+
+.cam-chip.active {
+  background: var(--color-primary, #dc2626);
+  border-color: var(--color-primary, #dc2626);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* Controls Footer */
+.cam-controls {
+  padding: 16px 20px;
+  background: #111827;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  gap: 16px;
+}
+
+.cam-control-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cam-control-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.cam-shutter-btn {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 5px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 0 0 3px var(--color-primary, #dc2626);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.1s ease, box-shadow 0.15s ease;
+}
+
+.cam-shutter-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 0 5px var(--color-primary, #dc2626);
+}
+
+.cam-shutter-btn:active {
+  transform: scale(0.92);
+}
+
+.cam-shutter-inner {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: var(--color-primary, #dc2626);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+}
+
+/* Error or Fallback State */
+.cam-error-box {
+  padding: 30px 20px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.cam-error-icon {
+  color: #f59e0b;
+  margin-bottom: 4px;
+}
+
+.cam-fallback-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+  width: 100%;
+  max-width: 320px;
+}

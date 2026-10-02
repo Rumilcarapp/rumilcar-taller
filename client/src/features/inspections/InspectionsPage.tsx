@@ -2,8 +2,9 @@ import React, { useState, useRef } from 'react';
 import { useInspectionStore, Inspection, ChecklistItem, DamageMark } from '../../store/useInspectionStore';
 import { useVehicleStore } from '../../store/useVehicleStore';
 import { Button, Card, EmptyState, Modal } from '../../components/ui';
-import { Plus, Search, ClipboardCheck, CheckCircle2, AlertTriangle, XCircle, Camera, X, Gauge, Fuel } from 'lucide-react';
+import { Plus, Search, ClipboardCheck, CheckCircle2, AlertTriangle, XCircle, Camera, X, Gauge, Fuel, Upload } from 'lucide-react';
 import { CarDamageMap } from './components/CarDamageMap';
+import { CameraModal } from '../../components/camera/CameraModal';
 
 const INITIAL_CHECKLIST: ChecklistItem[] = [
   { id: '1', name: 'Luces principales y cruces', status: 'good' },
@@ -40,10 +41,28 @@ export const InspectionsPage: React.FC = () => {
     ));
   };
 
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [cameraTargetItemId, setCameraTargetItemId] = useState<string | null>(null);
+
   const fileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
 
   const triggerFileInput = (itemId: string) => {
     fileInputRefs.current[itemId]?.click();
+  };
+
+  const openCameraForItem = (itemId: string) => {
+    setCameraTargetItemId(itemId);
+    setIsCameraOpen(true);
+  };
+
+  const handleCameraCapture = (dataUrl: string) => {
+    if (cameraTargetItemId) {
+      setChecklist(prev => prev.map(item => 
+        item.id === cameraTargetItemId ? { ...item, photoUrl: dataUrl } : item
+      ));
+    }
+    setCameraTargetItemId(null);
+    setIsCameraOpen(false);
   };
 
   const handlePhotoUpload = (itemId: string, e: React.ChangeEvent<HTMLInputElement>) => {
@@ -389,11 +408,20 @@ export const InspectionsPage: React.FC = () => {
                           accept="image/*"
                         />
                         <button 
-                          onClick={() => triggerFileInput(item.id)}
-                          style={{ width: 26, height: 26, border: '1px solid var(--color-border)', borderRadius: '4px', background: item.photoUrl ? 'var(--color-success-light)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                          title="Adjuntar evidencia fotográfica"
+                          type="button"
+                          onClick={() => openCameraForItem(item.id)}
+                          style={{ width: 26, height: 26, border: '1px solid var(--color-border)', borderRadius: '4px', background: item.photoUrl ? 'var(--color-success-light)' : 'rgba(220, 38, 38, 0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                          title="Tomar foto en vivo con la cámara"
                         >
-                          <Camera size={14} color={item.photoUrl ? 'green' : 'var(--color-text-secondary)'} />
+                          <Camera size={14} color={item.photoUrl ? 'green' : 'var(--color-primary, #dc2626)'} />
+                        </button>
+                        <button 
+                          type="button"
+                          onClick={() => triggerFileInput(item.id)}
+                          style={{ width: 26, height: 26, border: '1px solid var(--color-border)', borderRadius: '4px', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                          title="Subir archivo o foto desde galería"
+                        >
+                          <Upload size={12} color="var(--color-text-secondary)" />
                         </button>
                       </div>
                     </div>
@@ -496,6 +524,15 @@ export const InspectionsPage: React.FC = () => {
           </div>
         </Modal>
       )}
+
+      {/* Live Camera Modal for Inspections */}
+      <CameraModal
+        isOpen={isCameraOpen}
+        onClose={() => { setIsCameraOpen(false); setCameraTargetItemId(null); }}
+        onCapture={handleCameraCapture}
+        title={`Tomar Foto: ${checklist.find(i => i.id === cameraTargetItemId)?.name || 'Inspección'}`}
+        initialLabel={checklist.find(i => i.id === cameraTargetItemId)?.name || ''}
+      />
 
     </div>
   );
