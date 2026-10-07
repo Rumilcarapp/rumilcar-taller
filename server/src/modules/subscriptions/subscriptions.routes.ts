@@ -527,6 +527,16 @@ subscriptionsRouter.get('/admin/analytics', authenticate, requireSuperAdmin, asy
       allPayments,
     ] = await Promise.all([
       prisma.workshop.findMany({
+        where: {
+          users: {
+            none: {
+              role: 'SUPERADMIN',
+            },
+          },
+          name: {
+            not: 'Rumilcar Central (SaaS)',
+          },
+        },
         include: {
           users: { select: { id: true, name: true, email: true, role: true } },
           subscription: {
@@ -544,11 +554,47 @@ subscriptionsRouter.get('/admin/analytics', authenticate, requireSuperAdmin, asy
         },
         orderBy: { createdAt: 'desc' },
       }),
-      prisma.workOrder.count(),
-      prisma.client.count(),
-      prisma.vehicle.count(),
-      prisma.user.count(),
+      prisma.workOrder.count({
+        where: {
+          workshop: {
+            users: { none: { role: 'SUPERADMIN' } },
+            name: { not: 'Rumilcar Central (SaaS)' },
+          },
+        },
+      }),
+      prisma.client.count({
+        where: {
+          workshop: {
+            users: { none: { role: 'SUPERADMIN' } },
+            name: { not: 'Rumilcar Central (SaaS)' },
+          },
+        },
+      }),
+      prisma.vehicle.count({
+        where: {
+          client: {
+            workshop: {
+              users: { none: { role: 'SUPERADMIN' } },
+              name: { not: 'Rumilcar Central (SaaS)' },
+            },
+          },
+        },
+      }),
+      prisma.user.count({
+        where: {
+          role: { not: 'SUPERADMIN' },
+          workshop: {
+            name: { not: 'Rumilcar Central (SaaS)' },
+          },
+        },
+      }),
       prisma.subscriptionPayment.findMany({
+        where: {
+          workshop: {
+            users: { none: { role: 'SUPERADMIN' } },
+            name: { not: 'Rumilcar Central (SaaS)' },
+          },
+        },
         include: { workshop: { select: { name: true } } },
         orderBy: { createdAt: 'desc' },
       }),

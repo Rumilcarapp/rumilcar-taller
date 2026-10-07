@@ -103,7 +103,7 @@ export const SuperAdminReportsPage: React.FC = () => {
 
   const monthlyTrend = adminAnalytics?.monthlyRevenueTrend || [];
 
-  const topWorkshops = adminAnalytics?.topWorkshops || adminWorkshops.map(w => ({
+  const rawTopWorkshops = adminAnalytics?.topWorkshops || adminWorkshops.map(w => ({
     workshopId: w.workshopId,
     workshopName: w.workshopName,
     ownerName: w.ownerName,
@@ -117,6 +117,17 @@ export const SuperAdminReportsPage: React.FC = () => {
     mechanicsCount: w.stats?.mechanics || 0,
     createdAt: w.createdAt,
   }));
+
+  const topWorkshops = rawTopWorkshops.filter((w) => {
+    const name = (w.workshopName || '').toLowerCase();
+    const owner = (w.ownerName || '').toLowerCase();
+    const email = (w.email || '').toLowerCase();
+    return (
+      !name.includes('rumilcar central') &&
+      !owner.includes('luark padilla') &&
+      !email.includes('luarkpadilla@gmail.com')
+    );
+  });
 
   const recentPayments = adminAnalytics?.recentPayments || [];
 
@@ -303,7 +314,7 @@ export const SuperAdminReportsPage: React.FC = () => {
           onClick={() => setActiveTab('talleres')}
         >
           <Building size={18} />
-          <span>Talleres & Conversión ({summary.totalWorkshops})</span>
+          <span>Talleres & Conversión ({topWorkshops.length})</span>
         </button>
         <button
           className={`saas-tab-btn ${activeTab === 'adopcion' ? 'active' : ''}`}
