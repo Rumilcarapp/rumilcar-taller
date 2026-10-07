@@ -812,3 +812,267 @@
   cursor: not-allowed;
   box-shadow: none;
 }
+
+/* ==========================================================================
+   LIGHT THEME OVERRIDES FOR SUPERADMIN SUPPORT HUB
+   ========================================================================== */
+
+.light-theme .support-hub-header {
+  border-bottom-color: #e2e8f0;
+}
+
+.light-theme .support-hub-title {
+  color: #0f172a;
+}
+
+.light-theme .support-hub-subtitle {
+  color: #64748b;
+}
+
+.light-theme .support-hub-tabs {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.light-theme .support-tab-btn {
+  color: #64748b;
+}
+
+.light-theme .support-tab-btn:hover {
+  color: #0f172a;
+  background: rgba(148, 163, 184, 0.1);
+}
+
+.light-theme .support-tab-btn.active {
+  background: #0ea5e9;
+  color: #ffffff;
+}
+
+/* Metric Pills */
+.light-theme .metric-pill {
+  background: #ffffff;
+  border-color: #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.light-theme .metric-label {
+  color: #64748b;
+}
+
+.light-theme .metric-num {
+  color: #0f172a;
+}
+
+/* Search and Filters */
+.light-theme .search-box input {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #0f172a;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.light-theme .search-box input::placeholder {
+  color: #94a3b8;
+}
+
+.light-theme .search-box .search-icon {
+  color: #94a3b8;
+}
+
+.light-theme .filter-group select {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #0f172a;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.light-theme .filter-group select option {
+  background: #ffffff;
+  color: #0f172a;
+}
+
+.light-theme .refresh-btn {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #0f172a;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.light-theme .refresh-btn:hover {
+  background: #f1f5f9;
+}
+
+/* Tickets List */
+.light-theme .tickets-empty {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #64748b;
+}
+
+.light-theme .ticket-card {
+  background: #ffffff;
+  border-color: #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.light-theme .ticket-card:hover {
+  border-color: #3b82f6;
+  background: #f8fafc;
+}
+
+.light-theme .ticket-card.selected {
+  border-color: #0ea5e9;
+  background: rgba(14, 165, 233, 0.08);
+}
+
+.light-theme .ticket-subject {
+  color: #0f172a;
+}
+
+.light-theme .ticket-snippet {
+  color: #64748b;
+}
+
+.light-theme .ticket-meta {
+  color: #64748b;
+}
+
+.light-theme .ticket-date {
+  color: #94a3b8;
+}
+
+/* Detail Column */
+.light-theme .ticket-detail-col {
+  background: #ffffff;
+  border-color: #e2e8f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.light-theme .detail-header {
+  border-bottom-color: #e2e8f0;
+}
+
+.light-theme .detail-title {
+  color: #0f172a;
+}
+
+.light-theme .detail-client-box {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  color: #64748b;
+}
+
+.light-theme .client-box-row strong {
+  color: #0f172a;
+}
+
+.light-theme .body-label {
+  color: #64748b;
+}
+
+.light-theme .body-content {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  color: #0f172a;
+}
+
+.light-theme .detail-admin-notes textarea {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+.light-theme .detail-admin-notes textarea:focus {
+  border-color: #0ea5e9;
+}
+
+.light-theme .detail-actions-bar {
+  border-top-color: #e2e8f0;
+}
+
+/* WhatsApp Hub Tab */
+.light-theme .wa-card {
+  background: #ffffff;
+  border-color: #e2e8f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.light-theme .wa-card-title {
+  color: #0f172a;
+}
+
+.light-theme .saas-hub-select {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+.light-theme .current-workshop-pill {
+  background: #f0f9ff;
+  border-color: #bae6fd;
+}
+
+.light-theme .c-label {
+  color: #64748b;
+}
+
+.light-theme .c-val {
+  color: #0f172a;
+}
+
+.light-theme .template-option-card {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+.light-theme .template-option-card:hover {
+  border-color: #38bdf8;
+  background: #f0f9ff;
+}
+
+.light-theme .template-option-card.active {
+  background: rgba(14, 165, 233, 0.1);
+  border-color: #0ea5e9;
+}
+
+.light-theme .tpl-header {
+  color: #0f172a;
+}
+
+.light-theme .preview-action-btn {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+.light-theme .preview-action-btn:hover {
+  background: #f1f5f9;
+}
+
+.light-theme .preview-hint {
+  color: #64748b;
+}
+
+.light-theme .wa-message-textarea {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+.light-theme .wa-message-textarea:focus {
+  border-color: #25d366;
+}
+
+.light-theme .wa-send-footer {
+  border-top-color: #e2e8f0;
+}
+
+.light-theme .target-phone-indicator {
+  color: #64748b;
+}
+
+.light-theme .target-phone-indicator strong {
+  color: #0f172a;
+}
+

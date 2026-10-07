@@ -27,9 +27,16 @@
   /* === Colors: Text === */
   --color-text-primary: #F5F5F5;
   --color-text-secondary: #A0A0A0;
-  --color-text-muted: #666666;
   --color-text-main: #F5F5F5;
   --color-text-inverse: #0A0A0A;
+
+  /* === Compatibility Aliases === */
+  --card-bg: #18181b;
+  --bg-card: #18181b;
+  --border-color: rgba(255, 255, 255, 0.1);
+  --text-primary: #F5F5F5;
+  --text-secondary: #A0A0A0;
+  --text-muted: #71717a;
 
   /* === Colors: Semantic === */
   --color-success: #22C55E;
@@ -133,6 +140,14 @@
   --color-text-muted: #9CA3AF;
   --color-text-main: #111827;
   --color-text-inverse: #FFFFFF;
+
+  /* === Compatibility Aliases (Light Theme) === */
+  --card-bg: #FFFFFF;
+  --bg-card: #FFFFFF;
+  --border-color: #E2E8F0;
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-muted: #94A3B8;
 
   --color-success: #16A34A;
   --color-success-bg: rgba(22, 163, 74, 0.1);
