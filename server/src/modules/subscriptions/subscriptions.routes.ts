@@ -1269,6 +1269,18 @@ subscriptionsRouter.put('/admin/support/tickets/:id', authenticate, requireSuper
   }
 });
 
+// DELETE /api/subscriptions/admin/support/tickets/:id — SuperAdmin deletes support ticket
+subscriptionsRouter.delete('/admin/support/tickets/:id', authenticate, requireSuperAdmin, async (req, res) => {
+  try {
+    await prisma.supportTicket.delete({
+      where: { id: String(req.params.id) },
+    });
+    res.json({ success: true, message: 'Ticket de soporte eliminado correctamente' });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al eliminar ticket de soporte' });
+  }
+});
+
 // =========================================================================
 // 🎯 OBJETIVO 6: MONITOR DE SALUD & COPIAS DE SEGURIDAD (BACKUPS)
 // =========================================================================

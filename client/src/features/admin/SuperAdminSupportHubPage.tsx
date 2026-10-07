@@ -15,6 +15,7 @@ import {
   Check,
   ShieldCheck,
   Flame,
+  Trash2,
 } from 'lucide-react';
 import './SuperAdminSupportHubPage.css';
 
@@ -185,6 +186,33 @@ export const SuperAdminSupportHubPage: React.FC = () => {
       }
     } catch (err: any) {
       showToast('error', err.message || 'Error al actualizar ticket');
+    } finally {
+      setUpdatingTicket(false);
+    }
+  };
+
+  const handleDeleteTicket = async (ticketId: string) => {
+    if (!window.confirm('¿Estás seguro de que deseas eliminar este ticket de soporte permanentemente?')) return;
+    setUpdatingTicket(true);
+    try {
+      const res = await fetch(`${getApiUrl()}/subscriptions/admin/support/tickets/${ticketId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${getAuthToken()}`,
+        },
+      });
+      if (res.ok) {
+        showToast('success', 'Ticket eliminado correctamente');
+        setTickets((prev) => prev.filter((t) => t.id !== ticketId));
+        if (selectedTicket && selectedTicket.id === ticketId) {
+          setSelectedTicket(null);
+        }
+      } else {
+        const data = await res.json();
+        showToast('error', data.error || 'Error al eliminar ticket');
+      }
+    } catch (err: any) {
+      showToast('error', err.message || 'Error al eliminar ticket');
     } finally {
       setUpdatingTicket(false);
     }
@@ -515,6 +543,16 @@ export const SuperAdminSupportHubPage: React.FC = () => {
                     >
                       <CheckCircle2 size={15} />
                       Marcar Resuelto
+                    </button>
+                    <button
+                      className="status-btn btn-danger"
+                      disabled={updatingTicket}
+                      onClick={() => handleDeleteTicket(selectedTicket.id)}
+                      title="Eliminar este ticket permanentemente"
+                      style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444' }}
+                    >
+                      <Trash2 size={15} />
+                      Eliminar
                     </button>
                   </div>
                 </div>
