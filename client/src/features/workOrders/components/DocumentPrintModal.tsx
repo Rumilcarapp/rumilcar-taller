@@ -4,7 +4,7 @@ import { WorkOrder } from '../../../store/useWorkOrderStore';
 import { useCashStore } from '../../../store/useCashStore';
 import { useWorkshopStore } from '../../../store/useWorkshopStore';
 import { useAuthStore } from '../../../stores/authStore';
-import { Printer, Send, Link, FileText, Receipt, Check } from 'lucide-react';
+import { Printer, Send, Link, FileText, Receipt, Check, Building2 } from 'lucide-react';
 import { normalizePhoneNumber, openWhatsApp } from '../../../lib/whatsapp';
 import './DocumentPrint.css';
 
@@ -73,6 +73,45 @@ export const DocumentPrintModal: React.FC<DocumentPrintModalProps> = ({
     openWhatsApp(norm.e164, msg);
   };
 
+  const handleSendWhatsAppWorkshop = () => {
+    if (!order) return;
+    const rawPhone = workshop.phone || (workshop.paymentDetails?.pagoMovil?.telefono) || '';
+    const norm = normalizePhoneNumber(rawPhone);
+    if (!norm.valid) {
+      alert('El taller no tiene un número de WhatsApp registrado en la configuración de la empresa (Perfil).');
+      return;
+    }
+
+    const docName = documentType === 'PRESUPUESTO' ? 'Presupuesto' : 'Orden de Trabajo';
+    let msg = `📋 *${docName.toUpperCase()} #${order.orderNumber ? 'OT-' + order.orderNumber : (order.id.length > 10 ? order.id.slice(0, 8) : order.id)} - ${workshopDisplayName.toUpperCase()}*\n` +
+      `_Copia para Taller / Registro de Cotización_\n\n` +
+      `👤 *Cliente:* ${order.client?.nombre || 'Cliente'} ${order.client?.apellido || ''} (Tel: ${order.client?.telefono || 'No registrado'})\n` +
+      `🚗 *Vehículo:* ${order.vehicle?.marca || ''} ${order.vehicle?.modelo || ''} (${order.vehicle?.placa || 'Sin placa'})\n\n`;
+
+    if (order.services && order.services.length > 0) {
+      msg += `🛠️ *SERVICIOS:*\n`;
+      order.services.forEach(s => {
+        msg += `• ${s.name}: $${(s.price || 0).toFixed(2)}\n`;
+      });
+      msg += `\n`;
+    }
+
+    if (order.parts && order.parts.length > 0) {
+      msg += `🔩 *REPUESTOS:*\n`;
+      order.parts.forEach(p => {
+        const sub = (p.price || 0) * (p.quantity || 1);
+        msg += `• ${p.quantity}x ${p.name}: $${sub.toFixed(2)}\n`;
+      });
+      msg += `\n`;
+    }
+
+    msg += `💰 *TOTAL ESTIMADO: $${totalUSD.toFixed(2)} USD* (Bs ${totalVES.toLocaleString('es-VE', { maximumFractionDigits: 0 })})\n` +
+      `🔍 *Enlace digital:* ${trackingUrl}\n\n` +
+      `_Enviado desde el sistema de taller Rumilcar._`;
+
+    openWhatsApp(norm.e164, msg);
+  };
+
   const typeLabels = {
     ORDEN: 'ORDEN DE TRABAJO',
     PRESUPUESTO: 'PRESUPUESTO / COTIZACIÓN',
@@ -125,14 +164,14 @@ export const DocumentPrintModal: React.FC<DocumentPrintModalProps> = ({
             </button>
           </div>
 
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             <Button
               size="sm"
               variant="outline"
               onClick={handleCopyTracking}
               icon={copied ? <Check size={14} color="#10b981" /> : <Link size={14} />}
             >
-              {copied ? '¡Enlace Copiado!' : 'Copiar Link de Rastreo'}
+              {copied ? '¡Copiado!' : 'Copiar Link'}
             </Button>
 
             <Button
@@ -141,8 +180,20 @@ export const DocumentPrintModal: React.FC<DocumentPrintModalProps> = ({
               onClick={handleSendWhatsApp}
               icon={<Send size={14} />}
               style={{ color: '#25D366', borderColor: '#25D366' }}
+              title="Enviar al WhatsApp del cliente"
             >
-              Enviar WhatsApp
+              WA Cliente
+            </Button>
+
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleSendWhatsAppWorkshop}
+              icon={<Building2 size={14} />}
+              style={{ color: '#2563eb', borderColor: '#93c5fd' }}
+              title="Enviar presupuesto al número de WhatsApp del taller"
+            >
+              WA Taller
             </Button>
 
             <Button

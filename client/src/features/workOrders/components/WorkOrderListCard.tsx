@@ -11,7 +11,8 @@ import {
   XCircle, 
   DollarSign,
   Link,
-  MessageSquare
+  MessageSquare,
+  Building2
 } from 'lucide-react';
 import { Button } from '../../../components/ui';
 import { useNavigate } from 'react-router-dom';
@@ -24,6 +25,7 @@ interface Props {
   onConvertToWorkOrder?: () => void;
   onPayOrder?: (order: WorkOrder) => void;
   onWhatsAppClick?: (order: WorkOrder) => void;
+  onWhatsAppWorkshopClick?: (order: WorkOrder) => void;
 }
 
 const statusColors = {
@@ -41,7 +43,8 @@ export const WorkOrderListCard: React.FC<Props> = ({
   onDelete, 
   onConvertToWorkOrder, 
   onPayOrder,
-  onWhatsAppClick 
+  onWhatsAppClick,
+  onWhatsAppWorkshopClick 
 }) => {
   const [showMenu, setShowMenu] = useState(false);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
@@ -203,6 +206,11 @@ export const WorkOrderListCard: React.FC<Props> = ({
                   {onWhatsAppClick && (
                     <button className="dropdown-item" style={{ color: '#16a34a' }} onClick={() => { onWhatsAppClick(order); setShowMenu(false); }}>
                       <MessageSquare size={14} color="#25D366" /> Enviar WhatsApp al Cliente
+                    </button>
+                  )}
+                  {onWhatsAppWorkshopClick && (
+                    <button className="dropdown-item" style={{ color: '#2563eb' }} onClick={() => { onWhatsAppWorkshopClick(order); setShowMenu(false); }}>
+                      <Building2 size={14} color="#2563eb" /> Enviar Presupuesto al WhatsApp del Taller
                     </button>
                   )}
                   <button className="dropdown-item" onClick={() => { setIsPrintModalOpen(true); setShowMenu(false); }}>

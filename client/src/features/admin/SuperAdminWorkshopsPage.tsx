@@ -30,7 +30,8 @@ import {
   Trash2,
   FileText,
   Send,
-  RotateCcw
+  RotateCcw,
+  MessageSquareHeart
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import {
@@ -311,6 +312,40 @@ export const SuperAdminWorkshopsPage: React.FC = () => {
       }
     } catch (err: any) {
       showToast('error', err.message || 'Error al acceder como este taller');
+    }
+  };
+
+  const handleDispatchSurvey = async (w: AdminWorkshopItem) => {
+    if (
+      !window.confirm(
+        `¿Deseas enviar la encuesta de feedback al taller "${w.workshopName}"?\n\nAl cliente le aparecerá la ventana emergente automáticamente en su pantalla cuando ingrese al software.`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://rumilcar-taller.onrender.com/api';
+      const authToken = localStorage.getItem('rumilcar_token') || '';
+      const response = await fetch(`${apiUrl}/surveys/admin/dispatch`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          workshopId: w.workshopId,
+          reason: 'Encuesta enviada desde lista de talleres por SuperAdmin',
+        }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        showToast('success', data.message || `Encuesta enviada exitosamente a "${w.workshopName}"`);
+      } else {
+        showToast('error', data.error || 'No se pudo despachar la encuesta');
+      }
+    } catch (err: any) {
+      showToast('error', err.message || 'Error de conexión al enviar encuesta');
     }
   };
 
@@ -894,6 +929,21 @@ export const SuperAdminWorkshopsPage: React.FC = () => {
               >
                 <ShieldCheck size={15} color="#a855f7" />
                 <span>Membresías y Pagos</span>
+              </button>
+
+              {/* Solicitar Feedback / Enviar Encuesta */}
+              <button
+                type="button"
+                className="saas-dropdown-item"
+                onClick={() => {
+                  setActiveMenuId(null);
+                  setMenuCoords(null);
+                  handleDispatchSurvey(w);
+                }}
+                title="Enviar encuesta de retroalimentación a este taller"
+              >
+                <MessageSquareHeart size={15} color="#e11d48" />
+                <span>Enviar Encuesta</span>
               </button>
 
               <div className="saas-dropdown-divider" />

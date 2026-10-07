@@ -3,7 +3,8 @@ import {
   normalizePhoneNumber, 
   buildWhatsAppMessage, 
   openWhatsApp, 
-  WhatsAppContextData 
+  WhatsAppContextData,
+  WhatsAppTemplateType 
 } from './whatsapp';
 import { useCashStore } from '../store/useCashStore';
 import { useWorkshopStore } from '../store/useWorkshopStore';
@@ -25,9 +26,12 @@ export const getOrderWhatsAppContext = (order: WorkOrder): WhatsAppContextData =
     titular: workshopPM.titular || workshop.name || 'Multiservicios Rumilcar',
   } : undefined;
 
+  const currentWorkshopPhone = workshop?.phone || workshopPM?.telefono || user?.phone || '';
+
   return {
     clientName: order.client?.nombre,
     clientPhone: order.client?.telefono,
+    workshopPhone: currentWorkshopPhone,
     vehicle: {
       marca: order.vehicle?.marca,
       modelo: order.vehicle?.modelo,
@@ -50,20 +54,33 @@ export const getOrderWhatsAppContext = (order: WorkOrder): WhatsAppContextData =
   };
 };
 
-export const handleWhatsAppShare = (order: WorkOrder) => {
-  const phone = order.client?.telefono;
+export const handleWhatsAppShare = (order: WorkOrder, target: 'client' | 'workshop' = 'client') => {
+  const context = getOrderWhatsAppContext(order);
+  const phone = target === 'workshop' ? context.workshopPhone : order.client?.telefono;
   const norm = normalizePhoneNumber(phone);
   
   if (!norm.valid) {
-    alert(norm.reason || "El cliente no tiene un número de teléfono válido registrado.");
+    if (target === 'workshop') {
+      alert("El taller no tiene un número de teléfono de WhatsApp configurado en el Perfil de la Empresa.");
+    } else {
+      alert(norm.reason || "El cliente no tiene un número de teléfono válido registrado.");
+    }
     return;
   }
 
-  const context = getOrderWhatsAppContext(order);
-  const tpl = order.status === 'Presupuesto' ? 'PRESUPUESTO' : (order.status === 'Listo' || order.status === 'Finalizado' ? 'VEHICULO_LISTO' : 'AVANCE');
-  const message = buildWhatsAppMessage(tpl, context);
+  let tpl: WhatsAppTemplateType;
+  if (target === 'workshop') {
+    tpl = 'PRESUPUESTO_TALLER';
+  } else {
+    tpl = order.status === 'Presupuesto' ? 'PRESUPUESTO' : (order.status === 'Listo' || order.status === 'Finalizado' ? 'VEHICULO_LISTO' : 'AVANCE');
+  }
 
+  const message = buildWhatsAppMessage(tpl, context);
   openWhatsApp(norm.e164, message);
+};
+
+export const handleWhatsAppShareToWorkshop = (order: WorkOrder) => {
+  handleWhatsAppShare(order, 'workshop');
 };
 
 export const handlePrintOrder = (order: WorkOrder) => {

@@ -25,11 +25,13 @@ interface WhatsAppModalProps {
   onClose: () => void;
   contextData: WhatsAppContextData;
   initialTemplate?: WhatsAppTemplateType;
+  initialRecipient?: 'client' | 'workshop';
 }
 
 const TEMPLATE_OPTIONS: { id: WhatsAppTemplateType; label: string; icon: string }[] = [
+  { id: 'PRESUPUESTO', label: '📋 Presupuesto (Cliente)', icon: '📋' },
+  { id: 'PRESUPUESTO_TALLER', label: '🏢 Presupuesto para Taller', icon: '🏢' },
   { id: 'VEHICULO_LISTO', label: '🚗 Vehículo Listo', icon: '🚗' },
-  { id: 'PRESUPUESTO', label: '📋 Presupuesto', icon: '📋' },
   { id: 'COBRANZA', label: '💵 Cobro & Pago Móvil', icon: '💵' },
   { id: 'AVANCE', label: '🔧 Avance de Trabajo', icon: '🔧' },
   { id: 'POST_VENTA', label: '🛡️ Garantía / Saludo', icon: '🛡️' },
@@ -40,16 +42,22 @@ export const WhatsAppModal: React.FC<WhatsAppModalProps> = ({
   isOpen,
   onClose,
   contextData,
-  initialTemplate
+  initialTemplate,
+  initialRecipient = 'client'
 }) => {
+  const [recipient, setRecipient] = useState<'client' | 'workshop'>(initialRecipient);
+
   // Determine best default template based on context status if not provided
-  const getDefaultTemplate = (): WhatsAppTemplateType => {
+  const getDefaultTemplate = (targetRec: 'client' | 'workshop'): WhatsAppTemplateType => {
     if (initialTemplate) return initialTemplate;
+    if (contextData.status === 'Presupuesto') {
+      return targetRec === 'workshop' ? 'PRESUPUESTO_TALLER' : 'PRESUPUESTO';
+    }
+    if (targetRec === 'workshop') {
+      return 'PRESUPUESTO_TALLER';
+    }
     if (contextData.status === 'Listo' || contextData.status === 'Finalizado') {
       return 'VEHICULO_LISTO';
-    }
-    if (contextData.status === 'Presupuesto') {
-      return 'PRESUPUESTO';
     }
     if ((contextData.balancePendingUSD || 0) > 0) {
       return 'COBRANZA';
@@ -57,8 +65,10 @@ export const WhatsAppModal: React.FC<WhatsAppModalProps> = ({
     return 'VEHICULO_LISTO';
   };
 
-  const [activeTemplate, setActiveTemplate] = useState<WhatsAppTemplateType>(getDefaultTemplate());
-  const [phoneNumber, setPhoneNumber] = useState<string>(contextData.clientPhone || '');
+  const [activeTemplate, setActiveTemplate] = useState<WhatsAppTemplateType>(getDefaultTemplate(initialRecipient));
+  const [phoneNumber, setPhoneNumber] = useState<string>(
+    initialRecipient === 'workshop' ? (contextData.workshopPhone || '') : (contextData.clientPhone || '')
+  );
   const [message, setMessage] = useState<string>('');
   const [copied, setCopied] = useState<boolean>(false);
   const [preferWeb, setPreferWeb] = useState<boolean>(false);
@@ -66,14 +76,33 @@ export const WhatsAppModal: React.FC<WhatsAppModalProps> = ({
   // Sync state whenever modal opens or context changes
   useEffect(() => {
     if (isOpen) {
-      const tpl = getDefaultTemplate();
+      const rec = initialRecipient || 'client';
+      setRecipient(rec);
+      const tpl = getDefaultTemplate(rec);
       setActiveTemplate(tpl);
-      setPhoneNumber(contextData.clientPhone || '');
+      setPhoneNumber(rec === 'workshop' ? (contextData.workshopPhone || '') : (contextData.clientPhone || ''));
       const initialText = buildWhatsAppMessage(tpl, contextData);
       setMessage(initialText);
       setCopied(false);
     }
-  }, [isOpen, contextData, initialTemplate]);
+  }, [isOpen, contextData, initialTemplate, initialRecipient]);
+
+  // Handle switching recipient
+  const handleSwitchRecipient = (target: 'client' | 'workshop') => {
+    setRecipient(target);
+    const targetPhone = target === 'workshop' ? (contextData.workshopPhone || '') : (contextData.clientPhone || '');
+    setPhoneNumber(targetPhone);
+
+    let nextTemplate = activeTemplate;
+    if (target === 'workshop' && activeTemplate === 'PRESUPUESTO') {
+      nextTemplate = 'PRESUPUESTO_TALLER';
+    } else if (target === 'client' && activeTemplate === 'PRESUPUESTO_TALLER') {
+      nextTemplate = 'PRESUPUESTO';
+    }
+    setActiveTemplate(nextTemplate);
+    const newText = buildWhatsAppMessage(nextTemplate, contextData);
+    setMessage(newText);
+  };
 
   // Handle template switch
   const handleSelectTemplate = (tpl: WhatsAppTemplateType) => {
@@ -148,10 +177,40 @@ export const WhatsAppModal: React.FC<WhatsAppModalProps> = ({
           </div>
         </div>
 
+        {/* Recipient Selector */}
+        <div className="wa-recipient-section">
+          <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-main)', marginBottom: '6px', display: 'block' }}>
+            Destinatario del WhatsApp:
+          </label>
+          <div className="wa-recipient-selector">
+            <button
+              type="button"
+              className={`wa-recipient-btn ${recipient === 'client' ? 'active' : ''}`}
+              onClick={() => handleSwitchRecipient('client')}
+            >
+              <span>👤 Cliente: {contextData.clientName || 'Cliente'}</span>
+              <span className="wa-recipient-phone-tag">{contextData.clientPhone || 'Sin número'}</span>
+            </button>
+            <button
+              type="button"
+              className={`wa-recipient-btn ${recipient === 'workshop' ? 'active' : ''}`}
+              onClick={() => handleSwitchRecipient('workshop')}
+            >
+              <span>🏢 Taller: {contextData.workshopName || 'Taller'}</span>
+              <span className="wa-recipient-phone-tag">{contextData.workshopPhone || 'Sin número'}</span>
+            </button>
+          </div>
+          {recipient === 'workshop' && !contextData.workshopPhone && (
+            <div style={{ fontSize: '11px', color: '#b45309', background: '#fef3c7', padding: '6px 10px', borderRadius: '6px', marginTop: '6px' }}>
+              ⚠️ El taller no tiene un teléfono configurado en el Perfil de la Empresa. Puedes escribirlo directamente a continuación.
+            </div>
+          )}
+        </div>
+
         {/* Phone number input & status */}
         <div className="wa-phone-row">
           <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-main)' }}>
-            Número de WhatsApp del Cliente:
+            {recipient === 'workshop' ? 'Número de WhatsApp del Taller:' : 'Número de WhatsApp del Cliente:'}
           </label>
           <div className="wa-phone-input-group">
             <input

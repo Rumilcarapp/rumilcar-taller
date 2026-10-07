@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Wrench, Calendar, FileText, Stethoscope,
   ClipboardCheck, Car, Users, Package, ShoppingCart,
   Wallet, CarFront, Truck, CreditCard, HeartHandshake,
-  BarChart3, UserCircle, ChevronLeft, ChevronRight, ShieldCheck, LogOut, X, Sparkles, Building2, LifeBuoy, Settings, Briefcase
+  BarChart3, UserCircle, ChevronLeft, ChevronRight, ShieldCheck, LogOut, X, Sparkles, Building2, LifeBuoy, Settings, Briefcase, MessageSquareHeart
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { useUserManagementStore, AppModuleKey } from '../../store/useUserManagementStore';
@@ -71,6 +71,7 @@ const superAdminNavSections: { label: string; items: SuperAdminNavItem[] }[] = [
       { path: '/admin/membresias', icon: ShieldCheck, label: 'Control de Membresías' },
       { path: '/admin/talleres', icon: Building2, label: 'Talleres Clientes' },
       { path: '/admin/soporte', icon: LifeBuoy, label: 'Soporte & WhatsApp' },
+      { path: '/admin/feedback', icon: MessageSquareHeart, label: 'Encuestas & Feedback' },
       { path: '/admin/configuracion', icon: Settings, label: 'Configuración SaaS' },
       { path: '/reportes', icon: BarChart3, label: 'Reportes y Métricas' },
     ],

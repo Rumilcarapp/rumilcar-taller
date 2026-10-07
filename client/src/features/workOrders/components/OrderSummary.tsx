@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ServiceLine } from './ServiceLineItem';
 import { PartLine } from './PartLineItem';
-import { Printer, Share2, CheckCircle } from 'lucide-react';
+import { Printer, Share2, CheckCircle, Building2 } from 'lucide-react';
 import { Button } from '../../../components/ui';
 import './OrderSummary.css';
 
@@ -11,11 +11,21 @@ interface Props {
   onSaveOrder: (total: number) => void;
   onPrint?: (total: number) => void;
   onWhatsApp?: (total: number) => void;
+  onWhatsAppWorkshop?: (total: number) => void;
   isBudget?: boolean;
   onConvertToOrder?: (total: number) => void;
 }
 
-export const OrderSummary: React.FC<Props> = ({ services, parts, onSaveOrder, onPrint, onWhatsApp, isBudget, onConvertToOrder }) => {
+export const OrderSummary: React.FC<Props> = ({ 
+  services, 
+  parts, 
+  onSaveOrder, 
+  onPrint, 
+  onWhatsApp, 
+  onWhatsAppWorkshop, 
+  isBudget, 
+  onConvertToOrder 
+}) => {
   const [bcvRate, setBcvRate] = useState<number>(40.00); // Fallback
   const [loadingRate, setLoadingRate] = useState(true);
   
@@ -164,9 +174,18 @@ export const OrderSummary: React.FC<Props> = ({ services, parts, onSaveOrder, on
             CONVERTIR A ORDEN
           </Button>
         )}
-        <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
-          <Button variant="outline" icon={<Printer size={16}/>} className="btn-flex" onClick={() => onPrint && onPrint(totalUSD)}>Presupuesto</Button>
-          <Button variant="outline" icon={<Share2 size={16}/>} className="btn-flex" onClick={() => onWhatsApp && onWhatsApp(totalUSD)}>WhatsApp</Button>
+        <div style={{ display: 'flex', gap: '8px', marginTop: '12px', flexWrap: 'wrap' }}>
+          <Button variant="outline" icon={<Printer size={16}/>} className="btn-flex" onClick={() => onPrint && onPrint(totalUSD)}>
+            Imprimir
+          </Button>
+          <Button variant="outline" icon={<Share2 size={16}/>} className="btn-flex" onClick={() => onWhatsApp && onWhatsApp(totalUSD)} title="Enviar copia de cotización al cliente">
+            WA Cliente
+          </Button>
+          {onWhatsAppWorkshop && (
+            <Button variant="outline" icon={<Building2 size={16}/>} className="btn-flex" onClick={() => onWhatsAppWorkshop(totalUSD)} style={{ color: '#2563eb', borderColor: '#93c5fd' }} title="Enviar presupuesto al número de WhatsApp del taller">
+              WA Taller
+            </Button>
+          )}
         </div>
       </div>
     </div>

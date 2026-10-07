@@ -49,6 +49,8 @@ model Workshop {
   mechanicPayrolls         MechanicPayroll[]
   auditLogs                AuditLog[]
   passwordResetTokens      PasswordResetToken[]
+  surveyRequests           WorkshopSurveyRequest[]
+  surveyResponses          SurveyResponse[]
 }
 
 model User {
@@ -618,4 +620,65 @@ model PasswordResetToken {
   @@index([expiresAt])
   @@index([resetTokenHash])
 }
+
+// ==========================================
+// Módulo SaaS: Encuestas y Feedback Dinámico
+// ==========================================
+
+model SurveyQuestion {
+  id          String   @id @default(uuid())
+  order       Int      @default(0)
+  title       String
+  description String?
+  type        String   // RATING_STARS, SINGLE_CHOICE, MULTIPLE_CHOICE, TEXT, BOOLEAN
+  options     String[] @default([])
+  isRequired  Boolean  @default(true)
+  isActive    Boolean  @default(true)
+  category    String   @default("TRIAL_END") // TRIAL_END, GENERAL, FEATURE_REQUEST
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive, order])
+}
+
+model WorkshopSurveyRequest {
+  id           String    @id @default(uuid())
+  workshopId   String
+  requestedBy  String    @default("SYSTEM_AUTO_TRIAL") // "SYSTEM_AUTO_TRIAL" o ID de SuperAdmin
+  reason       String?   // "Fin de prueba gratuita" o "Solicitud manual SuperAdmin"
+  status       String    @default("PENDING") // PENDING, ANSWERED, DISMISSED
+  notifiedAt   DateTime  @default(now())
+  answeredAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  workshop     Workshop  @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+  responses    SurveyResponse[]
+
+  @@index([workshopId, status])
+}
+
+model SurveyResponse {
+  id           String                 @id @default(uuid())
+  requestId    String?
+  workshopId   String
+  userId       String?
+  userName     String?
+  userEmail    String?
+  userPhone    String?
+  answers      Json                   // Objeto { [questionId]: value }
+  rating       Int?                   // Puntuación 1 a 5 si se incluyó pregunta de estrellas
+  status       String                 @default("PENDING") // PENDING, CONTACTED, ARCHIVED
+  adminNotes   String?                @db.Text
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+
+  surveyRequest WorkshopSurveyRequest? @relation(fields: [requestId], references: [id], onDelete: SetNull)
+  workshop      Workshop               @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+
+  @@index([workshopId])
+  @@index([status])
+  @@index([createdAt])
+}
+
 

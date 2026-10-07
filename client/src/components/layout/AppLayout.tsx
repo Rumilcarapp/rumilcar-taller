@@ -4,6 +4,7 @@ import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 import { OnboardingModal } from '../onboarding/OnboardingModal';
 import { SubscriptionBanner } from '../subscription/SubscriptionBanner';
+import { TrialFeedbackModal } from '../subscription/TrialFeedbackModal';
 import { ImpersonationBanner } from '../shared/ImpersonationBanner';
 import { BroadcastBanner } from '../shared/BroadcastBanner';
 import { useCashStore } from '../../store/useCashStore';
@@ -98,6 +99,9 @@ export const AppLayout: React.FC = () => {
 
       {/* Global Onboarding Welcome Modal */}
       <OnboardingModal />
+
+      {/* Global Post-Trial / SuperAdmin Triggered Feedback Survey Modal */}
+      <TrialFeedbackModal />
     </div>
   );
 };

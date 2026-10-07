@@ -10,7 +10,7 @@ import { VehicleInspectionPanel } from './components/VehicleInspectionPanel';
 import { ServiceLine, ServiceLineItem } from './components/ServiceLineItem';
 import { PartLine, PartLineItem } from './components/PartLineItem';
 import { OrderSummary } from './components/OrderSummary';
-import { handlePrintOrder, handleWhatsAppShare } from '../../lib/orderActions';
+import { handlePrintOrder, handleWhatsAppShare, handleWhatsAppShareToWorkshop } from '../../lib/orderActions';
 import { useWorkOrderStore } from '../../store/useWorkOrderStore';
 import { useClientStore } from '../../store/useClientStore';
 import { useVehicleStore } from '../../store/useVehicleStore';
@@ -199,6 +199,7 @@ export const CreateWorkOrderPage: React.FC = () => {
 
   const handlePrint = (totalUSD: number) => handlePrintOrder(buildMockOrder(totalUSD));
   const handleWhatsApp = (totalUSD: number) => handleWhatsAppShare(buildMockOrder(totalUSD));
+  const handleWhatsAppWorkshop = (totalUSD: number) => handleWhatsAppShareToWorkshop(buildMockOrder(totalUSD));
 
   const handleConvertToOrder = (totalUSD: number) => {
     if (!selectedClient || !selectedVehicle) { alert('Debes seleccionar un cliente y un vehiculo'); return; }
@@ -571,6 +572,7 @@ export const CreateWorkOrderPage: React.FC = () => {
              onSaveOrder={handleSaveOrder}
              onPrint={handlePrint}
              onWhatsApp={handleWhatsApp}
+             onWhatsAppWorkshop={handleWhatsAppWorkshop}
              isBudget={isBudget}
              onConvertToOrder={id && isBudget ? handleConvertToOrder : undefined}
            />

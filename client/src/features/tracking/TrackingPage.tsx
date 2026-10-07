@@ -18,6 +18,7 @@ import {
   PhoneCall,
   Star
 } from 'lucide-react';
+import { normalizePhoneNumber } from '../../lib/whatsapp';
 import './TrackingPage.css';
 
 export const TrackingPage: React.FC = () => {
@@ -25,6 +26,7 @@ export const TrackingPage: React.FC = () => {
   const navigate = useNavigate();
   const { workOrders } = useWorkOrderStore();
   const { exchangeRateVES } = useCashStore();
+  const { workshop } = useWorkshopStore();
 
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
 
@@ -245,14 +247,27 @@ export const TrackingPage: React.FC = () => {
               </a>
             )}
 
-            <a
-              href={`https://wa.me/584141234567?text=${encodeURIComponent(`Hola, quisiera consultar sobre mi orden #${order.id} del vehículo ${order.vehicle?.marca} ${order.vehicle?.modelo} (${order.vehicle?.placa})`)}`}
-              target="_blank"
-              rel="noreferrer"
-              className="tracking-btn-whatsapp"
-            >
-              <Send size={18} /> Contactar a mi Asesor por WhatsApp
-            </a>
+            {(() => {
+              const rawWorkshopPhone = workshop?.phone || workshop?.paymentDetails?.pagoMovil?.telefono || '';
+              const normWorkshopPhone = normalizePhoneNumber(rawWorkshopPhone);
+              const targetPhone = normWorkshopPhone.valid ? normWorkshopPhone.e164 : '584141234567';
+              const isBudget = order.status === 'Presupuesto';
+              const orderTag = order.orderNumber ? `OT-${order.orderNumber}` : order.id;
+              const waMessage = isBudget
+                ? `Hola, quisiera consultar / coordinar la aprobación del presupuesto #${orderTag} para mi vehículo ${order.vehicle?.marca || ''} ${order.vehicle?.modelo || ''} (${order.vehicle?.placa || ''})`
+                : `Hola, quisiera consultar sobre mi orden #${orderTag} del vehículo ${order.vehicle?.marca || ''} ${order.vehicle?.modelo || ''} (${order.vehicle?.placa || ''})`;
+
+              return (
+                <a
+                  href={`https://wa.me/${targetPhone}?text=${encodeURIComponent(waMessage)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="tracking-btn-whatsapp"
+                >
+                  <Send size={18} /> {isBudget ? 'Aprobar o Consultar Presupuesto por WhatsApp' : 'Contactar a mi Asesor por WhatsApp'}
+                </a>
+              );
+            })()}
 
             <button
               type="button"

@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, EmptyState } from '../../components/ui';
 import { FileText, Plus, Search } from 'lucide-react';
-import { useWorkOrderStore } from '../../store/useWorkOrderStore';
+import { WorkOrder, useWorkOrderStore } from '../../store/useWorkOrderStore';
 import { WorkOrderListCard } from '../workOrders/components/WorkOrderListCard';
+import { WhatsAppModal } from '../../components/whatsapp/WhatsAppModal';
+import { getOrderWhatsAppContext } from '../../lib/orderActions';
 
 export const BudgetsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -11,6 +13,8 @@ export const BudgetsPage: React.FC = () => {
   
   const [activeTab, setActiveTab] = useState<'Todos' | 'Presupuesto' | 'Rechazado'>('Todos');
   const [searchTerm, setSearchTerm] = useState('');
+  const [whatsAppOrder, setWhatsAppOrder] = useState<WorkOrder | null>(null);
+  const [whatsAppRecipient, setWhatsAppRecipient] = useState<'client' | 'workshop'>('client');
 
   // Filter only budgets
   const budgetOrders = workOrders.filter(wo => wo.status === 'Presupuesto' || wo.status === 'Rechazado');
@@ -86,6 +90,14 @@ export const BudgetsPage: React.FC = () => {
                     onStatusChange={updateOrderStatus}
                     onDelete={deleteWorkOrder}
                     onConvertToWorkOrder={() => convertToWorkOrder(order.id)}
+                    onWhatsAppClick={(ord) => {
+                      setWhatsAppRecipient('client');
+                      setWhatsAppOrder(ord);
+                    }}
+                    onWhatsAppWorkshopClick={(ord) => {
+                      setWhatsAppRecipient('workshop');
+                      setWhatsAppOrder(ord);
+                    }}
                   />
                 ))
               )}
@@ -93,6 +105,16 @@ export const BudgetsPage: React.FC = () => {
           </>
         )}
       </div>
+
+      {whatsAppOrder && (
+        <WhatsAppModal
+          isOpen={!!whatsAppOrder}
+          onClose={() => setWhatsAppOrder(null)}
+          contextData={getOrderWhatsAppContext(whatsAppOrder)}
+          initialRecipient={whatsAppRecipient}
+          initialTemplate={whatsAppRecipient === 'workshop' ? 'PRESUPUESTO_TALLER' : 'PRESUPUESTO'}
+        />
+      )}
     </div>
   );
 };

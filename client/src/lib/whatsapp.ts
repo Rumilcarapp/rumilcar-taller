@@ -124,6 +124,7 @@ export async function copyToClipboard(text: string): Promise<boolean> {
 export type WhatsAppTemplateType =
   | 'VEHICULO_LISTO'
   | 'PRESUPUESTO'
+  | 'PRESUPUESTO_TALLER'
   | 'COBRANZA'
   | 'AVANCE'
   | 'POST_VENTA'
@@ -132,6 +133,7 @@ export type WhatsAppTemplateType =
 export interface WhatsAppContextData {
   clientName?: string;
   clientPhone?: string;
+  workshopPhone?: string;
   vehicle?: {
     marca?: string;
     modelo?: string;
@@ -250,6 +252,45 @@ export function buildWhatsAppMessage(type: WhatsAppTemplateType, ctx: WhatsAppCo
       }
 
       msg += `✅ *Para autorizar el inicio de los trabajos*, solo respóndenos a este mensaje confirmando tu aprobación. ¡Estamos a tu orden!`;
+      return msg;
+    }
+
+    case 'PRESUPUESTO_TALLER': {
+      let msg = `📋 *PRESUPUESTO DE SERVICIO - ${workshop.toUpperCase()}*\n` +
+        `_Copia para Taller / Registro interno de cotización_${orderTag}\n\n` +
+        `👤 *Cliente:* ${client}\n` +
+        `📞 *Teléfono Cliente:* ${ctx.clientPhone || 'No registrado'}\n` +
+        `🚗 *Vehículo:* ${vehDesc}\n\n`;
+
+      if (ctx.services && ctx.services.length > 0) {
+        msg += `🛠️ *SERVICIOS Y MANO DE OBRA:*\n`;
+        ctx.services.forEach(s => {
+          msg += `• ${s.name}: $${(s.price || 0).toFixed(2)}\n`;
+        });
+        msg += `\n`;
+      }
+
+      if (ctx.parts && ctx.parts.length > 0) {
+        msg += `🔩 *REPUESTOS E INSUMOS:*\n`;
+        ctx.parts.forEach(p => {
+          const sub = (p.price || 0) * (p.quantity || 1);
+          msg += `• ${p.quantity}x ${p.name}: $${sub.toFixed(2)}\n`;
+        });
+        msg += `\n`;
+      }
+
+      const total = ctx.totalUSD || 0;
+      msg += `💵 *TOTAL ESTIMADO: $${total.toFixed(2)} USD*${formatVES(total)}\n\n`;
+
+      if (ctx.customNote) {
+        msg += `ℹ️ *Observaciones:* ${ctx.customNote}\n\n`;
+      }
+
+      if (ctx.trackingUrl) {
+        msg += `📱 *Portal Digital / Seguimiento:* ${ctx.trackingUrl}\n\n`;
+      }
+
+      msg += `📌 _Presupuesto listo para validación, compra de repuestos o contacto con el cliente._`;
       return msg;
     }
 

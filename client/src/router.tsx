@@ -29,6 +29,7 @@ import { SubscriptionPage } from './features/subscription/SubscriptionPage';
 import { SuperAdminSubscriptionsPage } from './features/admin/SuperAdminSubscriptionsPage';
 import { SuperAdminWorkshopsPage } from './features/admin/SuperAdminWorkshopsPage';
 import { SuperAdminSupportHubPage } from './features/admin/SuperAdminSupportHubPage';
+import { SuperAdminFeedbackPage } from './features/admin/SuperAdminFeedbackPage';
 import { SuperAdminConfigPage } from './features/admin/SuperAdminConfigPage';
 import { PermissionGuard } from './components/shared/PermissionGuard';
 import { useAuthStore } from './stores/authStore';
@@ -127,6 +128,7 @@ export const router = createBrowserRouter([
       { path: 'admin/membresias', element: <SuperAdminRoute><SuperAdminSubscriptionsPage /></SuperAdminRoute> },
       { path: 'admin/talleres', element: <SuperAdminRoute><SuperAdminWorkshopsPage /></SuperAdminRoute> },
       { path: 'admin/soporte', element: <SuperAdminRoute><SuperAdminSupportHubPage /></SuperAdminRoute> },
+      { path: 'admin/feedback', element: <SuperAdminRoute><SuperAdminFeedbackPage /></SuperAdminRoute> },
       { path: 'admin/configuracion', element: <SuperAdminRoute><SuperAdminConfigPage /></SuperAdminRoute> },
     ],
   },
