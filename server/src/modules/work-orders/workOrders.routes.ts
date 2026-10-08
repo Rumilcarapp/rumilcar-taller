@@ -1,11 +1,182 @@
-import { Router, Response } from 'express';
+import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { prisma } from '../../lib/prisma';
 import { authenticate, requireWorkshop, requireRole, AuthRequest, logSecurityEvent } from '../../middleware/auth';
 
 export const workOrdersRouter = Router();
 
-// Apply authentication and workshop requirement to all work order management routes
+// ==========================================
+// PUBLIC TRACKING ROUTE (No Auth Required)
+// ==========================================
+// GET /api/work-orders/tracking/:id — Public customer tracking by UUID, short ID, orderNumber, or license plate
+workOrdersRouter.get('/tracking/:id', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const rawParam = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const rawId = (rawParam || '').trim();
+    if (!rawId) {
+      res.status(400).json({ error: 'Identificador de orden requerido' });
+      return;
+    }
+
+    const isNumeric = /^\d+$/.test(rawId);
+
+    const order = await prisma.workOrder.findFirst({
+      where: {
+        OR: [
+          { id: rawId },
+          { id: { startsWith: rawId, mode: 'insensitive' } },
+          { vehicle: { licensePlate: { equals: rawId, mode: 'insensitive' } } },
+          ...(isNumeric ? [{ orderNumber: parseInt(rawId, 10) }] : []),
+        ],
+      },
+      include: {
+        workshop: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            email: true,
+            address: true,
+            logoUrl: true,
+            taxId: true,
+            exchangeRates: {
+              orderBy: { effectiveAt: 'desc' },
+              take: 1,
+            },
+            paymentMethods: true,
+          },
+        },
+        client: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            taxId: true,
+            address: true,
+          },
+        },
+        vehicle: true,
+        items: {
+          include: { inventoryItem: true },
+        },
+        photos: {
+          orderBy: { createdAt: 'desc' },
+        },
+        payments: {
+          orderBy: { paidAt: 'desc' },
+        },
+        assignments: {
+          include: {
+            mechanic: {
+              select: {
+                id: true,
+                name: true,
+                specialty: true,
+                photoUrl: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!order) {
+      res.status(404).json({ error: 'Orden no encontrada' });
+      return;
+    }
+
+    const statusMapFromBackend: Record<string, string> = {
+      RECEIVED: 'Recibido',
+      IN_PROGRESS: 'En Proceso',
+      READY: 'Listo',
+      DELIVERED: 'Finalizado',
+      CANCELLED: 'Rechazado',
+    };
+
+    const services = (order.items || [])
+      .filter((i) => i.type === 'SERVICE')
+      .map((i) => ({
+        id: i.id,
+        name: i.description,
+        price: i.unitPriceAnchor,
+        quantity: i.quantity,
+      }));
+
+    const parts = (order.items || [])
+      .filter((i) => i.type === 'PART')
+      .map((i) => ({
+        id: i.id,
+        name: i.description,
+        price: i.unitPriceAnchor,
+        quantity: i.quantity,
+      }));
+
+    const mechanic = order.assignments?.[0]?.mechanic;
+    const latestRate = order.workshop?.exchangeRates?.[0]?.rateToAnchor || 65;
+
+    const formattedOrder = {
+      id: order.id,
+      orderNumber: order.orderNumber,
+      status: statusMapFromBackend[order.status] || order.status || 'Recibido',
+      statusRaw: order.status,
+      date: order.receivedAt || order.createdAt,
+      receivedAt: order.receivedAt,
+      completedAt: order.completedAt,
+      deliveredAt: order.deliveredAt,
+      totalUSD: order.totalAnchor || 0,
+      notes: order.notes,
+      inspectionNotes: order.inspectionNotes,
+      client: {
+        id: order.client.id,
+        nombre: order.client.name,
+        telefono: order.client.phone || '',
+        documento: order.client.taxId || '',
+        direccion: order.client.address || '',
+      },
+      vehicle: {
+        id: order.vehicle.id,
+        marca: order.vehicle.make,
+        modelo: order.vehicle.model,
+        ano: order.vehicle.year ? String(order.vehicle.year) : '',
+        placa: order.vehicle.licensePlate || '',
+        color: order.vehicle.color || '',
+        mileage: order.vehicle.mileage,
+      },
+      services,
+      parts,
+      payments: (order.payments || []).map((p) => ({
+        id: p.id,
+        amountUSD: p.currency === 'USD' ? p.amount : 0,
+        amountVES: p.currency === 'VES' ? p.amount : undefined,
+        method: p.paymentMethod,
+        date: p.paidAt,
+        reference: p.reference,
+      })),
+      mechanicName: mechanic?.name,
+      photos: order.photos,
+    };
+
+    res.json({
+      success: true,
+      order: formattedOrder,
+      workshop: {
+        id: order.workshop.id,
+        name: order.workshop.name,
+        phone: order.workshop.phone,
+        email: order.workshop.email,
+        address: order.workshop.address,
+        logoUrl: order.workshop.logoUrl,
+        taxId: order.workshop.taxId,
+      },
+      exchangeRateVES: latestRate,
+    });
+  } catch (error: any) {
+    console.error('Error fetching tracking work order:', error);
+    res.status(500).json({ error: 'Error al consultar la orden para seguimiento' });
+  }
+});
+
+// Apply authentication and workshop requirement to all private work order management routes
 workOrdersRouter.use(authenticate);
 workOrdersRouter.use(requireWorkshop);
 

@@ -71,6 +71,10 @@ app.use('/api/clients', clientsRouter);
 app.use('/api/vehicles', vehiclesRouter);
 app.use('/api/inventory', inventoryRouter);
 app.use('/api/work-orders', workOrdersRouter);
+app.get('/api/tracking/:id', (req, res, next) => {
+  req.url = `/tracking/${req.params.id}`;
+  workOrdersRouter(req, res, next);
+});
 app.use('/api/subscriptions', subscriptionsRouter);
 app.use('/api/cash', cashRouter);
 app.use('/api/expenses', expensesRouter);
