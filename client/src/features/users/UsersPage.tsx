@@ -7,6 +7,7 @@ import {
   AppModuleKey 
 } from '../../store/useUserManagementStore';
 import { useAuthStore } from '../../stores/authStore';
+import { apiClient } from '../../services/api';
 import { UserModal } from './components/UserModal';
 import { RoleModal } from './components/RoleModal';
 import { 
@@ -120,6 +121,43 @@ export const UsersPage: React.FC = () => {
       }));
     }
   }, [users]);
+
+  // Synchronize staff sub-accounts directly from cloud database
+  React.useEffect(() => {
+    let isMounted = true;
+    const syncStaffAccounts = async () => {
+      try {
+        const remoteUsers = await apiClient('/workshop/users');
+        if (isMounted && Array.isArray(remoteUsers) && remoteUsers.length > 0) {
+          useUserManagementStore.setState((state) => {
+            const merged = remoteUsers.map((ru: any) => {
+              const existing = state.users.find((u) => u.id === ru.id || u.email?.toLowerCase() === ru.email?.toLowerCase());
+              return {
+                id: ru.id,
+                workshopId: currentWorkshopId,
+                name: ru.name,
+                email: ru.email,
+                phone: existing?.phone || '',
+                role: ru.role,
+                isActive: ru.isActive,
+                lastLogin: ru.lastLoginAt,
+                createdAt: ru.createdAt,
+              };
+            });
+            return { users: merged };
+          });
+        }
+      } catch (err) {
+        console.warn('Could not sync cloud staff accounts:', err);
+      }
+    };
+    if (currentWorkshopId) {
+      syncStaffAccounts();
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [currentWorkshopId]);
 
   // Filter audit logs strictly to current workshop and exclude superadmin logs from client accounts
   const workshopAuditLogs = auditLogs.filter((log) => {
@@ -372,7 +410,17 @@ export const UsersPage: React.FC = () => {
                       <td style={{ padding: '12px 10px' }}>
                         <button
                           type="button"
-                          onClick={() => toggleUserStatus(u.id)}
+                          onClick={async () => {
+                            try {
+                              await apiClient(`/workshop/users/${u.id}`, {
+                                method: 'PUT',
+                                body: JSON.stringify({ isActive: !u.isActive }),
+                              });
+                            } catch (e) {
+                              console.warn(e);
+                            }
+                            toggleUserStatus(u.id);
+                          }}
                           style={{
                             padding: '3px 10px',
                             borderRadius: '12px',
@@ -405,8 +453,15 @@ export const UsersPage: React.FC = () => {
                             <Button
                               size="sm"
                               variant="ghost"
-                              onClick={() => {
-                                if (confirm(`¿Eliminar al usuario ${u.name}?`)) deleteUser(u.id);
+                              onClick={async () => {
+                                if (confirm(`¿Eliminar la subcuenta de ${u.name}?`)) {
+                                  try {
+                                    await apiClient(`/workshop/users/${u.id}`, { method: 'DELETE' });
+                                  } catch (e) {
+                                    console.warn(e);
+                                  }
+                                  deleteUser(u.id);
+                                }
                               }}
                               icon={<Trash2 size={14} color="#ef4444" />}
                             />

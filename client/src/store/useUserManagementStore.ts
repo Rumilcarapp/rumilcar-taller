@@ -71,7 +71,7 @@ interface UserManagementState {
   auditLogs: AuditLog[];
 
   // User Actions
-  addUser: (user: Omit<ManagedUser, 'id' | 'createdAt'>) => void;
+  addUser: (user: Omit<ManagedUser, 'id' | 'createdAt'> & { id?: string }) => void;
   updateUser: (id: string, updates: Partial<ManagedUser>) => void;
   toggleUserStatus: (id: string) => void;
   deleteUser: (id: string) => void;
@@ -261,7 +261,7 @@ export const useUserManagementStore = create<UserManagementState>()(
             {
               ...user,
               workshopId: currentWorkshopId,
-              id: 'usr-' + Date.now(),
+              id: user.id || 'usr-' + Date.now(),
               createdAt: new Date().toISOString(),
             },
             ...state.users,
