@@ -35,9 +35,49 @@ export const TrackingPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [order, setOrder] = useState<WorkOrder | null>(null);
   const [workshopData, setWorkshopData] = useState<any>(null);
-  const [rateVES, setRateVES] = useState<number>(65);
+  const [rateVES, setRateVES] = useState<number>(() => {
+    const saved = useCashStore.getState().exchangeRateVES;
+    return (saved && saved > 100) ? saved : 0;
+  });
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+
+  // Obtener tasa BCV oficial en vivo para el cliente
+  useEffect(() => {
+    let isMounted = true;
+    const fetchBcvRate = async () => {
+      try {
+        const res = await fetch('https://ve.dolarapi.com/v1/dolares/oficial');
+        if (res.ok) {
+          const data = await res.json();
+          if (isMounted && data?.promedio && data.promedio > 0) {
+            const liveRate = Number(data.promedio.toFixed(2));
+            setRateVES((prev) => (prev > 100 ? prev : liveRate));
+            useCashStore.getState().setExchangeRateVES(liveRate);
+            return;
+          }
+        }
+      } catch {}
+
+      try {
+        const fbRes = await fetch('https://pydolarvenezuela-api.vercel.app/api/v1/dollar?page=bcv');
+        if (fbRes.ok) {
+          const fbData = await fbRes.json();
+          const r = fbData?.monitors?.usd?.price || fbData?.price;
+          if (isMounted && typeof r === 'number' && r > 0) {
+            const liveRate = Number(r.toFixed(2));
+            setRateVES((prev) => (prev > 100 ? prev : liveRate));
+            useCashStore.getState().setExchangeRateVES(liveRate);
+          }
+        }
+      } catch {}
+    };
+
+    fetchBcvRate();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -60,7 +100,7 @@ export const TrackingPage: React.FC = () => {
               setWorkshopData(data.workshop);
               useWorkshopStore.getState().updateWorkshop(data.workshop);
             }
-            if (data.exchangeRateVES) {
+            if (data.exchangeRateVES && data.exchangeRateVES > 100) {
               setRateVES(data.exchangeRateVES);
               useCashStore.getState().setExchangeRateVES(data.exchangeRateVES);
             }
@@ -87,7 +127,7 @@ export const TrackingPage: React.FC = () => {
           const currentWorkshop = useWorkshopStore.getState().workshop;
           if (currentWorkshop) setWorkshopData(currentWorkshop);
           const currentRate = useCashStore.getState().exchangeRateVES;
-          if (currentRate) setRateVES(currentRate);
+          if (currentRate && currentRate > 100) setRateVES(currentRate);
         }
         setLoading(false);
       }
@@ -145,7 +185,10 @@ export const TrackingPage: React.FC = () => {
     );
   }
 
-  const rate = rateVES || useCashStore.getState().exchangeRateVES || 65;
+  const cachedRate = useCashStore.getState().exchangeRateVES;
+  const rate = (rateVES && rateVES > 100)
+    ? rateVES
+    : (cachedRate && cachedRate > 100 ? cachedRate : 874.73);
   const totalUSD = order.totalUSD || 0;
   const totalVES = totalUSD * rate;
 
@@ -332,8 +375,8 @@ export const TrackingPage: React.FC = () => {
               <strong style={{ fontSize: '16px' }}>${totalUSD.toFixed(2)} USD</strong>
             </div>
             <div className="tracking-total-row" style={{ color: '#dc2626' }}>
-              <span>Equivalente en Bolívares (Tasa: {rate} Bs/$):</span>
-              <strong style={{ fontSize: '15px' }}>Bs {totalVES.toLocaleString('es-VE', { maximumFractionDigits: 2 })}</strong>
+              <span>Equivalente en Bolívares (Tasa: {Number(rate).toFixed(2)} Bs/$):</span>
+              <strong style={{ fontSize: '15px' }}>Bs {totalVES.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
             </div>
 
             {pendingUSD > 0 ? (

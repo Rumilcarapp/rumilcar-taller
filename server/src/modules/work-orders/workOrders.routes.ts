@@ -112,7 +112,23 @@ workOrdersRouter.get('/tracking/:id', async (req: Request, res: Response): Promi
       }));
 
     const mechanic = order.assignments?.[0]?.mechanic;
-    const latestRate = order.workshop?.exchangeRates?.[0]?.rateToAnchor || 65;
+    let latestRate = order.workshop?.exchangeRates?.[0]?.rateToAnchor;
+    if (!latestRate || latestRate <= 65) {
+      try {
+        const bcvRes = await fetch('https://ve.dolarapi.com/v1/dolares/oficial', { signal: AbortSignal.timeout(2500) });
+        if (bcvRes.ok) {
+          const bcvData: any = await bcvRes.json();
+          if (bcvData?.promedio && bcvData.promedio > 0) {
+            latestRate = Number(bcvData.promedio.toFixed(2));
+          }
+        }
+      } catch {
+        latestRate = latestRate && latestRate > 100 ? latestRate : 874.73;
+      }
+    }
+    if (!latestRate || latestRate <= 65) {
+      latestRate = 874.73;
+    }
 
     const itemsTotal = (services.reduce((a, s) => a + (s.price || 0) * (s.quantity || 1), 0)) +
                        (parts.reduce((a, p) => a + (p.price || 0) * (p.quantity || 1), 0));
