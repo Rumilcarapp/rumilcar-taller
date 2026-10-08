@@ -7,7 +7,7 @@ import {
   WhatsAppTemplateType 
 } from './whatsapp';
 import { useCashStore } from '../store/useCashStore';
-import { useWorkshopStore } from '../store/useWorkshopStore';
+import { useWorkshopStore, DEFAULT_TERMS_AND_CONDITIONS } from '../store/useWorkshopStore';
 import { useAuthStore } from '../stores/authStore';
 
 export const getOrderWhatsAppContext = (order: WorkOrder): WhatsAppContextData => {
@@ -240,6 +240,20 @@ export const handlePrintOrder = (order: WorkOrder) => {
           </div>
           <div style="margin-top: 8px; font-size: 11px; color: #6b7280; text-align: right;">
             Equivalente en Bolívares (VES): <strong>Bs ${finalTotalVES.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+          </div>
+        </div>
+
+        <div style="clear: both; margin-top: 40px; border-top: 1px solid #e5e7eb; padding-top: 14px;">
+          <div style="font-size: 11px; font-weight: 800; color: #374151; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">TÉRMINOS Y CONDICIONES:</div>
+          <div style="font-size: 11px; color: #4b5563; line-height: 1.5; white-space: pre-line;">${workshop?.termsAndConditions || DEFAULT_TERMS_AND_CONDITIONS}</div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; margin-top: 50px; padding: 0 40px;">
+          <div style="text-align: center; width: 220px; border-top: 1px solid #9ca3af; padding-top: 6px; font-size: 11px; font-weight: bold; color: #4b5563;">
+            FIRMA DEL ASESOR / TALLER
+          </div>
+          <div style="text-align: center; width: 220px; border-top: 1px solid #9ca3af; padding-top: 6px; font-size: 11px; font-weight: bold; color: #4b5563;">
+            FIRMA DE CONFORMIDAD DEL CLIENTE
           </div>
         </div>
       </body>

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Modal, Button } from '../../../components/ui';
 import { WorkOrder } from '../../../store/useWorkOrderStore';
 import { useCashStore } from '../../../store/useCashStore';
-import { useWorkshopStore } from '../../../store/useWorkshopStore';
+import { useWorkshopStore, DEFAULT_TERMS_AND_CONDITIONS } from '../../../store/useWorkshopStore';
 import { useAuthStore } from '../../../stores/authStore';
 import { Printer, Send, Link, FileText, Receipt, Check, Building2 } from 'lucide-react';
 import { normalizePhoneNumber, openWhatsApp } from '../../../lib/whatsapp';
@@ -383,11 +383,10 @@ export const DocumentPrintModal: React.FC<DocumentPrintModalProps> = ({
 
             {/* Terms and Warranties */}
             <div className="doc-terms-box">
-              <strong>TÉRMINOS Y CONDICIONES DE GARANTÍA:</strong>
-              <div>• Garantía de 30 días o 1.000 KM sobre mano de obra mecánica efectuada en nuestras instalaciones.</div>
-              <div>• Repuestos eléctricos y electrónicos no poseen garantía una vez instalados, salvo defecto de fábrica comprobable.</div>
-              <div>• Los presupuestos tienen una vigencia máxima de 7 días continuos sujetos a variación de repuestos.</div>
-              <div>• Todo vehículo no retirado pasados 5 días hábiles luego de la notificación de entrega generará cargo por estacionamiento.</div>
+              <strong>TÉRMINOS Y CONDICIONES:</strong>
+              <div style={{ whiteSpace: 'pre-line', marginTop: '4px', lineHeight: 1.5 }}>
+                {workshop.termsAndConditions || DEFAULT_TERMS_AND_CONDITIONS}
+              </div>
             </div>
 
             {/* Signatures */}

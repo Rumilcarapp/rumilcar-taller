@@ -6,13 +6,13 @@ import { useAuthStore } from '../../stores/authStore';
 import { useCashStore } from '../../store/useCashStore';
 import { usePersonnelStore, PersonnelMember } from '../../store/usePersonnelStore';
 import { usePayrollStore } from '../../store/usePayrollStore';
-import { useWorkshopStore } from '../../store/useWorkshopStore';
+import { useWorkshopStore, DEFAULT_TERMS_AND_CONDITIONS } from '../../store/useWorkshopStore';
 import {
   Sun, Moon, Palette, Building2, User, Globe, Phone, Mail, MapPin, FileText,
   Plus, Edit, UserCheck, UserX, Trash2,
   RefreshCw, DollarSign, Percent, CreditCard, Calendar,
   LogIn, Wrench, LogOut, CheckCircle2, AlertCircle, Home, Check, Smartphone, Landmark, QrCode, Star, ExternalLink,
-  Camera, Upload, Image as ImageIcon
+  Camera, Upload, Image as ImageIcon, RotateCcw, ShieldCheck
 } from 'lucide-react';
 import './ProfilePage.css';
 
@@ -617,6 +617,79 @@ export const ProfilePage: React.FC = () => {
                 placeholder="0212-5551234 o 0414-1234567"
                 onChange={e => updateWorkshop({ phone: e.target.value })}
               />
+            </div>
+          </div>
+        </Card>
+
+        {/* ===== CARD: TÉRMINOS Y CONDICIONES DE GARANTÍA Y ENTREGA ===== */}
+        <Card
+          title="Términos y Condiciones de Garantía y Entrega"
+          subtitle="Personaliza las cláusulas que se imprimirán en tus facturas, presupuestos y notas de entrega oficiales."
+          action={
+            <Button
+              variant="outline"
+              size="sm"
+              icon={<RotateCcw size={14} />}
+              onClick={() => {
+                if (confirm('¿Deseas restablecer los términos y condiciones predeterminados?')) {
+                  updateWorkshop({ termsAndConditions: DEFAULT_TERMS_AND_CONDITIONS });
+                  triggerSaveFeedback('Términos predeterminados restablecidos');
+                }
+              }}
+              title="Restaurar las cláusulas predeterminadas recomendadas para talleres mecánicos"
+            >
+              Restablecer Predeterminados
+            </Button>
+          }
+          style={{ gridColumn: '1 / -1' }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div style={{ fontSize: '13px', color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>
+              Edita las políticas de garantía de mano de obra, validez de presupuestos, repuestos y condiciones de retiro de tu taller. Cada línea o punto que escribas aquí aparecerá automáticamente al pie de los comprobantes impresos en formato Carta y PDF.
+            </div>
+
+            <textarea
+              className="input-field"
+              rows={5}
+              value={workshop.termsAndConditions !== undefined ? workshop.termsAndConditions : DEFAULT_TERMS_AND_CONDITIONS}
+              onChange={e => updateWorkshop({ termsAndConditions: e.target.value })}
+              placeholder="Escribe aquí los términos y condiciones de tu taller..."
+              style={{
+                width: '100%',
+                padding: '12px 14px',
+                borderRadius: 'var(--radius-md)',
+                fontFamily: 'inherit',
+                fontSize: '13px',
+                lineHeight: 1.6,
+                background: 'var(--color-bg-primary)',
+                border: '1px solid var(--color-border)',
+                color: 'var(--color-text-primary)',
+                resize: 'vertical',
+                minHeight: '120px',
+                boxSizing: 'border-box'
+              }}
+            />
+
+            {/* Vista Previa de Impresión */}
+            <div style={{ 
+              background: 'var(--color-bg-secondary)', 
+              border: '1px solid var(--color-border)', 
+              borderRadius: '8px', 
+              padding: '12px 16px',
+              fontSize: '12px'
+            }}>
+              <div style={{ fontWeight: 800, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--color-text-muted)', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <FileText size={14} /> Vista previa en comprobantes impresos:
+              </div>
+              <div style={{ 
+                color: 'var(--color-text-primary)', 
+                lineHeight: 1.6, 
+                whiteSpace: 'pre-line',
+                paddingLeft: '6px',
+                borderLeft: '3px solid var(--color-primary)'
+              }}>
+                {workshop.termsAndConditions !== undefined ? workshop.termsAndConditions : DEFAULT_TERMS_AND_CONDITIONS}
+              </div>
             </div>
           </div>
         </Card>

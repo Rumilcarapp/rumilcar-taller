@@ -42,6 +42,7 @@ export interface WorkshopProfile {
   phone: string;
   anchorCurrency: 'USD' | 'VES';
   usdtSpread: string;
+  termsAndConditions?: string;
   logoUrl?: string;
   paymentDetails?: WorkshopPaymentDetails;
   googleReviewUrl?: string;
@@ -61,6 +62,11 @@ interface WorkshopState {
   resetToCleanProfile: (customName?: string) => void;
   fetchWorkshop: () => Promise<void>;
 }
+
+export const DEFAULT_TERMS_AND_CONDITIONS = `• Garantía de 30 días o 1.000 KM sobre mano de obra mecánica efectuada en nuestras instalaciones.
+• Repuestos eléctricos y electrónicos no poseen garantía una vez instalados, salvo defecto de fábrica comprobable.
+• Los presupuestos tienen una vigencia máxima de 7 días continuos sujetos a variación de repuestos.
+• Todo vehículo no retirado pasados 5 días hábiles luego de la notificación de entrega generará cargo por estacionamiento.`;
 
 export const DEFAULT_WORKSHOP_PAYMENT_DETAILS: WorkshopPaymentDetails = {
   pagoMovil: {
@@ -96,6 +102,7 @@ const DEFAULT_WORKSHOP: WorkshopProfile = {
   phone: '',
   anchorCurrency: 'USD',
   usdtSpread: '0',
+  termsAndConditions: DEFAULT_TERMS_AND_CONDITIONS,
   paymentDetails: DEFAULT_WORKSHOP_PAYMENT_DETAILS,
   createdAt: new Date().toLocaleDateString('es-VE'),
   lastLogin: 'Hoy',
@@ -135,6 +142,7 @@ export const useWorkshopStore = create<WorkshopState>()(
                 phone: data.phone ?? '',
                 email: data.email ?? '',
                 ownerName: data.ownerName ?? state.workshop.ownerName,
+                termsAndConditions: data.termsAndConditions !== undefined ? (data.termsAndConditions || '') : (state.workshop.termsAndConditions || DEFAULT_TERMS_AND_CONDITIONS),
                 logoUrl: data.logoUrl !== undefined ? (data.logoUrl || '') : state.workshop.logoUrl,
                 anchorCurrency: data.anchorCurrency || state.workshop.anchorCurrency,
                 usdtSpread: data.usdtSpread !== undefined ? String(data.usdtSpread) : state.workshop.usdtSpread,
@@ -167,6 +175,7 @@ export const useWorkshopStore = create<WorkshopState>()(
               phone: current.phone,
               email: current.email,
               ownerName: current.ownerName,
+              termsAndConditions: current.termsAndConditions || DEFAULT_TERMS_AND_CONDITIONS,
               logoUrl: current.logoUrl || null,
               anchorCurrency: current.anchorCurrency,
               usdtSpread: parseFloat(current.usdtSpread) || 0,
