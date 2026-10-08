@@ -251,11 +251,19 @@ export const TrackingPage: React.FC = () => {
         {/* Header */}
         <div className="tracking-header">
           <div className="tracking-logo">
-            <img src={workshopLogo} alt={workshopName} onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }} />
-            <span>{workshopName.toUpperCase()}</span>
+            {workshopLogo && (
+              <img 
+                src={workshopLogo} 
+                alt={workshopName} 
+                className="tracking-logo-img"
+                onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }} 
+              />
+            )}
+            <span className="tracking-logo-text">{workshopName.toUpperCase()}</span>
           </div>
           <h1 className="tracking-title">Estado de tu Vehículo en Vivo</h1>
           <div className="tracking-order-badge">
+            <span className="tracking-order-live-dot"></span>
             Orden #{displayOrderTag}
           </div>
         </div>
