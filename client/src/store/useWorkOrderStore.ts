@@ -81,6 +81,7 @@ export const useWorkOrderStore = create<WorkOrderState>()(
                   name: i.description,
                   price: i.unitPriceAnchor,
                   quantity: i.quantity,
+                  currency: 'USD',
                 }));
 
               const parts = (o.items || [])
@@ -90,7 +91,17 @@ export const useWorkOrderStore = create<WorkOrderState>()(
                   name: i.description,
                   price: i.unitPriceAnchor,
                   quantity: i.quantity,
+                  currency: 'USD',
                 }));
+
+              const itemsTotalUSD = [
+                ...services.map((s: any) => (s.price || 0) * (s.quantity || 1)),
+                ...parts.map((p: any) => (p.price || 0) * (p.quantity || 1)),
+              ].reduce((a: number, b: number) => a + b, 0);
+
+              const safeTotalUSD = (itemsTotalUSD > 0 && (!o.totalAnchor || (o.totalAnchor < 1 && itemsTotalUSD >= 1)))
+                ? itemsTotalUSD
+                : (o.totalAnchor || itemsTotalUSD || 0);
 
               return {
                 id: o.id,
@@ -117,7 +128,7 @@ export const useWorkOrderStore = create<WorkOrderState>()(
                 parts,
                 date: o.receivedAt || o.createdAt,
                 deliveredAt: o.deliveredAt,
-                totalUSD: o.totalAnchor || 0,
+                totalUSD: safeTotalUSD,
                 status: statusMapFromBackend[o.status] || 'Recibido',
                 orderNumber: o.orderNumber,
                 inspectionNotes: o.inspectionNotes || '',
@@ -131,7 +142,17 @@ export const useWorkOrderStore = create<WorkOrderState>()(
         }
       },
       addWorkOrder: (order) => {
-        set((state) => ({ workOrders: [order, ...state.workOrders] }));
+        const itemsTotalUSD = [
+          ...(order.services || []).map((s: any) => (s.price || 0) * (s.quantity || 1)),
+          ...(order.parts || []).map((p: any) => (p.price || 0) * (p.quantity || 1)),
+        ].reduce((a: number, b: number) => a + b, 0);
+
+        const safeTotalUSD = (itemsTotalUSD > 0 && (!order.totalUSD || (order.totalUSD < 1 && itemsTotalUSD >= 1)))
+          ? itemsTotalUSD
+          : (order.totalUSD || itemsTotalUSD || 0);
+
+        const normalizedOrder = { ...order, totalUSD: safeTotalUSD };
+        set((state) => ({ workOrders: [normalizedOrder, ...state.workOrders] }));
 
         const currentUser = useAuthStore.getState().user;
         useUserManagementStore.getState().addAuditLog({
@@ -141,7 +162,7 @@ export const useWorkOrderStore = create<WorkOrderState>()(
           userRole: currentUser?.role || 'ASESOR',
           action: 'Creación de Orden de Trabajo',
           module: 'workOrders',
-          details: `Creó orden #${order.id} (${order.status}) para cliente ${order.client?.nombre || 'General'} - Monto: $${Number(order.totalUSD || 0).toFixed(2)} USD`,
+          details: `Creó orden #${order.id} (${order.status}) para cliente ${order.client?.nombre || 'General'} - Monto: $${Number(safeTotalUSD).toFixed(2)} USD`,
         });
 
         // Map items for backend
@@ -166,7 +187,7 @@ export const useWorkOrderStore = create<WorkOrderState>()(
           status: order.status,
           notes: order.notes,
           inspectionNotes: order.inspectionNotes,
-          totalAnchor: order.totalUSD,
+          totalAnchor: safeTotalUSD,
           items,
         }).then((saved) => {
           if (saved && saved.id) {
@@ -177,13 +198,29 @@ export const useWorkOrderStore = create<WorkOrderState>()(
         }).catch(() => {});
       },
       updateWorkOrder: (id, order) => {
-        set((state) => ({ workOrders: state.workOrders.map(wo => wo.id === id ? { ...wo, ...order } : wo) }));
+        const currentOrder = get().workOrders.find(wo => wo.id === id);
+        const mergedServices = order.services !== undefined ? order.services : currentOrder?.services || [];
+        const mergedParts = order.parts !== undefined ? order.parts : currentOrder?.parts || [];
+        const itemsTotalUSD = [
+          ...mergedServices.map((s: any) => (s.price || 0) * (s.quantity || 1)),
+          ...mergedParts.map((p: any) => (p.price || 0) * (p.quantity || 1)),
+        ].reduce((a: number, b: number) => a + b, 0);
+
+        let safeTotalUSD = order.totalUSD;
+        if (order.totalUSD !== undefined) {
+          if (itemsTotalUSD > 0 && (order.totalUSD < 1 && itemsTotalUSD >= 1)) {
+            safeTotalUSD = itemsTotalUSD;
+          }
+        }
+
+        const normalizedOrder = safeTotalUSD !== undefined ? { ...order, totalUSD: safeTotalUSD } : order;
+        set((state) => ({ workOrders: state.workOrders.map(wo => wo.id === id ? { ...wo, ...normalizedOrder } : wo) }));
 
         api.put(`/work-orders/${id}`, {
           ...(order.status !== undefined && { status: order.status }),
           ...(order.notes !== undefined && { notes: order.notes }),
           ...(order.inspectionNotes !== undefined && { inspectionNotes: order.inspectionNotes }),
-          ...(order.totalUSD !== undefined && { totalAnchor: order.totalUSD }),
+          ...(safeTotalUSD !== undefined && { totalAnchor: safeTotalUSD }),
           ...(order.deliveredAt !== undefined && { deliveredAt: order.deliveredAt }),
         }).catch(() => {});
       },

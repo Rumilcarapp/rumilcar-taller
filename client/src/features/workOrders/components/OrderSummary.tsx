@@ -48,15 +48,17 @@ export const OrderSummary: React.FC<Props> = ({
   // Convert everything to USD base for internal calc
   const calcSubtotalServicesUSD = () => {
     return services.reduce((acc, s) => {
-      const p = s.currency === 'USD' ? s.price : s.price / bcvRate;
+      const isVES = s.currency === 'VES';
+      const p = isVES && bcvRate > 0 ? (s.price || 0) / bcvRate : (s.price || 0);
       return acc + p;
     }, 0);
   };
 
   const calcSubtotalPartsUSD = () => {
     return parts.reduce((acc, p) => {
-      const price = p.currency === 'USD' ? p.price : p.price / bcvRate;
-      return acc + (price * p.quantity);
+      const isVES = p.currency === 'VES';
+      const price = isVES && bcvRate > 0 ? (p.price || 0) / bcvRate : (p.price || 0);
+      return acc + (price * (p.quantity || 1));
     }, 0);
   };
 

@@ -114,6 +114,12 @@ workOrdersRouter.get('/tracking/:id', async (req: Request, res: Response): Promi
     const mechanic = order.assignments?.[0]?.mechanic;
     const latestRate = order.workshop?.exchangeRates?.[0]?.rateToAnchor || 65;
 
+    const itemsTotal = (services.reduce((a, s) => a + (s.price || 0) * (s.quantity || 1), 0)) +
+                       (parts.reduce((a, p) => a + (p.price || 0) * (p.quantity || 1), 0));
+    const effectiveTotalUSD = (itemsTotal > 0 && (!order.totalAnchor || (order.totalAnchor < 1 && itemsTotal >= 1)))
+      ? itemsTotal
+      : (order.totalAnchor || itemsTotal || 0);
+
     const formattedOrder = {
       id: order.id,
       orderNumber: order.orderNumber,
@@ -123,7 +129,7 @@ workOrdersRouter.get('/tracking/:id', async (req: Request, res: Response): Promi
       receivedAt: order.receivedAt,
       completedAt: order.completedAt,
       deliveredAt: order.deliveredAt,
-      totalUSD: order.totalAnchor || 0,
+      totalUSD: effectiveTotalUSD,
       notes: order.notes,
       inspectionNotes: order.inspectionNotes,
       client: {
@@ -342,6 +348,12 @@ workOrdersRouter.post('/', async (req: AuthRequest, res: Response): Promise<void
         select: { orderNumber: true },
       });
 
+      const itemsSum = (items || []).reduce((acc, it) => acc + (parseFloat(String(it.unitPriceAnchor || 0)) * parseFloat(String(it.quantity || 1))), 0);
+      const parsedTotal = parseFloat(String(totalAnchor || 0));
+      const finalTotalAnchor = (itemsSum > 0 && (parsedTotal <= 0 || (parsedTotal < 1 && itemsSum >= 1)))
+        ? itemsSum
+        : (parsedTotal > 0 ? parsedTotal : itemsSum);
+
       const orderNumber = (lastOrder?.orderNumber || 1000) + 1;
 
       return tx.workOrder.create({
@@ -352,7 +364,7 @@ workOrdersRouter.post('/', async (req: AuthRequest, res: Response): Promise<void
           createdById: userId,
           orderNumber,
           status,
-          totalAnchor: parseFloat(String(totalAnchor || 0)),
+          totalAnchor: finalTotalAnchor,
           notes: notes ? notes.trim() : null,
           inspectionNotes: inspectionNotes ? inspectionNotes.trim() : null,
           items: items && items.length > 0 ? {
@@ -423,13 +435,24 @@ workOrdersRouter.put('/:id', async (req: AuthRequest, res: Response): Promise<vo
         autoCompletedAt = completedAt ? new Date(completedAt) : new Date();
       }
 
+      let finalTotalAnchor: number | undefined = undefined;
+      if (totalAnchor !== undefined) {
+        const parsed = parseFloat(String(totalAnchor));
+        const itemsSum = (existing.items || []).reduce((acc, it) => acc + (it.unitPriceAnchor * it.quantity), 0);
+        if (itemsSum > 0 && (parsed <= 0 || (parsed < 1 && itemsSum >= 1))) {
+          finalTotalAnchor = itemsSum;
+        } else {
+          finalTotalAnchor = parsed;
+        }
+      }
+
       return tx.workOrder.update({
         where: { id },
         data: {
           status,
           notes: notes !== undefined ? (notes ? notes.trim() : null) : undefined,
           inspectionNotes: inspectionNotes !== undefined ? (inspectionNotes ? inspectionNotes.trim() : null) : undefined,
-          totalAnchor: totalAnchor !== undefined ? parseFloat(String(totalAnchor)) : undefined,
+          totalAnchor: finalTotalAnchor !== undefined ? finalTotalAnchor : undefined,
           deliveredAt: autoDeliveredAt || (deliveredAt ? new Date(deliveredAt) : undefined),
           completedAt: autoCompletedAt || (completedAt ? new Date(completedAt) : undefined),
         },

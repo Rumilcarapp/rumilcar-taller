@@ -44,10 +44,28 @@ export const PaymentModal: React.FC<Props> = ({ order, onClose, onSuccess }) => 
   const [reference, setReference] = useState('');
   const [note, setNote] = useState('');
 
+  // Calculate safe items total in USD
+  const subServices = (order.services || []).reduce((acc: number, s: any) => {
+    const isVES = s.currency === 'VES';
+    const p = isVES && exchangeRateVES > 0 ? (s.price || s.precio || 0) / exchangeRateVES : (s.price || s.precio || 0);
+    return acc + p;
+  }, 0);
+  const subParts = (order.parts || []).reduce((acc: number, p: any) => {
+    const isVES = p.currency === 'VES';
+    const price = isVES && exchangeRateVES > 0 ? (p.price || p.precio || 0) / exchangeRateVES : (p.price || p.precio || 0);
+    const qty = p.quantity || p.cantidad || 1;
+    return acc + (price * qty);
+  }, 0);
+  const itemsTotalUSD = subServices + subParts;
+
+  const totalUSD = (itemsTotalUSD > 0 && (!order.totalUSD || (order.totalUSD < 1 && itemsTotalUSD >= 1)))
+    ? itemsTotalUSD
+    : (order.totalUSD || itemsTotalUSD || 0);
+
   // Mixed payment mode state
   const [mixedPayments, setMixedPayments] = useState<{ id: string; method: PaymentMethod; amountUSD: number; reference: string }[]>([
-    { id: '1', method: 'Efectivo', amountUSD: Math.round(order.totalUSD / 2), reference: '' },
-    { id: '2', method: 'Pago Movil', amountUSD: order.totalUSD - Math.round(order.totalUSD / 2), reference: '' }
+    { id: '1', method: 'Efectivo', amountUSD: Math.round(totalUSD / 2), reference: '' },
+    { id: '2', method: 'Pago Movil', amountUSD: totalUSD - Math.round(totalUSD / 2), reference: '' }
   ]);
 
   const [completed, setCompleted] = useState(false);
@@ -65,7 +83,6 @@ export const PaymentModal: React.FC<Props> = ({ order, onClose, onSuccess }) => 
       .catch(() => {});
   }, [setExchangeRateVES]);
 
-  const totalUSD = order.totalUSD || 0;
   const totalVES = totalUSD * rate;
 
   const mixedTotalUSD = mixedPayments.reduce((acc, p) => acc + (p.amountUSD || 0), 0);

@@ -30,8 +30,24 @@ export const DocumentPrintModal: React.FC<DocumentPrintModalProps> = ({
 
   if (!order) return null;
 
-  const totalUSD = order.totalUSD || 0;
   const rate = exchangeRateVES || 65;
+
+  const subServices = (order.services || []).reduce((acc: number, s: any) => {
+    const isVES = s.currency === 'VES';
+    const price = isVES && rate > 0 ? (s.price || s.precio || 0) / rate : (s.price || s.precio || 0);
+    return acc + price;
+  }, 0);
+  const subParts = (order.parts || []).reduce((acc: number, p: any) => {
+    const isVES = p.currency === 'VES';
+    const price = isVES && rate > 0 ? (p.price || p.precio || 0) / rate : (p.price || p.precio || 0);
+    const qty = p.quantity || p.cantidad || 1;
+    return acc + (price * qty);
+  }, 0);
+  const itemsTotal = subServices + subParts;
+
+  const totalUSD = (itemsTotal > 0 && (!order.totalUSD || (order.totalUSD < 1 && itemsTotal >= 1)))
+    ? itemsTotal
+    : (order.totalUSD || itemsTotal || 0);
   const totalVES = totalUSD * rate;
 
   const paidUSD = (order.payments || []).reduce((acc, p) => acc + (p.amountUSD || 0), 0);

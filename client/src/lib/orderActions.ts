@@ -12,8 +12,25 @@ import { useAuthStore } from '../stores/authStore';
 
 export const getOrderWhatsAppContext = (order: WorkOrder): WhatsAppContextData => {
   const rate = useCashStore.getState().exchangeRateVES || 0;
+
+  const subtotalServices = (order.services || []).reduce((acc: number, s: any) => {
+    const isVES = s.currency === 'VES';
+    const price = isVES && rate > 0 ? (s.price || s.precio || 0) / rate : (s.price || s.precio || 0);
+    return acc + price;
+  }, 0);
+
+  const subtotalParts = (order.parts || []).reduce((acc: number, p: any) => {
+    const isVES = p.currency === 'VES';
+    const price = isVES && rate > 0 ? (p.price || p.precio || 0) / rate : (p.price || p.precio || 0);
+    const qty = p.quantity || p.cantidad || 1;
+    return acc + (price * qty);
+  }, 0);
+
+  const calculatedItemsTotal = subtotalServices + subtotalParts;
+  const trueTotalUSD = calculatedItemsTotal > 0 ? calculatedItemsTotal : (order.totalUSD || 0);
+
   const paid = (order.payments || []).reduce((acc, p) => acc + (p.amountUSD || 0), 0);
-  const pending = Math.max(0, (order.totalUSD || 0) - paid);
+  const pending = Math.max(0, trueTotalUSD - paid);
   const workshop = useWorkshopStore.getState().workshop;
   const user = useAuthStore.getState().user;
   const currentWorkshopName = workshop?.name || user?.workshopName || 'Multiservicios Rumilcar';
@@ -41,7 +58,7 @@ export const getOrderWhatsAppContext = (order: WorkOrder): WhatsAppContextData =
     },
     orderId: order.orderNumber ? `OT-${order.orderNumber}` : (order.id.length > 10 ? order.id.slice(0, 8) : order.id),
     status: order.status,
-    totalUSD: order.totalUSD || 0,
+    totalUSD: trueTotalUSD,
     paidUSD: paid,
     balancePendingUSD: pending,
     exchangeRateVES: rate,
@@ -96,6 +113,28 @@ export const handlePrintOrder = (order: WorkOrder) => {
   const workshopAddress = workshop?.address || '';
   const workshopEmail = workshop?.email || '';
 
+  const rate = useCashStore.getState().exchangeRateVES || 65;
+
+  // Calculate items subtotal safely in USD
+  const subtotalServices = (order.services || []).reduce((acc: number, s: any) => {
+    const isVES = s.currency === 'VES';
+    const price = isVES && rate > 0 ? (s.price || s.precio || 0) / rate : (s.price || s.precio || 0);
+    return acc + price;
+  }, 0);
+
+  const subtotalParts = (order.parts || []).reduce((acc: number, p: any) => {
+    const isVES = p.currency === 'VES';
+    const price = isVES && rate > 0 ? (p.price || p.precio || 0) / rate : (p.price || p.precio || 0);
+    const qty = p.quantity || p.cantidad || 1;
+    return acc + (price * qty);
+  }, 0);
+
+  const calculatedItemsTotal = subtotalServices + subtotalParts;
+  const finalTotalUSD = (calculatedItemsTotal > 0 && (!order.totalUSD || (order.totalUSD < 1 && calculatedItemsTotal >= 1)))
+    ? calculatedItemsTotal
+    : (order.totalUSD && order.totalUSD > 0 ? order.totalUSD : calculatedItemsTotal);
+  const finalTotalVES = finalTotalUSD * rate;
+
   // Clean client info (prevent undefined)
   const clientFullName = [order.client?.nombre, order.client?.apellido].filter(Boolean).join(' ') || 'Cliente General';
   const clientDoc = order.client?.documento || '';
@@ -132,7 +171,7 @@ export const handlePrintOrder = (order: WorkOrder) => {
           th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e5e7eb; font-size: 13px; }
           th { background: #f3f4f6; font-weight: 700; color: #374151; }
           h3 { font-size: 14px; text-transform: uppercase; color: #374151; margin: 20px 0 8px 0; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; }
-          .totals { width: 320px; float: right; margin-top: 10px; }
+          .totals { width: 340px; float: right; margin-top: 10px; }
           .totals-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px; }
           .grand-total { font-size: 18px; font-weight: 800; border-top: 2px solid #111827; padding-top: 10px; margin-top: 8px; color: #dc2626; }
           @media print {
@@ -193,14 +232,14 @@ export const handlePrintOrder = (order: WorkOrder) => {
         <div class="totals">
           <div class="totals-row">
             <span>Subtotal:</span>
-            <span>$${(order.totalUSD || 0).toFixed(2)}</span>
+            <span>$${(calculatedItemsTotal > 0 ? calculatedItemsTotal : finalTotalUSD).toFixed(2)}</span>
           </div>
           <div class="totals-row grand-total">
             <span>TOTAL A PAGAR:</span>
-            <span>$${(order.totalUSD || 0).toFixed(2)} USD</span>
+            <span>$${finalTotalUSD.toFixed(2)} USD</span>
           </div>
           <div style="margin-top: 8px; font-size: 11px; color: #6b7280; text-align: right;">
-            Equivalente en Bolívares (VES) a tasa oficial del día.
+            Equivalente en Bolívares (VES): <strong>Bs ${finalTotalVES.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
           </div>
         </div>
       </body>
