@@ -114,21 +114,24 @@ export const SuperAdminSupportHubPage: React.FC = () => {
         headers: { Authorization: `Bearer ${getAuthToken()}` },
       });
       const data = await res.json();
-      if (res.ok && data.success) {
-        const list = (data.data || []).map((w: any) => ({
-          workshopId: w.workshopId,
-          workshopName: w.workshopName,
-          ownerName: w.ownerName,
-          email: w.email,
-          phone: w.phone,
-          plan: w.plan,
-          status: w.status,
-          daysRemaining: w.daysRemaining,
-          dueDate: w.subscriptionEnd ? new Date(w.subscriptionEnd).toLocaleDateString('es-VE') : 'N/D',
+      if (res.ok) {
+        const rawList = data.workshops || data.data || (Array.isArray(data) ? data : []);
+        const list: WorkshopSummary[] = rawList.map((w: any) => ({
+          workshopId: w.workshopId || w.id,
+          workshopName: w.workshopName || w.name,
+          ownerName: w.ownerName || w.users?.[0]?.name || 'Dueño',
+          email: w.email || w.users?.[0]?.email || '',
+          phone: w.phone || '',
+          plan: w.plan || w.subscription?.plan || 'TRIAL',
+          status: w.status || w.subscription?.status || 'TRIALING',
+          daysRemaining: typeof w.daysRemaining === 'number' ? w.daysRemaining : 0,
+          dueDate: w.subscriptionEnd || w.subscription?.currentPeriodEnd || w.subscription?.trialEndsAt
+            ? new Date(w.subscriptionEnd || w.subscription?.currentPeriodEnd || w.subscription?.trialEndsAt).toLocaleDateString('es-VE')
+            : 'N/D',
         }));
         setWorkshops(list);
-        if (list.length > 0 && !selectedWorkshopId) {
-          setSelectedWorkshopId(list[0].workshopId);
+        if (list.length > 0) {
+          setSelectedWorkshopId((prev) => (prev && list.some((item) => item.workshopId === prev) ? prev : list[0].workshopId));
         }
       }
     } catch (err: any) {
@@ -586,12 +589,17 @@ export const SuperAdminSupportHubPage: React.FC = () => {
                     className="saas-hub-select"
                     value={selectedWorkshopId}
                     onChange={(e) => setSelectedWorkshopId(e.target.value)}
+                    disabled={workshops.length === 0}
                   >
-                    {workshops.map((w) => (
-                      <option key={w.workshopId} value={w.workshopId}>
-                        {w.workshopName} — {w.ownerName} ({w.plan} | {w.daysRemaining}d)
-                      </option>
-                    ))}
+                    {workshops.length === 0 ? (
+                      <option value="">No hay talleres disponibles</option>
+                    ) : (
+                      workshops.map((w) => (
+                        <option key={w.workshopId} value={w.workshopId}>
+                          {w.workshopName} — {w.ownerName} ({w.plan} | {w.daysRemaining}d)
+                        </option>
+                      ))
+                    )}
                   </select>
                 </div>
 
@@ -667,7 +675,7 @@ export const SuperAdminSupportHubPage: React.FC = () => {
                 </div>
 
                 <p className="preview-hint">
-                  Puedes editar este texto libremente antes de enviarlo. Las variables ya fueron reemplazadas con los datos de <strong>{currentWorkshop?.workshopName}</strong>.
+                  Puedes editar este texto libremente antes de enviarlo. Las variables ya fueron reemplazadas con los datos de {currentWorkshop ? <strong>{currentWorkshop.workshopName}</strong> : 'el taller seleccionado'}.
                 </p>
 
                 <textarea
