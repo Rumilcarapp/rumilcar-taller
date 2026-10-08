@@ -160,7 +160,7 @@ export const OrderSummary: React.FC<Props> = ({
              <span className="eq-ves">Bs. {totalVES.toFixed(2)}</span>
            </div>
            <div className="eq-row">
-             <span>USDT</span>
+             <span>REF</span>
              <span>${totalUSD.toFixed(2)}</span>
            </div>
         </div>
