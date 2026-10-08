@@ -421,7 +421,40 @@ export const ProfilePage: React.FC = () => {
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          {/* Botón de Sincronización Manual con la Nube */}
+          <button
+            type="button"
+            onClick={async () => {
+              try {
+                await fetchWorkshop();
+                await fetchPersonnel();
+                triggerSaveFeedback('¡Datos actualizados desde la nube!');
+              } catch {
+                triggerSaveFeedback('Error al sincronizar datos');
+              }
+            }}
+            title="Recargar datos más recientes directamente desde la nube"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '12px',
+              color: '#ffffff',
+              background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+              border: 'none',
+              padding: '6px 14px',
+              borderRadius: '20px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              boxShadow: '0 2px 8px rgba(37, 99, 235, 0.25)',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <RefreshCw size={13} />
+            <span>Sincronizar Nube</span>
+          </button>
+
           {/* Indicador de Guardado Automático */}
           <div style={{
             display: 'flex',

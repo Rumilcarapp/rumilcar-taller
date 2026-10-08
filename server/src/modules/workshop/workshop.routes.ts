@@ -19,6 +19,7 @@ const updateWorkshopSchema = z.object({
   anchorCurrency: z.enum(['USD', 'VES']).optional(),
   usdtSpread: z.number().or(z.string()).optional(),
   autoExchangeRate: z.boolean().optional(),
+  ownerName: z.string().trim().optional(),
 });
 
 // GET /api/workshop — Get workshop profile
@@ -29,13 +30,22 @@ workshopRouter.get('/', async (req: AuthRequest, res: Response) => {
       include: {
         paymentMethods: true,
         mechanics: { orderBy: { name: 'asc' } },
+        users: {
+          select: { id: true, name: true, email: true, role: true },
+        },
       },
     });
     if (!workshop) {
       res.status(404).json({ error: 'Taller no encontrado' });
       return;
     }
-    res.json(workshop);
+
+    const owner = workshop.users?.find((u) => u.role === 'OWNER') || workshop.users?.[0];
+
+    res.json({
+      ...workshop,
+      ownerName: owner?.name || '',
+    });
   } catch (error) {
     res.status(500).json({ error: 'Error al obtener el perfil del taller' });
   }
@@ -51,6 +61,14 @@ workshopRouter.put('/', requireRole('OWNER', 'ADMIN'), async (req: AuthRequest, 
     }
 
     const data = parseResult.data;
+
+    if (data.ownerName) {
+      await prisma.user.updateMany({
+        where: { workshopId: req.workshopId!, role: 'OWNER' },
+        data: { name: data.ownerName },
+      });
+    }
+
     const workshop = await prisma.workshop.update({
       where: { id: req.workshopId },
       data: {
@@ -66,8 +84,19 @@ workshopRouter.put('/', requireRole('OWNER', 'ADMIN'), async (req: AuthRequest, 
         ...(data.usdtSpread !== undefined && { usdtSpread: parseFloat(String(data.usdtSpread)) }),
         ...(data.autoExchangeRate !== undefined && { autoExchangeRate: data.autoExchangeRate }),
       },
+      include: {
+        users: {
+          select: { id: true, name: true, email: true, role: true },
+        },
+      },
     });
-    res.json(workshop);
+
+    const owner = workshop.users?.find((u) => u.role === 'OWNER') || workshop.users?.[0];
+
+    res.json({
+      ...workshop,
+      ownerName: owner?.name || '',
+    });
   } catch (error) {
     res.status(500).json({ error: 'Error al actualizar el perfil' });
   }

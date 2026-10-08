@@ -107,14 +107,6 @@ export const LoginPage: React.FC = () => {
     if (incomingWorkshopId) {
       localStorage.setItem('rumilcar_last_workshop_id', incomingWorkshopId);
     }
-    if (userToLogin.workshopName && userToLogin.workshopName !== 'Rumilcar Central (SaaS)') {
-      useWorkshopStore.getState().updateWorkshop({
-        name: userToLogin.workshopName,
-        ownerName: userToLogin.name || '',
-        email: userToLogin.email || '',
-        phone: userToLogin.phone || '',
-      });
-    }
     login(
       {
         id: userToLogin.id,
@@ -127,6 +119,9 @@ export const LoginPage: React.FC = () => {
       },
       token || 'jwt-token-' + Date.now()
     );
+
+    // Fetch fresh workshop profile directly from cloud PostgreSQL database
+    useWorkshopStore.getState().fetchWorkshop().catch(() => {});
 
     addAuditLog({
       workshopId: incomingWorkshopId || userToLogin.workshopId || '',

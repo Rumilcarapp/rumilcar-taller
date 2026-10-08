@@ -8,16 +8,22 @@ import { TrialFeedbackModal } from '../subscription/TrialFeedbackModal';
 import { ImpersonationBanner } from '../shared/ImpersonationBanner';
 import { BroadcastBanner } from '../shared/BroadcastBanner';
 import { useCashStore } from '../../store/useCashStore';
+import { useWorkshopStore } from '../../store/useWorkshopStore';
+import { getAuthToken } from '../../services/api';
 import './AppLayout.css';
 
 export const AppLayout: React.FC = () => {
   const location = useLocation();
   const { autoRate, fetchAutoExchangeRate } = useCashStore();
 
-  // Automatic official dollar rate sync in background
+  // Automatic official dollar rate and workshop sync in background
   useEffect(() => {
     if (autoRate) {
       fetchAutoExchangeRate();
+    }
+
+    if (getAuthToken()) {
+      useWorkshopStore.getState().fetchWorkshop().catch(() => {});
     }
 
     const interval = setInterval(() => {
@@ -29,6 +35,9 @@ export const AppLayout: React.FC = () => {
     const handleFocus = () => {
       if (useCashStore.getState().autoRate) {
         fetchAutoExchangeRate();
+      }
+      if (getAuthToken()) {
+        useWorkshopStore.getState().fetchWorkshop().catch(() => {});
       }
     };
     window.addEventListener('focus', handleFocus);

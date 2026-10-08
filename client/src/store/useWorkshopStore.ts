@@ -123,25 +123,27 @@ export const useWorkshopStore = create<WorkshopState>()(
       fetchWorkshop: async () => {
         try {
           const data = await api.get('/workshop');
-          if (data && data.name) {
+          if (data && (data.name || data.id)) {
             set((state) => ({
               workshop: {
                 ...state.workshop,
-                name: data.name || state.workshop.name,
-                legalName: data.legalName || state.workshop.legalName,
-                taxId: data.taxId || state.workshop.taxId,
-                address: data.address || state.workshop.address,
-                website: data.website || state.workshop.website,
-                phone: data.phone || state.workshop.phone,
-                email: data.email || state.workshop.email,
+                name: data.name ?? state.workshop.name,
+                legalName: data.legalName ?? '',
+                taxId: data.taxId ?? '',
+                address: data.address ?? '',
+                website: data.website ?? '',
+                phone: data.phone ?? '',
+                email: data.email ?? '',
+                ownerName: data.ownerName ?? state.workshop.ownerName,
                 logoUrl: data.logoUrl !== undefined ? (data.logoUrl || '') : state.workshop.logoUrl,
                 anchorCurrency: data.anchorCurrency || state.workshop.anchorCurrency,
                 usdtSpread: data.usdtSpread !== undefined ? String(data.usdtSpread) : state.workshop.usdtSpread,
               },
+              lastSavedAt: data.updatedAt || state.lastSavedAt,
             }));
           }
-        } catch {
-          // Keep local state if offline
+        } catch (err) {
+          console.warn('Error al consultar perfil del taller en la nube:', err);
         }
       },
       updateWorkshop: (updates) => {
@@ -156,7 +158,7 @@ export const useWorkshopStore = create<WorkshopState>()(
           try {
             set({ isSaving: true });
             const current = get().workshop;
-            await api.put('/workshop', {
+            const updated = await api.put('/workshop', {
               name: current.name,
               legalName: current.legalName,
               taxId: current.taxId,
@@ -164,11 +166,12 @@ export const useWorkshopStore = create<WorkshopState>()(
               website: current.website,
               phone: current.phone,
               email: current.email,
+              ownerName: current.ownerName,
               logoUrl: current.logoUrl || null,
               anchorCurrency: current.anchorCurrency,
               usdtSpread: parseFloat(current.usdtSpread) || 0,
             });
-            set({ isSaving: false, lastSavedAt: new Date().toISOString() });
+            set({ isSaving: false, lastSavedAt: updated?.updatedAt || new Date().toISOString() });
           } catch {
             set({ isSaving: false });
           }
