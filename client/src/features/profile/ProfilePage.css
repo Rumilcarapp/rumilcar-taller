@@ -3,7 +3,11 @@
    ============================================ */
 
 .profile-page {
+  width: 100%;
   max-width: 1100px;
+  min-width: 0;
+  box-sizing: border-box;
+  margin: 0 auto;
 }
 
 /* Header Card */
@@ -17,6 +21,9 @@
   padding: var(--space-6);
   margin-bottom: var(--space-6);
   gap: var(--space-6);
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .profile-header-left {
@@ -116,8 +123,16 @@
 /* Profile Grid */
 .profile-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: var(--space-5);
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.profile-grid > * {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .profile-currency-card,
@@ -125,11 +140,20 @@
 .profile-mechanics-card,
 .profile-integrations-card {
   grid-column: 1 / -1;
+  min-width: 0;
 }
 
-@media (max-width: 900px) {
-  .profile-grid { grid-template-columns: 1fr; }
-  .profile-header-card { flex-direction: column; align-items: flex-start; }
+@media (max-width: 1024px) {
+  .profile-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-4);
+  }
+  .profile-header-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-4);
+    padding: var(--space-4);
+  }
 }
 
 /* Form Grid */
@@ -174,15 +198,35 @@
   align-items: flex-end;
   gap: var(--space-4);
   flex-wrap: wrap;
+  width: 100%;
+  min-width: 0;
 }
 
-.rate-input-row .input-group { flex: 1; min-width: 180px; }
+.rate-input-row .input-group {
+  flex: 1 1 200px;
+  min-width: 0;
+}
 
 .rate-toggle {
   display: flex;
   align-items: center;
   gap: var(--space-3);
   padding-bottom: var(--space-1);
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+@media (max-width: 768px) {
+  .rate-input-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-3);
+  }
+  .rate-toggle {
+    justify-content: space-between;
+    width: 100%;
+    padding-top: var(--space-1);
+  }
 }
 
 .rate-suffix {
@@ -375,10 +419,14 @@
 /* Mechanics Table */
 .mechanics-table-container {
   overflow-x: auto;
+  width: 100%;
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
 }
 
 .mechanics-table {
   width: 100%;
+  min-width: 600px;
   border-spacing: 0;
 }
 
@@ -517,4 +565,27 @@
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-medium);
   display: block;
+}
+
+/* Payment accounts grid */
+.payment-accounts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: var(--space-4);
+  width: 100%;
+  min-width: 0;
+}
+
+/* Responsive button text for tablet & mobile */
+.btn-text-tablet {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .btn-text-desktop {
+    display: none;
+  }
+  .btn-text-tablet {
+    display: inline;
+  }
 }

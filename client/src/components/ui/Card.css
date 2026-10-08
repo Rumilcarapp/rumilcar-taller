@@ -3,12 +3,22 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   transition: all var(--transition-base);
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .card-pad-none .card-body { padding: 0; }
 .card-pad-sm .card-body { padding: var(--space-3); }
 .card-pad-md .card-body { padding: var(--space-5); }
 .card-pad-lg .card-body { padding: var(--space-6); }
+
+.card-body {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
 
 .card-header {
   display: flex;
@@ -17,18 +27,38 @@
   padding: var(--space-5);
   border-bottom: 1px solid var(--color-border);
   gap: var(--space-4);
+  flex-wrap: wrap;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.card-header-text {
+  flex: 1 1 200px;
+  min-width: 0;
 }
 
 .card-title {
   font-size: var(--font-size-md);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .card-subtitle {
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
   margin-top: var(--space-1);
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.card-action {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  max-width: 100%;
 }
 
 .card-glass {

@@ -638,7 +638,8 @@ export const ProfilePage: React.FC = () => {
               }}
               title="Restaurar las cláusulas predeterminadas recomendadas para talleres mecánicos"
             >
-              Restablecer Predeterminados
+              <span className="btn-text-desktop">Restablecer Predeterminados</span>
+              <span className="btn-text-tablet">Restablecer</span>
             </Button>
           }
           style={{ gridColumn: '1 / -1' }}
@@ -676,7 +677,11 @@ export const ProfilePage: React.FC = () => {
               border: '1px solid var(--color-border)', 
               borderRadius: '8px', 
               padding: '12px 16px',
-              fontSize: '12px'
+              fontSize: '12px',
+              maxWidth: '100%',
+              boxSizing: 'border-box',
+              overflowWrap: 'break-word',
+              wordBreak: 'break-word'
             }}>
               <div style={{ fontWeight: 800, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--color-text-muted)', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <FileText size={14} /> Vista previa en comprobantes impresos:
@@ -829,7 +834,7 @@ export const ProfilePage: React.FC = () => {
             </Button>
           }
         >
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
+          <div className="payment-accounts-grid">
             {/* Sección Pago Móvil */}
             <div style={{ background: 'var(--color-bg-secondary)', padding: '18px', borderRadius: '10px', border: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-primary)', fontWeight: 800 }}>
