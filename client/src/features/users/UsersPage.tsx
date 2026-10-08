@@ -69,8 +69,57 @@ export const UsersPage: React.FC = () => {
 
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
 
-  // Filter users belonging to current workshop
-  const workshopUsers = users.filter((u) => !u.workshopId || u.workshopId === currentWorkshopId);
+  // Visible roles for the workshop (strictly excludes platform SaaS superadmin)
+  const visibleRoles = roles.filter((r) => r.id !== 'SUPERADMIN');
+
+  // Filter users belonging to current workshop, strictly excluding Superadmin SaaS and demo accounts
+  const workshopUsers = users.filter((u) => {
+    // Never show Superadmin SaaS account in workshop user management
+    if (
+      u.role === 'SUPERADMIN' ||
+      u.email?.toLowerCase().includes('luarkpadilla') ||
+      u.name?.toLowerCase().includes('luark')
+    ) {
+      return false;
+    }
+    // Never show dummy/demo "admin@taller.com" or "Administrador (Dueño)"
+    if (
+      u.email === 'admin@taller.com' ||
+      u.name?.includes('Administrador (Dueño)') ||
+      u.name?.includes('Don Pedro')
+    ) {
+      return false;
+    }
+    // Match workshop ID if user has workshopId assigned
+    if (currentWorkshopId && u.workshopId && u.workshopId !== currentWorkshopId) {
+      return false;
+    }
+    return true;
+  });
+
+  // Automatically purge legacy/demo/superadmin entries from local storage store if present
+  React.useEffect(() => {
+    const hasUnwanted = users.some(
+      (u) =>
+        u.role === 'SUPERADMIN' ||
+        u.email === 'admin@taller.com' ||
+        u.email?.toLowerCase().includes('luarkpadilla') ||
+        u.name?.includes('Administrador (Dueño)') ||
+        u.name?.includes('Don Pedro')
+    );
+    if (hasUnwanted) {
+      useUserManagementStore.setState((state) => ({
+        users: state.users.filter(
+          (u) =>
+            u.role !== 'SUPERADMIN' &&
+            u.email !== 'admin@taller.com' &&
+            !u.email?.toLowerCase().includes('luarkpadilla') &&
+            !u.name?.includes('Administrador (Dueño)') &&
+            !u.name?.includes('Don Pedro')
+        ),
+      }));
+    }
+  }, [users]);
 
   // Filter audit logs strictly to current workshop and exclude superadmin logs from client accounts
   const workshopAuditLogs = auditLogs.filter((log) => {
@@ -92,7 +141,7 @@ export const UsersPage: React.FC = () => {
   });
 
   const activeUsersCount = workshopUsers.filter((u) => u.isActive).length;
-  const currentRoleDef = roles.find((r) => r.id === selectedRoleForPermissions) || roles[0];
+  const currentRoleDef = visibleRoles.find((r) => r.id === selectedRoleForPermissions) || visibleRoles[0] || roles[0];
 
   const handleTogglePerm = (module: AppModuleKey, action: 'view' | 'create' | 'edit' | 'delete') => {
     if (selectedRoleForPermissions === 'OWNER') {
@@ -174,7 +223,7 @@ export const UsersPage: React.FC = () => {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
               <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Roles Definidos</div>
-              <div style={{ fontSize: '24px', fontWeight: 800, color: '#8b5cf6', marginTop: '4px' }}>{roles.length}</div>
+              <div style={{ fontSize: '24px', fontWeight: 800, color: '#8b5cf6', marginTop: '4px' }}>{visibleRoles.length}</div>
               <div style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Perfiles de permisos</div>
             </div>
             <div style={{ padding: '8px', borderRadius: '8px', background: 'rgba(139, 92, 246, 0.1)', color: '#8b5cf6' }}>
@@ -379,7 +428,7 @@ export const UsersPage: React.FC = () => {
           
           {/* Role selector chips */}
           <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
-            {roles.map((r) => (
+            {visibleRoles.map((r) => (
               <button
                 key={r.id}
                 type="button"

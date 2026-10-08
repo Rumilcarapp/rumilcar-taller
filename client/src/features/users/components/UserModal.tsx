@@ -125,7 +125,7 @@ export const UserModal: React.FC<UserModalProps> = ({
               onChange={(e) => setRole(e.target.value)}
               style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-bg-surface)', fontSize: '13px' }}
             >
-              {roles.map((r) => (
+              {roles.filter((r) => r.id !== 'SUPERADMIN').map((r) => (
                 <option key={r.id} value={r.id}>
                   {r.name}
                 </option>

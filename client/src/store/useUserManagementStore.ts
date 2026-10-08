@@ -405,29 +405,38 @@ export const useUserManagementStore = create<UserManagementState>()(
       name: 'rumilcar-users-storage',
       onRehydrateStorage: () => (state) => {
         if (state && Array.isArray(state.users)) {
-          state.users = state.users.map((u) => {
-            if (u.name.includes('Don Pedro')) {
-              return { ...u, name: 'Administrador (Dueño)' };
-            }
-            return u;
+          state.users = state.users.filter((u) => {
+            const isSuperAdmin =
+              u.role === 'SUPERADMIN' ||
+              u.email?.toLowerCase().includes('luarkpadilla') ||
+              u.name?.toLowerCase().includes('luark');
+            const isDemoAdmin =
+              u.email === 'admin@taller.com' ||
+              u.name?.includes('Administrador (Dueño)') ||
+              u.name?.includes('Don Pedro');
+            return !isSuperAdmin && !isDemoAdmin;
           });
         }
         if (state && Array.isArray(state.auditLogs)) {
-          state.auditLogs = state.auditLogs.map((l) => {
-            // Retrofit workshopId if missing on legacy logs
-            if (!l.workshopId) {
-              if (l.userRole === 'SUPERADMIN' || l.details?.includes('Rumilcar Central') || l.userName?.includes('Luark')) {
-                return { ...l, workshopId: '19c1bb78-46e2-4434-b629-33f2cae7d00c' };
+          state.auditLogs = state.auditLogs
+            .filter((l) => {
+              const isSuperAdmin =
+                l.userRole === 'SUPERADMIN' ||
+                l.details?.includes('Rumilcar Central') ||
+                l.userName?.toLowerCase().includes('luark');
+              const isDemoAdmin =
+                l.userName?.includes('Administrador (Dueño)') ||
+                l.userName?.includes('Don Pedro');
+              return !isSuperAdmin && !isDemoAdmin;
+            })
+            .map((l) => {
+              if (!l.workshopId) {
+                if (l.details?.includes('Multiservicios Rumilcar') || l.userName?.includes('Daniel')) {
+                  return { ...l, workshopId: '0ea6fc7a-889d-46ad-8efa-a8e3f4831e89' };
+                }
               }
-              if (l.details?.includes('Multiservicios Rumilcar') || l.userName?.includes('Daniel')) {
-                return { ...l, workshopId: '0ea6fc7a-889d-46ad-8efa-a8e3f4831e89' };
-              }
-            }
-            if (l.userName.includes('Don Pedro')) {
-              return { ...l, userName: 'Administrador (Dueño)' };
-            }
-            return l;
-          });
+              return l;
+            });
         }
       },
     }
