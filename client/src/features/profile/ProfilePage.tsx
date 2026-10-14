@@ -15,6 +15,7 @@ import {
   Camera, Upload, Image as ImageIcon, RotateCcw, ShieldCheck
 } from 'lucide-react';
 import './ProfilePage.css';
+import { BillingSettingsCard } from './components/BillingSettingsCard';
 
 export const ProfilePage: React.FC = () => {
   // Workshop Profile Store (100% auto-persisted in real-time)
@@ -1203,6 +1204,11 @@ export const ProfilePage: React.FC = () => {
             </div>
           </div>
         </Card>
+
+        {/* Facturación Digital SENIAT Venezuela (Ambos Casos: Rumilcarapp provee o Taller conecta su cuenta) */}
+        <div style={{ gridColumn: '1 / -1' }}>
+          <BillingSettingsCard />
+        </div>
 
       </div>
 

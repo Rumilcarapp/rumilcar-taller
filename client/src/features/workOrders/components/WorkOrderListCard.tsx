@@ -12,7 +12,8 @@ import {
   DollarSign,
   Link,
   MessageSquare,
-  Building2
+  Building2,
+  ShieldCheck
 } from 'lucide-react';
 import { Button } from '../../../components/ui';
 import { useNavigate } from 'react-router-dom';
@@ -48,9 +49,10 @@ export const WorkOrderListCard: React.FC<Props> = ({
 }) => {
   const [showMenu, setShowMenu] = useState(false);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+  const isBudget = order.status === 'Presupuesto' || order.status === 'Rechazado';
+  const [printDocType, setPrintDocType] = useState<'ORDEN' | 'PRESUPUESTO' | 'RECIBO' | 'FACTURA_FISCAL'>(isBudget ? 'PRESUPUESTO' : 'ORDEN');
   const navigate = useNavigate();
 
-  const isBudget = order.status === 'Presupuesto' || order.status === 'Rechazado';
   const detailRoute = isBudget ? '/presupuestos/' + order.id : '/trabajos/' + order.id;
 
   const toggleMenu = (e: React.MouseEvent) => {
@@ -213,8 +215,11 @@ export const WorkOrderListCard: React.FC<Props> = ({
                       <Building2 size={14} color="#2563eb" /> Enviar Presupuesto al WhatsApp del Taller
                     </button>
                   )}
-                  <button className="dropdown-item" onClick={() => { setIsPrintModalOpen(true); setShowMenu(false); }}>
+                  <button className="dropdown-item" onClick={() => { setPrintDocType(isBudget ? 'PRESUPUESTO' : 'ORDEN'); setIsPrintModalOpen(true); setShowMenu(false); }}>
                     <Printer size={14} /> Imprimir Documento (Carta / Ticket)
+                  </button>
+                  <button className="dropdown-item" style={{ color: '#059669', fontWeight: 600 }} onClick={() => { setPrintDocType('FACTURA_FISCAL'); setIsPrintModalOpen(true); setShowMenu(false); }}>
+                    <ShieldCheck size={14} color="#059669" /> Factura Fiscal Digital (SENIAT / HKA)
                   </button>
                   <button className="dropdown-item" onClick={() => { window.open(`/rastreo/${order.id}`, '_blank'); setShowMenu(false); }}>
                     <Link size={14} /> Abrir Portal de Rastreo del Cliente
@@ -271,7 +276,7 @@ export const WorkOrderListCard: React.FC<Props> = ({
         isOpen={isPrintModalOpen}
         onClose={() => setIsPrintModalOpen(false)}
         order={order}
-        documentType={isBudget ? 'PRESUPUESTO' : 'ORDEN'}
+        documentType={printDocType}
       />
     </>
   );

@@ -1,0 +1,300 @@
+.billing-settings-card {
+  margin-top: 16px;
+}
+
+.billing-settings-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.billing-intro-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+}
+
+.intro-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(37, 99, 235, 0.12);
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.intro-text strong {
+  display: block;
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+
+.intro-text p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
+.billing-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+
+.switch-label {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.switch-label input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.switch-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--color-border, #cbd5e1);
+  transition: .3s;
+  border-radius: 24px;
+}
+
+.switch-slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .3s;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+input:checked + .switch-slider {
+  background-color: var(--color-primary, #2563eb);
+}
+
+input:checked + .switch-slider:before {
+  transform: translateX(20px);
+}
+
+.billing-mode-selector {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+@media (max-width: 768px) {
+  .billing-mode-selector {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mode-option-label {
+  cursor: pointer;
+  display: block;
+}
+
+.mode-option-label input {
+  display: none;
+}
+
+.mode-card {
+  padding: 14px;
+  border-radius: var(--radius-md);
+  border: 2px solid var(--color-border);
+  background: var(--color-bg-surface);
+  transition: all 0.2s ease;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.mode-card:hover {
+  border-color: var(--color-primary-light, #93c5fd);
+}
+
+.mode-card.active {
+  border-color: var(--color-primary, #2563eb);
+  background: rgba(37, 99, 235, 0.04);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.08);
+}
+
+.mode-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.mode-card p {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+  margin: 0 0 10px;
+  flex: 1;
+}
+
+.mode-status-tag {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--color-primary);
+  background: rgba(37, 99, 235, 0.1);
+  padding: 3px 8px;
+  border-radius: 12px;
+  width: fit-content;
+}
+
+.managed-quota-box,
+.own-credentials-box,
+.fiscal-emitter-box,
+.tax-parameters-box,
+.recent-invoices-box {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+}
+
+.quota-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.quota-bar-bg {
+  width: 100%;
+  height: 8px;
+  background: var(--color-bg-tertiary, #e2e8f0);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.quota-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981 0%, #2563eb 100%);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 640px) {
+  .form-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.custom-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.field-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.custom-select {
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  font-size: 13px;
+  outline: none;
+}
+
+.field-hint {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.tax-switches-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.tax-switch-card {
+  padding: 12px;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.recent-invoices-box {
+  display: flex;
+  flex-direction: column;
+}
+
+.invoices-mini-table {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.invoice-mini-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+}
+
+.mini-badge-issued {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  background: #ecfdf5;
+  color: #059669;
+  border-radius: 4px;
+  border: 1px solid #a7f3d0;
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  100% {
+    transform: rotate(360deg);
+  }
+}

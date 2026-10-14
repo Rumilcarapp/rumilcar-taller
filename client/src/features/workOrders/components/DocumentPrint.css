@@ -289,3 +289,78 @@
     display: none !important;
   }
 }
+
+/* Fiscal Document Enhancements */
+.fiscal-type-tab {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+}
+
+.fiscal-type-tab.active {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #ffffff;
+  border-color: #2563eb;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+}
+
+.fiscal-type-tab.fiscal-active {
+  background: linear-gradient(135deg, #059669, #047857);
+  color: #ffffff;
+  border-color: #059669;
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);
+}
+
+.fiscal-emit-box {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 24px;
+  max-width: 680px;
+  margin: 16px auto;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+}
+
+.fiscal-hka-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(37, 99, 235, 0.1);
+  color: #2563eb;
+  border: 1px solid rgba(37, 99, 235, 0.25);
+}
+
+.fiscal-qr-container {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  margin-top: 10px;
+}
+
+.fiscal-qr-img {
+  width: 90px;
+  height: 90px;
+  object-fit: contain;
+  border-radius: 4px;
+  background: #ffffff;
+  padding: 3px;
+  border: 1px solid #cbd5e1;
+}
+
