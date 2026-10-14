@@ -23,8 +23,8 @@ export const SubscriptionBanner: React.FC = () => {
 
   const { isTrial, daysRemaining, isExpired, status, plan } = subscription;
 
-  // Active paid plan with more than 5 days remaining: hide banner to keep interface clean
-  if (status === 'ACTIVE' && daysRemaining > 5) {
+  // Active plan (paid, courtesy, or indefinite free) with more than 5 days remaining: hide banner to keep interface clean
+  if ((status === 'ACTIVE' && daysRemaining > 5) || daysRemaining > 365) {
     return null;
   }
 

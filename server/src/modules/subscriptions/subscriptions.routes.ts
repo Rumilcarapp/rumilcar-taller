@@ -488,8 +488,11 @@ subscriptionsRouter.post('/admin/change-plan', authenticate, requireSuperAdmin, 
   try {
     const { workshopId, plan, status, durationDays = 30 } = req.body;
 
+    const isIndefinite = durationDays === -1 || Number(durationDays) >= 36500;
     const now = new Date();
-    const newEnd = new Date(now.getTime() + Number(durationDays) * 24 * 60 * 60 * 1000);
+    const newEnd = isIndefinite
+      ? new Date('2099-12-31T23:59:59.999Z')
+      : new Date(now.getTime() + Number(durationDays) * 24 * 60 * 60 * 1000);
 
     const updated = await prisma.subscription.update({
       where: { workshopId },
@@ -499,11 +502,14 @@ subscriptionsRouter.post('/admin/change-plan', authenticate, requireSuperAdmin, 
         currentPeriodStart: now,
         currentPeriodEnd: newEnd,
         trialEndsAt: newEnd,
+        ...(isIndefinite ? { priceUSD: 0 } : {}),
       },
     });
 
     res.json({
-      message: `Plan actualizado a ${plan} (${status}) hasta el ${newEnd.toLocaleDateString('es-VE')}`,
+      message: isIndefinite
+        ? `Membresía liberada para el taller con plan ${plan} de forma indefinida y gratuita.`
+        : `Plan actualizado a ${plan} (${status}) hasta el ${newEnd.toLocaleDateString('es-VE')}`,
       subscription: updated,
     });
   } catch (error: any) {

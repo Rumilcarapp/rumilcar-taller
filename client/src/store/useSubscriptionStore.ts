@@ -180,7 +180,7 @@ interface SubscriptionState {
   approvePayment: (paymentId: string, plan: SubscriptionPlanKey, months?: number) => Promise<boolean>;
   rejectPayment: (paymentId: string, reason: string) => Promise<boolean>;
   extendTrial: (workshopId: string, days?: number) => Promise<boolean>;
-  changePlan: (workshopId: string, plan: SubscriptionPlanKey, status: SubscriptionStatusKey) => Promise<boolean>;
+  changePlan: (workshopId: string, plan: SubscriptionPlanKey, status: SubscriptionStatusKey, durationDays?: number) => Promise<boolean>;
   createClientWorkshop: (data: {
     workshopName: string;
     ownerName: string;
@@ -752,8 +752,9 @@ export const useSubscriptionStore = create<SubscriptionState>()(
         return true;
       },
 
-      changePlan: async (workshopId: string, plan: SubscriptionPlanKey, status: SubscriptionStatusKey) => {
+      changePlan: async (workshopId: string, plan: SubscriptionPlanKey, status: SubscriptionStatusKey, durationDays?: number) => {
         const token = getAuthToken();
+        const isIndefinite = durationDays === -1 || (durationDays !== undefined && durationDays >= 36500);
         try {
           if (token) {
             const res = await fetch(`${getApiUrl()}/subscriptions/admin/change-plan`, {
@@ -762,7 +763,7 @@ export const useSubscriptionStore = create<SubscriptionState>()(
                 'Content-Type': 'application/json',
                 Authorization: `Bearer ${token}`,
               },
-              body: JSON.stringify({ workshopId, plan, status }),
+              body: JSON.stringify({ workshopId, plan, status, durationDays }),
             });
             if (res.ok) {
               await get().fetchAdminWorkshops();
@@ -773,6 +774,8 @@ export const useSubscriptionStore = create<SubscriptionState>()(
           // Local fallback
         }
 
+        const calculatedDays = isIndefinite ? 99999 : (status === 'ACTIVE' ? (durationDays || 30) : 15);
+
         set({
           adminWorkshops: get().adminWorkshops.map((w) => {
             if (w.workshopId === workshopId) {
@@ -780,8 +783,8 @@ export const useSubscriptionStore = create<SubscriptionState>()(
                 ...w,
                 plan,
                 status,
-                isTrial: plan === 'TRIAL',
-                daysRemaining: status === 'ACTIVE' ? 30 : w.daysRemaining,
+                isTrial: plan === 'TRIAL' && !isIndefinite,
+                daysRemaining: calculatedDays,
               };
             }
             return w;

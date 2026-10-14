@@ -50,6 +50,7 @@ export const SuperAdminSubscriptionsPage: React.FC = () => {
   const [selectedWorkshopName, setSelectedWorkshopName] = useState('');
   const [targetPlan, setTargetPlan] = useState<SubscriptionPlanKey>('PRO');
   const [targetStatus, setTargetStatus] = useState<SubscriptionStatusKey>('ACTIVE');
+  const [targetDuration, setTargetDuration] = useState<number>(30);
 
   // Success toast
   const [actionMessage, setActionMessage] = useState('');
@@ -97,15 +98,26 @@ export const SuperAdminSubscriptionsPage: React.FC = () => {
     setSelectedWorkshopName(wName);
     setTargetPlan(curPlan);
     setTargetStatus(curStatus);
+    setTargetDuration(30);
     setPlanModalOpen(true);
   };
 
   const handleConfirmChangePlan = async () => {
     if (!selectedWorkshopId) return;
-    const success = await changePlan(selectedWorkshopId, targetPlan, targetStatus);
+    const success = await changePlan(selectedWorkshopId, targetPlan, targetStatus, targetDuration);
     if (success) {
       setPlanModalOpen(false);
       showNotification(`⭐ Plan actualizado con éxito para ${selectedWorkshopName}.`);
+    }
+  };
+
+  const handleFreeIndefinite = async (workshopId: string, workshopName: string) => {
+    if (!window.confirm(`¿Liberar membresía para "${workshopName}" de forma GRATUITA E INDEFINIDA (sin fecha de caducidad ni avisos de días restantes)?`)) {
+      return;
+    }
+    const success = await changePlan(workshopId, 'ELITE', 'ACTIVE', -1);
+    if (success) {
+      showNotification(`🎉 Membresía de "${workshopName}" liberada con éxito de forma gratuita e indefinida.`);
     }
   };
 
@@ -408,9 +420,13 @@ export const SuperAdminSubscriptionsPage: React.FC = () => {
                     </Badge>
                   </td>
                   <td>
-                    <strong className={w.daysRemaining <= 3 ? 'text-danger' : 'text-primary'}>
-                      {w.daysRemaining} días
-                    </strong>
+                    {w.daysRemaining > 1000 ? (
+                      <Badge variant="success">♾️ Ilimitado (Libre)</Badge>
+                    ) : (
+                      <strong className={w.daysRemaining <= 3 ? 'text-danger' : 'text-primary'}>
+                        {w.daysRemaining} días
+                      </strong>
+                    )}
                   </td>
                   <td>
                     <span className="stats-pill">
@@ -432,6 +448,22 @@ export const SuperAdminSubscriptionsPage: React.FC = () => {
                         onClick={() => handleOpenChangePlan(w.workshopId, w.workshopName, w.plan, w.status)}
                       >
                         Editar Plan
+                      </button>
+                      <button
+                        style={{
+                          padding: '5px 9px',
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          borderRadius: '6px',
+                          background: '#ecfdf5',
+                          color: '#059669',
+                          border: '1px solid #a7f3d0',
+                          cursor: 'pointer',
+                        }}
+                        title="Liberar acceso gratis indefinido"
+                        onClick={() => handleFreeIndefinite(w.workshopId, w.workshopName)}
+                      >
+                        🔓 Liberar Gratis
                       </button>
                     </div>
                   </td>
@@ -504,6 +536,20 @@ export const SuperAdminSubscriptionsPage: React.FC = () => {
                 <option value="TRIALING">En Periodo de Prueba</option>
                 <option value="PAST_DUE">Vencido (Periodo de Gracia)</option>
                 <option value="SUSPENDED">Suspendido (Solo Lectura)</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Duración / Vigencia:</label>
+              <select
+                className="modal-select"
+                value={targetDuration}
+                onChange={(e) => setTargetDuration(Number(e.target.value))}
+              >
+                <option value={30}>30 Días (1 Mes)</option>
+                <option value={90}>90 Días (3 Meses)</option>
+                <option value={365}>1 Año (365 Días)</option>
+                <option value={-1}>♾️ Indefinido / Permanente (Gratis y sin avisos de días)</option>
               </select>
             </div>
 
