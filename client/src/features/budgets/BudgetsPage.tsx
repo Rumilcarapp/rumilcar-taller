@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, EmptyState } from '../../components/ui';
 import { FileText, Plus, Search } from 'lucide-react';
@@ -9,7 +9,11 @@ import { getOrderWhatsAppContext } from '../../lib/orderActions';
 
 export const BudgetsPage: React.FC = () => {
   const navigate = useNavigate();
-  const { workOrders, updateOrderStatus, deleteWorkOrder, convertToWorkOrder } = useWorkOrderStore();
+  const { workOrders, fetchWorkOrders, updateOrderStatus, deleteWorkOrder, convertToWorkOrder } = useWorkOrderStore();
+
+  useEffect(() => {
+    fetchWorkOrders().catch(() => {});
+  }, [fetchWorkOrders]);
   
   const [activeTab, setActiveTab] = useState<'Todos' | 'Presupuesto' | 'Rechazado'>('Todos');
   const [searchTerm, setSearchTerm] = useState('');

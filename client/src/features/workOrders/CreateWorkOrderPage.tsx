@@ -224,8 +224,13 @@ export const CreateWorkOrderPage: React.FC = () => {
     }
   };
 
-  const handleSaveOrder = (totalUSD: number) => {
+  const [saving, setSaving] = useState(false);
+
+  const handleSaveOrder = async (totalUSD: number) => {
     if (!selectedClient || !selectedVehicle) { alert('Debes seleccionar un cliente y un vehiculo'); return; }
+    if (saving) return;
+    setSaving(true);
+
     const orderPayload = {
       client: selectedClient,
       vehicle: { ...selectedVehicle, kilometraje: mileage !== '' ? Number(mileage) : selectedVehicle.kilometraje },
@@ -241,18 +246,26 @@ export const CreateWorkOrderPage: React.FC = () => {
       photos: inspectionPhotos
     };
 
-    if (id) {
-      updateWorkOrder(id, orderPayload);
-    } else {
-      addWorkOrder({
-        id: 'RMC-2026-' + Math.floor(1000 + Math.random() * 9000).toString(),
-        date: new Date().toISOString(),
-        status: isBudget ? 'Presupuesto' : 'Recibido',
-        ...orderPayload
-      });
+    try {
+      if (id) {
+        updateWorkOrder(id, orderPayload);
+      } else {
+        await addWorkOrder({
+          id: 'RMC-2026-' + Math.floor(1000 + Math.random() * 9000).toString(),
+          date: new Date().toISOString(),
+          status: isBudget ? 'Presupuesto' : 'Recibido',
+          ...orderPayload
+        });
+      }
+      alert(isBudget ? "Presupuesto guardado y sincronizado exitosamente!" : "¡Orden guardada y sincronizada en la nube exitosamente!");
+      navigate(isBudget ? '/presupuestos' : '/trabajos');
+    } catch (err: any) {
+      console.error('Error saving order:', err);
+      alert("Aviso: La orden fue guardada en tu navegador. Sincronización en la nube: " + (err.message || 'Verifica tu conexión'));
+      navigate(isBudget ? '/presupuestos' : '/trabajos');
+    } finally {
+      setSaving(false);
     }
-    alert(isBudget ? "Presupuesto guardado exitosamente!" : "Orden guardada exitosamente!");
-    navigate(isBudget ? '/presupuestos' : '/trabajos');
   };
 
   return (

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, EmptyState } from '../../components/ui';
 import { FileText, Plus, List, KanbanSquare } from 'lucide-react';
@@ -16,7 +16,11 @@ type FilterTab = 'Todas' | OrderStatus;
 
 export const WorkOrdersPage: React.FC = () => {
   const navigate = useNavigate();
-  const { workOrders, updateOrderStatus, deleteWorkOrder } = useWorkOrderStore();
+  const { workOrders, fetchWorkOrders, updateOrderStatus, deleteWorkOrder } = useWorkOrderStore();
+
+  useEffect(() => {
+    fetchWorkOrders().catch(() => {});
+  }, [fetchWorkOrders]);
   
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [activeTab, setActiveTab] = useState<FilterTab>('Todas');

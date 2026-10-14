@@ -91,6 +91,7 @@ workOrdersRouter.get('/tracking/:id', async (req: Request, res: Response): Promi
       READY: 'Listo',
       DELIVERED: 'Finalizado',
       CANCELLED: 'Rechazado',
+      QUOTE: 'Presupuesto',
     };
 
     const services = (order.items || [])
@@ -213,19 +214,34 @@ const workOrderItemSchema = z.object({
 
 const statusEnum = z.preprocess((val) => {
   const map: Record<string, string> = {
-    'Presupuesto': 'RECEIVED',
+    'Presupuesto': 'QUOTE',
+    'QUOTE': 'QUOTE',
     'Recibido': 'RECEIVED',
+    'RECEIVED': 'RECEIVED',
     'En Proceso': 'IN_PROGRESS',
+    'IN_PROGRESS': 'IN_PROGRESS',
     'Listo': 'READY',
+    'READY': 'READY',
     'Finalizado': 'DELIVERED',
+    'DELIVERED': 'DELIVERED',
     'Rechazado': 'CANCELLED',
+    'CANCELLED': 'CANCELLED',
   };
   return (typeof val === 'string' && map[val]) || val;
-}, z.enum(['RECEIVED', 'IN_PROGRESS', 'READY', 'DELIVERED', 'CANCELLED']));
+}, z.enum(['QUOTE', 'RECEIVED', 'IN_PROGRESS', 'READY', 'DELIVERED', 'CANCELLED']));
 
 const createWorkOrderSchema = z.object({
-  clientId: z.string().min(1, 'El cliente es requerido'),
-  vehicleId: z.string().min(1, 'El vehículo es requerido'),
+  clientId: z.string().optional().nullable(),
+  clientDocumento: z.string().optional().nullable(),
+  clientName: z.string().optional().nullable(),
+  clientPhone: z.string().optional().nullable(),
+  clientAddress: z.string().optional().nullable(),
+  vehicleId: z.string().optional().nullable(),
+  vehiclePlate: z.string().optional().nullable(),
+  vehicleMake: z.string().optional().nullable(),
+  vehicleModel: z.string().optional().nullable(),
+  vehicleYear: z.union([z.number(), z.string()]).optional().nullable(),
+  vehicleColor: z.string().optional().nullable(),
   status: statusEnum.default('RECEIVED'),
   notes: z.string().optional().nullable(),
   inspectionNotes: z.string().optional().nullable(),
@@ -336,24 +352,113 @@ workOrdersRouter.post('/', async (req: AuthRequest, res: Response): Promise<void
       return;
     }
 
-    const { clientId, vehicleId, status, notes, inspectionNotes, totalAnchor, items } = parseResult.data;
+    const {
+      clientId,
+      clientDocumento,
+      clientName,
+      clientPhone,
+      clientAddress,
+      vehicleId,
+      vehiclePlate,
+      vehicleMake,
+      vehicleModel,
+      vehicleYear,
+      vehicleColor,
+      status,
+      notes,
+      inspectionNotes,
+      totalAnchor,
+      items,
+    } = parseResult.data;
 
-    // Verify client belongs to this workshop
-    const client = await prisma.client.findFirst({
-      where: { id: clientId, workshopId },
-    });
-    if (!client) {
-      res.status(400).json({ error: 'El cliente no pertenece a tu taller' });
-      return;
+    // 1. Resolve client with intelligent fallbacks
+    let client = null;
+    if (clientId) {
+      client = await prisma.client.findFirst({
+        where: { id: clientId, workshopId },
+      });
+      if (!client) {
+        client = await prisma.client.findFirst({
+          where: { taxId: { equals: clientId, mode: 'insensitive' }, workshopId },
+        });
+      }
     }
 
-    // Verify vehicle belongs to this client and workshop
-    const vehicle = await prisma.vehicle.findFirst({
-      where: { id: vehicleId, clientId },
-    });
+    if (!client && clientDocumento) {
+      client = await prisma.client.findFirst({
+        where: { taxId: { equals: clientDocumento, mode: 'insensitive' }, workshopId },
+      });
+    }
+
+    if (!client && clientName) {
+      client = await prisma.client.findFirst({
+        where: { name: { equals: clientName, mode: 'insensitive' }, workshopId },
+      });
+    }
+
+    if (!client) {
+      if (clientName || clientDocumento) {
+        client = await prisma.client.create({
+          data: {
+            workshopId,
+            name: clientName || 'Cliente General',
+            taxId: clientDocumento || null,
+            phone: clientPhone || null,
+            address: clientAddress || null,
+          },
+        });
+      } else {
+        res.status(400).json({ error: 'No se pudo identificar o registrar el cliente para la orden' });
+        return;
+      }
+    }
+
+    // 2. Resolve vehicle with intelligent fallbacks
+    let vehicle = null;
+    if (vehicleId) {
+      vehicle = await prisma.vehicle.findFirst({
+        where: { id: vehicleId, clientId: client.id },
+      });
+      if (!vehicle) {
+        vehicle = await prisma.vehicle.findFirst({
+          where: { licensePlate: { equals: vehicleId, mode: 'insensitive' }, clientId: client.id },
+        });
+      }
+    }
+
+    const cleanPlate = (vehiclePlate || '').trim();
+    if (!vehicle && cleanPlate) {
+      vehicle = await prisma.vehicle.findFirst({
+        where: { licensePlate: { equals: cleanPlate, mode: 'insensitive' }, clientId: client.id },
+      });
+      if (!vehicle) {
+        const existingPlateInWorkshop = await prisma.vehicle.findFirst({
+          where: {
+            licensePlate: { equals: cleanPlate, mode: 'insensitive' },
+            client: { workshopId },
+          },
+        });
+        if (existingPlateInWorkshop) {
+          vehicle = await prisma.vehicle.update({
+            where: { id: existingPlateInWorkshop.id },
+            data: { clientId: client.id },
+          });
+        }
+      }
+    }
+
     if (!vehicle) {
-      res.status(400).json({ error: 'El vehículo no pertenece al cliente seleccionado' });
-      return;
+      const cleanYear = vehicleYear ? parseInt(String(vehicleYear), 10) : null;
+      vehicle = await prisma.vehicle.create({
+        data: {
+          clientId: client.id,
+          make: vehicleMake || 'Vehículo',
+          model: vehicleModel || 'General',
+          year: !isNaN(cleanYear as any) ? cleanYear : null,
+          licensePlate: cleanPlate || (vehicleId && !vehicleId.startsWith('VEH-') ? vehicleId : 'S/P'),
+          color: vehicleColor || null,
+        },
+      });
     }
 
     // Atomic transaction: Compute workshop-scoped order number and persist order with items
@@ -375,8 +480,8 @@ workOrdersRouter.post('/', async (req: AuthRequest, res: Response): Promise<void
       return tx.workOrder.create({
         data: {
           workshopId,
-          clientId,
-          vehicleId,
+          clientId: client.id,
+          vehicleId: vehicle.id,
           createdById: userId,
           orderNumber,
           status,

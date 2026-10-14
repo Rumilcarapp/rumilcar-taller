@@ -48,7 +48,7 @@ export interface WorkOrder {
 interface WorkOrderState {
   workOrders: WorkOrder[];
   fetchWorkOrders: () => Promise<void>;
-  addWorkOrder: (order: WorkOrder) => void;
+  addWorkOrder: (order: WorkOrder) => Promise<any>;
   updateWorkOrder: (id: string, order: Partial<WorkOrder>) => void;
   updateOrderStatus: (id: string, status: OrderStatus) => void;
   payAndFinalizeOrder: (id: string, payments: PaymentRecord[]) => void;
@@ -63,6 +63,14 @@ const statusMapFromBackend: Record<string, OrderStatus> = {
   READY: 'Listo',
   DELIVERED: 'Finalizado',
   CANCELLED: 'Rechazado',
+  QUOTE: 'Presupuesto',
+  PRESUPUESTO: 'Presupuesto',
+  Presupuesto: 'Presupuesto',
+  Recibido: 'Recibido',
+  'En Proceso': 'En Proceso',
+  Listo: 'Listo',
+  Finalizado: 'Finalizado',
+  Rechazado: 'Rechazado',
 };
 
 export const useWorkOrderStore = create<WorkOrderState>()(
@@ -141,7 +149,7 @@ export const useWorkOrderStore = create<WorkOrderState>()(
           // Keep local state if offline
         }
       },
-      addWorkOrder: (order) => {
+      addWorkOrder: async (order) => {
         const itemsTotalUSD = [
           ...(order.services || []).map((s: any) => (s.price || 0) * (s.quantity || 1)),
           ...(order.parts || []).map((p: any) => (p.price || 0) * (p.quantity || 1)),
@@ -181,21 +189,38 @@ export const useWorkOrderStore = create<WorkOrderState>()(
           })),
         ];
 
-        api.post('/work-orders', {
-          clientId: order.client?.id || order.client?.documento,
-          vehicleId: order.vehicle?.id || order.vehicle?.placa,
-          status: order.status,
-          notes: order.notes,
-          inspectionNotes: order.inspectionNotes,
-          totalAnchor: safeTotalUSD,
-          items,
-        }).then((saved) => {
+        try {
+          const saved = await api.post('/work-orders', {
+            clientId: order.client?.id,
+            clientDocumento: order.client?.documento || order.client?.taxId,
+            clientName: `${order.client?.nombre || ''} ${order.client?.apellido || ''}`.trim() || order.client?.name,
+            clientPhone: order.client?.telefono || order.client?.phone,
+            clientAddress: order.client?.direccion || order.client?.address,
+            vehicleId: order.vehicle?.id,
+            vehiclePlate: order.vehicle?.placa || order.vehicle?.licensePlate,
+            vehicleMake: order.vehicle?.marca || order.vehicle?.make,
+            vehicleModel: order.vehicle?.modelo || order.vehicle?.model,
+            vehicleYear: order.vehicle?.ano || order.vehicle?.year,
+            vehicleColor: order.vehicle?.color,
+            status: order.status,
+            notes: order.notes,
+            inspectionNotes: order.inspectionNotes,
+            totalAnchor: safeTotalUSD,
+            items,
+          });
+
           if (saved && saved.id) {
             set((state) => ({
-              workOrders: state.workOrders.map((wo) => (wo.id === order.id ? { ...wo, id: saved.id } : wo)),
+              workOrders: state.workOrders.map((wo) =>
+                wo.id === order.id ? { ...wo, id: saved.id, orderNumber: saved.orderNumber } : wo
+              ),
             }));
+            return saved;
           }
-        }).catch(() => {});
+        } catch (err) {
+          console.error('Error al sincronizar orden con la base de datos Supabase:', err);
+          throw err;
+        }
       },
       updateWorkOrder: (id, order) => {
         const currentOrder = get().workOrders.find(wo => wo.id === id);
