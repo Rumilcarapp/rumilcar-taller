@@ -358,9 +358,11 @@ export const useSubscriptionStore = create<SubscriptionState>()(
             isLoading: false,
           });
         } else {
-          // Recompute remaining days
+          // Recompute remaining days consistently
           const now = new Date();
-          const endsAt = new Date(currentSub.currentPeriodEnd || currentSub.trialEndsAt);
+          const trialEnd = currentSub.trialEndsAt ? new Date(currentSub.trialEndsAt) : new Date(0);
+          const periodEnd = currentSub.currentPeriodEnd ? new Date(currentSub.currentPeriodEnd) : new Date(0);
+          const endsAt = periodEnd > trialEnd ? periodEnd : trialEnd;
           const days = Math.ceil((endsAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
           set({
             subscription: {

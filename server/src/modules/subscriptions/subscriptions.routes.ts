@@ -150,24 +150,19 @@ subscriptionsRouter.get('/current', authenticate, async (req: AuthRequest, res: 
       });
     }
 
-    // Calculate remaining days
+    // Calculate remaining days consistently across all devices
     const now = new Date();
     let daysRemaining = 0;
     let isExpired = false;
 
-    if (sub.status === 'ACTIVE' && sub.currentPeriodEnd) {
-      const diffTime = sub.currentPeriodEnd.getTime() - now.getTime();
-      daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      if (daysRemaining <= 0) {
-        isExpired = true;
-      }
-    } else {
-      // Trialing or past due
-      const diffTime = sub.trialEndsAt.getTime() - now.getTime();
-      daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      if (daysRemaining <= 0) {
-        isExpired = true;
-      }
+    const trialEnd = sub.trialEndsAt ? new Date(sub.trialEndsAt) : new Date(0);
+    const periodEnd = sub.currentPeriodEnd ? new Date(sub.currentPeriodEnd) : new Date(0);
+    const effectiveEnd = periodEnd > trialEnd ? periodEnd : trialEnd;
+
+    const diffTime = effectiveEnd.getTime() - now.getTime();
+    daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    if (daysRemaining <= 0) {
+      isExpired = true;
     }
 
     res.json({
@@ -473,6 +468,7 @@ subscriptionsRouter.post('/admin/extend-trial', authenticate, requireSuperAdmin,
       where: { workshopId },
       data: {
         trialEndsAt: newTrialEnds,
+        currentPeriodEnd: newTrialEnds,
         status: 'TRIALING',
       },
     });
@@ -502,6 +498,7 @@ subscriptionsRouter.post('/admin/change-plan', authenticate, requireSuperAdmin, 
         status,
         currentPeriodStart: now,
         currentPeriodEnd: newEnd,
+        trialEndsAt: newEnd,
       },
     });
 
