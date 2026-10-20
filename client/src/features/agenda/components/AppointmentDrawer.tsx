@@ -1,16 +1,71 @@
-import React from 'react';
-import { X, Calendar, User, Phone, Car, Wrench, Info, CheckCircle2, Navigation } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Calendar, User, Phone, Car, Wrench, Info, CheckCircle2, Navigation, MessageCircle, Copy, Check, Edit } from 'lucide-react';
 import { Button, Badge } from '../../../components/ui';
+import { buildWhatsAppMessage, openWhatsApp, copyToClipboard } from '../../../lib/whatsapp';
+import { useWorkshopStore } from '../../../store/useWorkshopStore';
+import { useClientStore } from '../../../store/useClientStore';
 import './AppointmentDrawer.css';
 
 interface AppointmentDrawerProps {
   appointment: any;
   onClose: () => void;
   onConvertToWO: () => void;
+  onEdit?: () => void;
 }
 
-export const AppointmentDrawer: React.FC<AppointmentDrawerProps> = ({ appointment, onClose, onConvertToWO }) => {
+export const AppointmentDrawer: React.FC<AppointmentDrawerProps> = ({ appointment, onClose, onConvertToWO, onEdit }) => {
+  const [copiedLink, setCopiedLink] = useState(false);
+  const { workshop } = useWorkshopStore();
+  const { clients } = useClientStore();
+
   if (!appointment) return null;
+
+  // Resolve client phone
+  const matchedClient = appointment.clientId 
+    ? clients.find(c => c.id === appointment.clientId) 
+    : clients.find(c => `${c.nombre} ${c.apellido || ''}`.trim().toLowerCase() === (appointment.clientName || '').trim().toLowerCase());
+
+  const clientPhone = appointment.clientPhone || matchedClient?.telefono || '';
+
+  const handleSendWhatsApp = () => {
+    const confUrl = `${window.location.origin}/cita/${appointment.id}`;
+    const parts = (appointment.vehicleDesc || '').split('-');
+    const plate = parts.length > 1 ? parts[parts.length - 1].trim() : '';
+    const makeModel = parts[0].trim().split(' ');
+
+    const message = buildWhatsAppMessage('CITA_CONFIRMACION', {
+      clientName: appointment.clientName,
+      clientPhone: clientPhone,
+      workshopName: workshop?.name || 'Rumilcar Taller Mecánico',
+      vehicle: {
+        marca: makeModel[0] || '',
+        modelo: makeModel.slice(1).join(' ') || '',
+        placa: plate || '',
+      },
+      appointment: {
+        id: appointment.id,
+        date: appointment.date,
+        startTime: appointment.startTime,
+        endTime: appointment.endTime,
+        service: appointment.service,
+        confirmationUrl: confUrl,
+      },
+    });
+
+    if (clientPhone) {
+      openWhatsApp(clientPhone, message);
+    } else {
+      copyToClipboard(message);
+      alert('El cliente no tiene teléfono guardado. El mensaje con el link de confirmación fue copiado al portapapeles.');
+    }
+  };
+
+  const handleCopyLink = async () => {
+    const confUrl = `${window.location.origin}/cita/${appointment.id}`;
+    await copyToClipboard(confUrl);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2500);
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -27,9 +82,21 @@ export const AppointmentDrawer: React.FC<AppointmentDrawerProps> = ({ appointmen
     <>
       <div className="drawer-overlay" onClick={onClose} />
       <div className="drawer-container">
-        <div className="drawer-header">
+        <div className="drawer-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h2 className="drawer-title">DETALLE DE CITA</h2>
-          <button className="drawer-close-btn" onClick={onClose}><X size={20} /></button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            {onEdit && (
+              <button 
+                onClick={onEdit} 
+                className="drawer-close-btn" 
+                title="Editar cita"
+                style={{ color: '#60a5fa' }}
+              >
+                <Edit size={18} />
+              </button>
+            )}
+            <button className="drawer-close-btn" onClick={onClose}><X size={20} /></button>
+          </div>
         </div>
 
         <div className="drawer-content">
@@ -48,7 +115,9 @@ export const AppointmentDrawer: React.FC<AppointmentDrawerProps> = ({ appointmen
             <h4 className="drawer-section-title"><User size={14}/> CLIENTE</h4>
             <div className="drawer-field">
               <div className="drawer-value">{appointment.clientName}</div>
-              <div className="drawer-subvalue"><Phone size={12}/> 0414-1234567 (Mock)</div>
+              <div className="drawer-subvalue">
+                <Phone size={12}/> {clientPhone || 'Sin teléfono registrado'}
+              </div>
             </div>
           </div>
 
@@ -100,7 +169,55 @@ export const AppointmentDrawer: React.FC<AppointmentDrawerProps> = ({ appointmen
           </div>
         </div>
 
-        <div className="drawer-footer">
+        <div className="drawer-footer" style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
+            <button
+              onClick={handleSendWhatsApp}
+              style={{
+                flex: 1,
+                backgroundColor: '#25D366',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '0.65rem 0.85rem',
+                fontWeight: 700,
+                fontSize: '0.88rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.45rem',
+                cursor: 'pointer',
+                transition: 'opacity 0.2s',
+              }}
+              title="Enviar mensaje híbrido de confirmación por WhatsApp"
+            >
+              <MessageCircle size={16} />
+              WhatsApp de Cita
+            </button>
+
+            <button
+              onClick={handleCopyLink}
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                color: '#e5e7eb',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                borderRadius: '8px',
+                padding: '0.65rem 0.85rem',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.35rem',
+                cursor: 'pointer',
+              }}
+              title="Copiar enlace de confirmación web"
+            >
+              {copiedLink ? <Check size={16} color="#34d399" /> : <Copy size={16} />}
+              {copiedLink ? '¡Copiado!' : 'Copiar Link'}
+            </button>
+          </div>
+
           <Button variant="primary" style={{ width: '100%' }} onClick={onConvertToWO} disabled={appointment.status === 'CANCELLED'}>
             CONVERTIR A ORDEN DE TRABAJO
           </Button>

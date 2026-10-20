@@ -3,11 +3,13 @@ import { persist } from 'zustand/middleware';
 import { api } from '../services/api';
 import { useClientStore } from './useClientStore';
 import { useVehicleStore } from './useVehicleStore';
+import { safeDate, formatLocalDateStr, safeToISOString } from '../lib/dateUtils';
 
 export interface AppointmentItem {
   id: string;
   clientId?: string;
   clientName: string;
+  clientPhone?: string;
   vehicleId?: string;
   vehicleDesc: string;
   mechanicId?: string | null;
@@ -26,7 +28,7 @@ export interface AppointmentItem {
 interface AppointmentState {
   appointments: AppointmentItem[];
   fetchAppointments: (date?: string) => Promise<void>;
-  addAppointment: (apt: AppointmentItem) => void;
+  addAppointment: (apt: AppointmentItem) => Promise<AppointmentItem>;
   updateAppointment: (id: string, updated: Partial<AppointmentItem>) => void;
   deleteAppointment: (id: string) => void;
 }
@@ -41,8 +43,8 @@ export const useAppointmentStore = create<AppointmentState>()(
           const data = await api.get(endpoint);
           if (Array.isArray(data)) {
             const mapped: AppointmentItem[] = data.map((a: any) => {
-              const start = new Date(a.startAt);
-              const end = new Date(a.endAt);
+              const start = safeDate(a.startAt);
+              const end = safeDate(a.endAt || a.startAt);
               const startTime = start.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
               const endTime = end.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
 
@@ -50,17 +52,18 @@ export const useAppointmentStore = create<AppointmentState>()(
                 id: a.id,
                 clientId: a.clientId,
                 clientName: a.client?.name || 'Cliente',
+                clientPhone: a.client?.phone || '',
                 vehicleId: a.vehicleId,
                 vehicleDesc: a.vehicle ? `${a.vehicle.make} ${a.vehicle.model} - ${a.vehicle.licensePlate}` : 'Vehículo',
                 mechanicId: a.mechanicId,
                 mechanic: a.mechanic?.name || null,
                 service: a.serviceMotif,
                 modality: a.modality || 'TALLER',
-                date: a.startAt.split('T')[0],
-                startAt: a.startAt,
-                endAt: a.endAt,
-                startTime,
-                endTime,
+                date: a.startAt ? formatLocalDateStr(a.startAt) : formatLocalDateStr(start),
+                startAt: a.startAt ? String(a.startAt) : safeToISOString(start),
+                endAt: a.endAt ? String(a.endAt) : safeToISOString(end),
+                startTime: a.startTime || startTime,
+                endTime: a.endTime || endTime,
                 internalNotes: a.internalNotes || '',
                 status: a.status || 'PENDING',
               };
@@ -71,20 +74,16 @@ export const useAppointmentStore = create<AppointmentState>()(
           // Offline fallback
         }
       },
-      addAppointment: (apt) => {
+      addAppointment: async (apt) => {
         set((state) => ({ appointments: [apt, ...state.appointments] }));
 
-        // Resolve client and vehicle IDs if not provided
-        const clients = useClientStore.getState().clients;
-        const matchedClient = clients.find(c => c.nombre.toLowerCase() === apt.clientName.toLowerCase()) || clients[0];
-
-        const vehicles = useVehicleStore.getState().vehicles;
-        const matchedVehicle = vehicles.find(v => apt.vehicleDesc.toLowerCase().includes(v.placa.toLowerCase())) || vehicles[0];
-
-        if (matchedClient && matchedVehicle) {
-          api.post('/appointments', {
-            clientId: matchedClient.id,
-            vehicleId: matchedVehicle.id,
+        try {
+          const saved = await api.post('/appointments', {
+            clientId: apt.clientId || null,
+            clientName: apt.clientName,
+            clientPhone: apt.clientPhone || null,
+            vehicleId: apt.vehicleId || null,
+            vehicleDesc: apt.vehicleDesc,
             mechanicId: apt.mechanicId || null,
             startAt: apt.startAt,
             endAt: apt.endAt,
@@ -92,14 +91,29 @@ export const useAppointmentStore = create<AppointmentState>()(
             serviceMotif: apt.service,
             internalNotes: apt.internalNotes,
             status: apt.status,
-          }).then((saved) => {
-            if (saved && saved.id) {
-              set((state) => ({
-                appointments: state.appointments.map((a) => (a.id === apt.id ? { ...a, id: saved.id } : a)),
-              }));
-            }
-          }).catch(() => {});
+          });
+
+          if (saved && saved.id) {
+            const fullApt: AppointmentItem = {
+              ...apt,
+              id: saved.id,
+              clientId: saved.clientId,
+              clientName: saved.client?.name || apt.clientName,
+              clientPhone: saved.client?.phone || apt.clientPhone,
+              vehicleId: saved.vehicleId,
+              vehicleDesc: saved.vehicle
+                ? `${saved.vehicle.make} ${saved.vehicle.model} - ${saved.vehicle.licensePlate}`
+                : apt.vehicleDesc,
+            };
+            set((state) => ({
+              appointments: state.appointments.map((a) => (a.id === apt.id ? fullApt : a)),
+            }));
+            return fullApt;
+          }
+        } catch (err) {
+          console.error('[Appointments] Error al guardar cita en el servidor:', err);
         }
+        return apt;
       },
       updateAppointment: (id, updated) => {
         set((state) => ({
@@ -108,7 +122,10 @@ export const useAppointmentStore = create<AppointmentState>()(
 
         api.put(`/appointments/${id}`, {
           ...(updated.clientId && { clientId: updated.clientId }),
+          ...(updated.clientName && { clientName: updated.clientName }),
+          ...(updated.clientPhone && { clientPhone: updated.clientPhone }),
           ...(updated.vehicleId && { vehicleId: updated.vehicleId }),
+          ...(updated.vehicleDesc && { vehicleDesc: updated.vehicleDesc }),
           ...(updated.mechanicId !== undefined && { mechanicId: updated.mechanicId }),
           ...(updated.startAt && { startAt: updated.startAt }),
           ...(updated.endAt && { endAt: updated.endAt }),
@@ -116,7 +133,9 @@ export const useAppointmentStore = create<AppointmentState>()(
           ...(updated.service && { serviceMotif: updated.service }),
           ...(updated.internalNotes !== undefined && { internalNotes: updated.internalNotes }),
           ...(updated.status && { status: updated.status }),
-        }).catch(() => {});
+        }).catch((err) => {
+          console.error('[Appointments] Error al actualizar cita:', err);
+        });
       },
       deleteAppointment: (id) => {
         set((state) => ({

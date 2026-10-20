@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Badge, EmptyState } from '../../../components/ui';
-import { Clock, Eye, Edit, X, User } from 'lucide-react';
+import { Clock, Eye, Edit, X, User, MessageCircle } from 'lucide-react';
 import { AppointmentDrawer } from './AppointmentDrawer';
+import { buildWhatsAppMessage, openWhatsApp, copyToClipboard } from '../../../lib/whatsapp';
+import { useWorkshopStore } from '../../../store/useWorkshopStore';
+import { useClientStore } from '../../../store/useClientStore';
+import { formatLocalDateStr, formatAgendaTitle } from '../../../lib/dateUtils';
 import './AppointmentsList.css';
 
 interface AppointmentsListProps {
@@ -21,9 +25,50 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
   onUpdateStatus
 }) => {
   const navigate = useNavigate();
+  const { workshop } = useWorkshopStore();
+  const { clients } = useClientStore();
+
   const [viewingApt, setViewingApt] = useState<any>(null);
   const [cancelingAptId, setCancelingAptId] = useState<string | null>(null);
   const [statusDropdownAptId, setStatusDropdownAptId] = useState<string | null>(null);
+
+  const handleQuickWhatsApp = (apt: any) => {
+    const matchedClient = apt.clientId 
+      ? clients.find(c => c.id === apt.clientId) 
+      : clients.find(c => `${c.nombre} ${c.apellido || ''}`.trim().toLowerCase() === (apt.clientName || '').trim().toLowerCase());
+
+    const clientPhone = apt.clientPhone || matchedClient?.telefono || '';
+    const confUrl = `${window.location.origin}/cita/${apt.id}`;
+    const parts = (apt.vehicleDesc || '').split('-');
+    const plate = parts.length > 1 ? parts[parts.length - 1].trim() : '';
+    const makeModel = parts[0].trim().split(' ');
+
+    const message = buildWhatsAppMessage('CITA_CONFIRMACION', {
+      clientName: apt.clientName,
+      clientPhone: clientPhone,
+      workshopName: workshop?.name || 'Rumilcar Taller Mecánico',
+      vehicle: {
+        marca: makeModel[0] || '',
+        modelo: makeModel.slice(1).join(' ') || '',
+        placa: plate || '',
+      },
+      appointment: {
+        id: apt.id,
+        date: apt.date,
+        startTime: apt.startTime,
+        endTime: apt.endTime,
+        service: apt.service,
+        confirmationUrl: confUrl,
+      },
+    });
+
+    if (clientPhone) {
+      openWhatsApp(clientPhone, message);
+    } else {
+      copyToClipboard(message);
+      alert('El cliente no tiene teléfono guardado. El mensaje con el enlace fue copiado al portapapeles.');
+    }
+  };
 
   const handleConvertToWorkOrder = (apt: any) => {
     if (!apt) return;
@@ -43,14 +88,12 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
     });
   };
 
-  const dateStr = selectedDate.toISOString().split('T')[0];
+  const dateStr = formatLocalDateStr(selectedDate);
   const dayAppointments = appointments
     .filter(a => a.date === dateStr)
-    .sort((a, b) => a.startTime.localeCompare(b.startTime));
+    .sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
 
-  const getDayName = (date: Date) => ['Domingo', 'Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado'][date.getDay()];
-  const getMonthName = (date: Date) => ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"][date.getMonth()];
-  const title = `Agenda del ${getDayName(selectedDate)}, ${selectedDate.getDate()} de ${getMonthName(selectedDate)}`;
+  const title = formatAgendaTitle(selectedDate);
 
   const getStatusBadge = (status: string, aptId: string) => {
     const isDropdownOpen = statusDropdownAptId === aptId;
@@ -135,6 +178,9 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
                     </div>
                     {!isCancelled && (
                       <div className="apt-actions">
+                        <button className="apt-action-btn apt-action-wa" title="Enviar WhatsApp de confirmación" onClick={() => handleQuickWhatsApp(apt)}>
+                          <MessageCircle size={16} />
+                        </button>
                         <button className="apt-action-btn" title="Ver detalle" onClick={() => setViewingApt(apt)}><Eye size={16} /></button>
                         <button className="apt-action-btn" title="Editar" onClick={() => onEditClick(apt)}><Edit size={16} /></button>
                         <button className="apt-action-btn apt-action-danger" title="Cancelar" onClick={() => setCancelingAptId(apt.id)}><X size={16} /></button>
@@ -165,6 +211,11 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
         appointment={viewingApt} 
         onClose={() => setViewingApt(null)} 
         onConvertToWO={() => handleConvertToWorkOrder(viewingApt)}
+        onEdit={() => {
+          const aptToEdit = viewingApt;
+          setViewingApt(null);
+          onEditClick(aptToEdit);
+        }}
       />
     </div>
   );

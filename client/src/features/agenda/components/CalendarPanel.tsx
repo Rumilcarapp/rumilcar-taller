@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Badge } from '../../../components/ui';
+import { safeDate, formatLocalDateStr } from '../../../lib/dateUtils';
 import './CalendarPanel.css';
 
 interface CalendarPanelProps {
@@ -10,7 +11,8 @@ interface CalendarPanelProps {
 }
 
 export const CalendarPanel: React.FC<CalendarPanelProps> = ({ selectedDate, onSelectDate, appointments }) => {
-  const [currentMonth, setCurrentMonth] = useState(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
+  const safeSelected = safeDate(selectedDate);
+  const [currentMonth, setCurrentMonth] = useState(new Date(safeSelected.getFullYear(), safeSelected.getMonth(), 1));
 
   const nextMonth = () => {
     setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
@@ -50,7 +52,7 @@ export const CalendarPanel: React.FC<CalendarPanelProps> = ({ selectedDate, onSe
   };
 
   const hasAppointments = (day: number) => {
-    const dateStr = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day).toISOString().split('T')[0];
+    const dateStr = formatLocalDateStr(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day));
     return appointments.some(a => a.date === dateStr);
   };
 

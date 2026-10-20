@@ -5,6 +5,9 @@ import { AppointmentModal } from './components/AppointmentModal';
 import { Button } from '../../components/ui';
 import { Plus } from 'lucide-react';
 import { useAppointmentStore, AppointmentItem } from '../../store/useAppointmentStore';
+import { useWorkshopStore } from '../../store/useWorkshopStore';
+import { useClientStore } from '../../store/useClientStore';
+import { buildWhatsAppMessage, openWhatsApp, copyToClipboard } from '../../lib/whatsapp';
 import './AgendaPage.css';
 
 export const AgendaPage: React.FC = () => {
@@ -13,6 +16,8 @@ export const AgendaPage: React.FC = () => {
   const [editingApt, setEditingApt] = useState<AppointmentItem | null>(null);
 
   const { appointments, fetchAppointments, addAppointment, updateAppointment } = useAppointmentStore();
+  const { workshop } = useWorkshopStore();
+  const { clients } = useClientStore();
 
   useEffect(() => {
     fetchAppointments().catch(() => {});
@@ -28,14 +33,54 @@ export const AgendaPage: React.FC = () => {
     setShowModal(true);
   };
 
-  const handleSaveAppointment = (savedApt: any) => {
+  const handleSaveAppointment = async (savedApt: any, sendWhatsApp?: boolean) => {
+    let resultApt = savedApt;
     if (editingApt) {
       updateAppointment(savedApt.id, savedApt);
     } else {
-      addAppointment(savedApt);
+      resultApt = await addAppointment(savedApt);
     }
     setShowModal(false);
     setEditingApt(null);
+
+    if (sendWhatsApp) {
+      const aptId = resultApt?.id || savedApt.id;
+      const matchedClient = savedApt.clientId 
+        ? clients.find(c => c.id === savedApt.clientId) 
+        : clients.find(c => `${c.nombre} ${c.apellido || ''}`.trim().toLowerCase() === (savedApt.clientName || '').trim().toLowerCase());
+
+      const clientPhone = savedApt.clientPhone || matchedClient?.telefono || '';
+      const confUrl = `${window.location.origin}/cita/${aptId}`;
+      const parts = (savedApt.vehicleDesc || '').split('-');
+      const plate = parts.length > 1 ? parts[parts.length - 1].trim() : '';
+      const makeModel = parts[0].trim().split(' ');
+
+      const message = buildWhatsAppMessage('CITA_CONFIRMACION', {
+        clientName: savedApt.clientName,
+        clientPhone,
+        workshopName: workshop?.name || 'Rumilcar Taller Mecánico',
+        vehicle: {
+          marca: makeModel[0] || '',
+          modelo: makeModel.slice(1).join(' ') || '',
+          placa: plate || '',
+        },
+        appointment: {
+          id: aptId,
+          date: savedApt.date,
+          startTime: savedApt.startTime,
+          endTime: savedApt.endTime,
+          service: savedApt.service,
+          confirmationUrl: confUrl,
+        },
+      });
+
+      if (clientPhone) {
+        openWhatsApp(clientPhone, message);
+      } else {
+        copyToClipboard(message);
+        alert('Cita guardada con éxito. El cliente no tiene teléfono guardado, pero el mensaje con el link de confirmación fue copiado a tu portapapeles.');
+      }
+    }
   };
 
   const handleUpdateStatus = (id: string, newStatus: string) => {

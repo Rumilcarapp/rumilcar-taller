@@ -128,6 +128,7 @@ export type WhatsAppTemplateType =
   | 'COBRANZA'
   | 'AVANCE'
   | 'POST_VENTA'
+  | 'CITA_CONFIRMACION'
   | 'LIBRE';
 
 export interface WhatsAppContextData {
@@ -140,6 +141,14 @@ export interface WhatsAppContextData {
     placa?: string;
     year?: number | string;
     color?: string;
+  };
+  appointment?: {
+    id?: string;
+    date?: string;
+    startTime?: string;
+    endTime?: string;
+    service?: string;
+    confirmationUrl?: string;
   };
   orderId?: string;
   status?: string;
@@ -343,6 +352,26 @@ export function buildWhatsAppMessage(type: WhatsAppTemplateType, ctx: WhatsAppCo
       }
 
       msg += `¡Gracias por formar parte de la familia *${workshop}*! Que tengas una excelente semana.`;
+      return msg;
+    }
+
+    case 'CITA_CONFIRMACION': {
+      const aptDate = ctx.appointment?.date || 'la fecha indicada';
+      const aptTime = ctx.appointment?.startTime || '';
+      const service = ctx.appointment?.service || 'Revisión técnica';
+      const confUrl = ctx.appointment?.confirmationUrl || (typeof window !== 'undefined' ? `${window.location.origin}/cita/${ctx.appointment?.id || ''}` : '');
+
+      let msg = `¡Hola, *${client}*! 👋🚗\n\n` +
+        `Te saludamos de *${workshop}*. Hemos reservado tu turno para el día *${aptDate}*` +
+        (aptTime ? ` a las *${aptTime}*` : '') + `.\n\n` +
+        `🛠️ *Servicio programado:* ${service}\n` +
+        (ctx.vehicle?.marca || ctx.vehicle?.modelo ? `🚘 *Vehículo preliminar:* ${vehDesc}\n\n` : `\n`) +
+        `📲 *CONFIRMAR Y COMPLETAR DATOS EN 1 TOQUE:*\n` +
+        `Para asegurar tu cupo y completar los datos de tu vehículo (placa, modelo, etc.) ingresa aquí:\n` +
+        `👉 ${confUrl}\n\n` +
+        `💬 _(O si lo prefieres, solo respóndenos a este mensaje con un "Confirmo" y la placa/modelo de tu vehículo)._\n\n` +
+        `¡Te esperamos en *${workshop}*! 🙌`;
+
       return msg;
     }
 

@@ -22,6 +22,7 @@ import { ComprasPage } from './features/compras/ComprasPage';
 import { ReportesPage } from './features/reportes/ReportesPage';
 import { CRMPage } from './features/crm/CRMPage';
 import { AgendaPage } from './features/agenda/AgendaPage';
+import { AppointmentConfirmationPage } from './features/agenda/AppointmentConfirmationPage';
 import { BudgetsPage } from './features/budgets/BudgetsPage';
 import { UsersPage } from './features/users/UsersPage';
 import { TrackingPage } from './features/tracking/TrackingPage';
@@ -71,10 +72,73 @@ const WorkshopUsersRoute: React.FC = () => {
   );
 };
 
+const RouteErrorBoundary: React.FC = () => {
+  return (
+    <div style={{
+      minHeight: '80vh',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '2rem',
+      textAlign: 'center',
+      color: '#f3f4f6',
+      background: 'radial-gradient(circle at top center, #111827 0%, #090d16 100%)',
+    }}>
+      <div style={{
+        background: 'rgba(239, 68, 68, 0.1)',
+        border: '1px solid rgba(239, 68, 68, 0.3)',
+        borderRadius: '16px',
+        padding: '2rem',
+        maxWidth: '480px',
+        width: '100%',
+      }}>
+        <h2 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '0.75rem', color: '#f87171' }}>
+          Inconveniente al cargar la vista
+        </h2>
+        <p style={{ color: '#9ca3af', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: 1.5 }}>
+          Hemos protegido tu sesión y tus datos. Puedes recargar la pantalla o volver al panel principal del taller.
+        </p>
+        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+          <button
+            onClick={() => window.location.reload()}
+            style={{
+              padding: '0.65rem 1.25rem',
+              backgroundColor: '#2563eb',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            Recargar pantalla
+          </button>
+          <button
+            onClick={() => { window.location.href = '/'; }}
+            style={{
+              padding: '0.65rem 1.25rem',
+              backgroundColor: 'rgba(255, 255, 255, 0.08)',
+              color: '#d1d5db',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              borderRadius: '8px',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            Ir al Inicio
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const router = createBrowserRouter([
   {
     path: '/login',
     element: <LoginPage />,
+    errorElement: <RouteErrorBoundary />,
   },
   {
     path: '/restablecer-contrasena',
@@ -87,10 +151,22 @@ export const router = createBrowserRouter([
   {
     path: '/rastreo/:id',
     element: <TrackingPage />,
+    errorElement: <RouteErrorBoundary />,
   },
   {
     path: '/tracking/:id',
     element: <TrackingPage />,
+    errorElement: <RouteErrorBoundary />,
+  },
+  {
+    path: '/cita/:id',
+    element: <AppointmentConfirmationPage />,
+    errorElement: <RouteErrorBoundary />,
+  },
+  {
+    path: '/confirmar-cita/:id',
+    element: <AppointmentConfirmationPage />,
+    errorElement: <RouteErrorBoundary />,
   },
   {
     path: '/',
@@ -99,6 +175,7 @@ export const router = createBrowserRouter([
         <AppLayout />
       </ProtectedRoute>
     ),
+    errorElement: <RouteErrorBoundary />,
     children: [
       { index: true, element: <RootIndexRoute /> },
       { path: 'trabajos', element: <PermissionGuard module="workOrders"><WorkOrdersPage /></PermissionGuard> },

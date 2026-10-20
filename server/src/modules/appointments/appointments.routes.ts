@@ -1,22 +1,211 @@
-import { Router, Response } from 'express';
+import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { prisma } from '../../lib/prisma';
 import { authenticate, requireWorkshop, requireRole, AuthRequest, logSecurityEvent } from '../../middleware/auth';
 
 export const appointmentsRouter = Router();
 
-// Apply authentication and workshop requirement
+// ==========================================
+// PUBLIC APPOINTMENT CONFIRMATION ROUTES (No Auth Required)
+// ==========================================
+
+const publicConfirmSchema = z.object({
+  make: z.string().optional(),
+  model: z.string().optional(),
+  year: z.union([z.number(), z.string()]).optional().nullable(),
+  licensePlate: z.string().optional(),
+  color: z.string().optional().nullable(),
+  clientNotes: z.string().optional().nullable(),
+});
+
+// GET /api/appointments/public/:id
+appointmentsRouter.get('/public/:id', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const rawParam = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const rawId = (rawParam || '').trim();
+    if (!rawId) {
+      res.status(400).json({ error: 'Identificador de cita requerido' });
+      return;
+    }
+
+    const appointment = await prisma.appointment.findFirst({
+      where: {
+        OR: [
+          { id: rawId },
+          { id: { startsWith: rawId, mode: 'insensitive' } },
+        ],
+      },
+      include: {
+        workshop: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            address: true,
+            logoUrl: true,
+          },
+        },
+        client: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+          },
+        },
+        vehicle: {
+          select: {
+            id: true,
+            make: true,
+            model: true,
+            year: true,
+            licensePlate: true,
+            color: true,
+          },
+        },
+      },
+    });
+
+    if (!appointment) {
+      res.status(404).json({ error: 'Cita no encontrada o ha expirado' });
+      return;
+    }
+
+    res.json(appointment);
+  } catch (error: any) {
+    console.error('Error fetching public appointment:', error);
+    res.status(500).json({ error: 'Error al consultar la cita' });
+  }
+});
+
+// POST /api/appointments/public/:id/confirm
+appointmentsRouter.post('/public/:id/confirm', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const rawParam = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const rawId = (rawParam || '').trim();
+    if (!rawId) {
+      res.status(400).json({ error: 'Identificador de cita requerido' });
+      return;
+    }
+
+    const parseResult = publicConfirmSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      res.status(400).json({ error: parseResult.error.errors[0].message });
+      return;
+    }
+
+    const data = parseResult.data;
+
+    const appointment = await prisma.appointment.findFirst({
+      where: {
+        OR: [
+          { id: rawId },
+          { id: { startsWith: rawId, mode: 'insensitive' } },
+        ],
+      },
+      include: {
+        vehicle: true,
+      },
+    });
+
+    if (!appointment) {
+      res.status(404).json({ error: 'Cita no encontrada' });
+      return;
+    }
+
+    // 1. Update vehicle details if provided
+    if (appointment.vehicleId) {
+      const vehicleUpdate: any = {};
+      if (data.make && data.make.trim()) vehicleUpdate.make = data.make.trim();
+      if (data.model && data.model.trim()) vehicleUpdate.model = data.model.trim();
+      if (data.licensePlate && data.licensePlate.trim()) vehicleUpdate.licensePlate = data.licensePlate.trim().toUpperCase();
+      if (data.color && data.color.trim()) vehicleUpdate.color = data.color.trim();
+      if (data.year) {
+        const parsedYear = parseInt(String(data.year), 10);
+        if (!isNaN(parsedYear) && parsedYear >= 1950 && parsedYear <= 2030) {
+          vehicleUpdate.year = parsedYear;
+        }
+      }
+
+      if (Object.keys(vehicleUpdate).length > 0) {
+        await prisma.vehicle.update({
+          where: { id: appointment.vehicleId },
+          data: vehicleUpdate,
+        });
+      }
+    }
+
+    // 2. Append client notes if any
+    let updatedInternalNotes = appointment.internalNotes || '';
+    if (data.clientNotes && data.clientNotes.trim()) {
+      const clientNoteTag = `[Cliente al confirmar]: ${data.clientNotes.trim()}`;
+      updatedInternalNotes = updatedInternalNotes
+        ? `${updatedInternalNotes}\n${clientNoteTag}`
+        : clientNoteTag;
+    }
+
+    // 3. Mark appointment as CONFIRMED
+    const updatedAppointment = await prisma.appointment.update({
+      where: { id: appointment.id },
+      data: {
+        status: 'CONFIRMED',
+        internalNotes: updatedInternalNotes || null,
+      },
+      include: {
+        workshop: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            address: true,
+            logoUrl: true,
+          },
+        },
+        client: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+          },
+        },
+        vehicle: {
+          select: {
+            id: true,
+            make: true,
+            model: true,
+            year: true,
+            licensePlate: true,
+            color: true,
+          },
+        },
+      },
+    });
+
+    res.json({
+      success: true,
+      message: 'Cita confirmada exitosamente',
+      appointment: updatedAppointment,
+    });
+  } catch (error: any) {
+    console.error('Error confirming appointment:', error);
+    res.status(500).json({ error: 'Error al confirmar la cita' });
+  }
+});
+
+// Apply authentication and workshop requirement for workshop routes
 appointmentsRouter.use(authenticate);
 appointmentsRouter.use(requireWorkshop);
 
 const createAppointmentSchema = z.object({
-  clientId: z.string().min(1, 'El cliente es requerido'),
-  vehicleId: z.string().min(1, 'El vehículo es requerido'),
+  clientId: z.string().optional().nullable(),
+  clientName: z.string().optional().nullable(),
+  clientPhone: z.string().optional().nullable(),
+  vehicleId: z.string().optional().nullable(),
+  vehicleDesc: z.string().optional().nullable(),
   mechanicId: z.string().optional().nullable(),
   startAt: z.string().datetime().or(z.string().min(10)),
   endAt: z.string().datetime().or(z.string().min(10)),
   modality: z.string().optional().default('TALLER'),
-  serviceMotif: z.string().min(2, 'El motivo o servicio es requerido'),
+  serviceMotif: z.string().min(1, 'El motivo o servicio es requerido'),
   internalNotes: z.string().optional().nullable(),
   status: z.enum(['PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED']).optional().default('PENDING'),
 });
@@ -69,22 +258,91 @@ appointmentsRouter.post('/', async (req: AuthRequest, res: Response): Promise<vo
 
     const data = parseResult.data;
 
-    // Verify client belongs to this workshop
-    const client = await prisma.client.findFirst({
-      where: { id: data.clientId, workshopId },
-    });
+    // 1. Resolve or create client
+    let client = null;
+    if (data.clientId) {
+      client = await prisma.client.findFirst({
+        where: { id: data.clientId, workshopId },
+      });
+    }
+    if (!client && data.clientName && data.clientName.trim()) {
+      const cleanName = data.clientName.trim();
+      client = await prisma.client.findFirst({
+        where: {
+          workshopId,
+          name: { equals: cleanName, mode: 'insensitive' },
+        },
+      });
+      if (!client) {
+        client = await prisma.client.create({
+          data: {
+            workshopId,
+            name: cleanName,
+            phone: data.clientPhone ? data.clientPhone.trim() : null,
+          },
+        });
+      }
+    }
     if (!client) {
-      res.status(400).json({ error: 'El cliente no pertenece a tu taller' });
-      return;
+      client = await prisma.client.findFirst({ where: { workshopId } });
+      if (!client) {
+        client = await prisma.client.create({
+          data: {
+            workshopId,
+            name: data.clientName?.trim() || 'Cliente General',
+            phone: data.clientPhone?.trim() || null,
+          },
+        });
+      }
     }
 
-    // Verify vehicle belongs to client
-    const vehicle = await prisma.vehicle.findFirst({
-      where: { id: data.vehicleId, clientId: client.id },
-    });
+    // 2. Resolve or create vehicle
+    let vehicle = null;
+    if (data.vehicleId) {
+      vehicle = await prisma.vehicle.findFirst({
+        where: { id: data.vehicleId },
+      });
+    }
+    if (!vehicle && data.vehicleDesc && data.vehicleDesc.trim()) {
+      const parts = data.vehicleDesc.split('-');
+      const plate = parts.length > 1 ? parts[parts.length - 1].trim().toUpperCase() : '';
+      const makeModel = parts[0].trim().split(' ');
+      const make = makeModel[0] || 'Vehículo';
+      const model = makeModel.slice(1).join(' ') || 'General';
+
+      if (plate) {
+        vehicle = await prisma.vehicle.findFirst({
+          where: {
+            clientId: client.id,
+            licensePlate: { equals: plate, mode: 'insensitive' },
+          },
+        });
+      }
+      if (!vehicle) {
+        vehicle = await prisma.vehicle.create({
+          data: {
+            clientId: client.id,
+            make,
+            model,
+            licensePlate: plate || 'PENDIENTE',
+          },
+        });
+      }
+    }
     if (!vehicle) {
-      res.status(400).json({ error: 'El vehículo no pertenece al cliente seleccionado' });
-      return;
+      vehicle = await prisma.vehicle.findFirst({
+        where: { clientId: client.id },
+      });
+      if (!vehicle) {
+        vehicle = await prisma.vehicle.create({
+          data: {
+            clientId: client.id,
+            make: 'Vehículo',
+            model: 'General',
+            licensePlate: 'PENDIENTE',
+          },
+        });
+      }
     }
 
     const appointment = await prisma.appointment.create({
@@ -143,6 +401,35 @@ appointmentsRouter.put('/:id', async (req: AuthRequest, res: Response): Promise<
     }
 
     const data = parseResult.data;
+
+    // Update vehicle info if vehicleDesc was edited
+    if (data.vehicleDesc && existing.vehicleId) {
+      const parts = data.vehicleDesc.split('-');
+      const plate = parts.length > 1 ? parts[parts.length - 1].trim().toUpperCase() : '';
+      const makeModel = parts[0].trim().split(' ');
+      const make = makeModel[0] || 'Vehículo';
+      const model = makeModel.slice(1).join(' ') || 'General';
+
+      await prisma.vehicle.update({
+        where: { id: existing.vehicleId },
+        data: {
+          make,
+          model,
+          ...(plate ? { licensePlate: plate } : {}),
+        },
+      }).catch(() => {});
+    }
+
+    // Update client info if clientName or clientPhone was edited
+    if (existing.clientId && (data.clientName || data.clientPhone)) {
+      await prisma.client.update({
+        where: { id: existing.clientId },
+        data: {
+          ...(data.clientName ? { name: data.clientName.trim() } : {}),
+          ...(data.clientPhone ? { phone: data.clientPhone.trim() } : {}),
+        },
+      }).catch(() => {});
+    }
 
     const updated = await prisma.appointment.update({
       where: { id },

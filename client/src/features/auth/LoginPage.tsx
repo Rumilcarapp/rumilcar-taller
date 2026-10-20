@@ -6,6 +6,13 @@ import { useUserManagementStore } from '../../store/useUserManagementStore';
 import { useOnboardingStore } from '../../store/useOnboardingStore';
 import { useThemeStore } from '../../store/themeStore';
 import { useWorkshopStore } from '../../store/useWorkshopStore';
+import { usePersonnelStore } from '../../store/usePersonnelStore';
+import { useClientStore } from '../../store/useClientStore';
+import { useVehicleStore } from '../../store/useVehicleStore';
+import { useAppointmentStore } from '../../store/useAppointmentStore';
+import { useWorkOrderStore } from '../../store/useWorkOrderStore';
+import { useInventoryStore } from '../../store/useInventoryStore';
+import { useCashStore } from '../../store/useCashStore';
 import {
   Mail,
   Lock,
@@ -120,8 +127,15 @@ export const LoginPage: React.FC = () => {
       token || 'jwt-token-' + Date.now()
     );
 
-    // Fetch fresh workshop profile directly from cloud PostgreSQL database
+    // Fetch fresh workshop data directly from cloud PostgreSQL database
     useWorkshopStore.getState().fetchWorkshop().catch(() => {});
+    usePersonnelStore.getState().fetchPersonnel().catch(() => {});
+    useClientStore.getState().fetchClients().catch(() => {});
+    useVehicleStore.getState().fetchVehicles().catch(() => {});
+    useAppointmentStore.getState().fetchAppointments().catch(() => {});
+    useWorkOrderStore.getState().fetchWorkOrders().catch(() => {});
+    useInventoryStore.getState().fetchInventory().catch(() => {});
+    useCashStore.getState().fetchCashSession().catch(() => {});
 
     addAuditLog({
       workshopId: incomingWorkshopId || userToLogin.workshopId || '',

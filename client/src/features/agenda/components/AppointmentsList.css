@@ -197,6 +197,11 @@
   color: var(--color-error);
   border-color: var(--color-error);
 }
+.apt-action-wa:hover {
+  background: rgba(37, 211, 102, 0.15);
+  color: #25D366;
+  border-color: #25D366;
+}
 
 .cancel-confirm-overlay {
   position: absolute;

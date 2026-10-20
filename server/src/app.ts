@@ -79,6 +79,14 @@ app.use('/api/subscriptions', subscriptionsRouter);
 app.use('/api/cash', cashRouter);
 app.use('/api/expenses', expensesRouter);
 app.use('/api/appointments', appointmentsRouter);
+app.get('/api/cita/:id', (req, res, next) => {
+  req.url = `/public/${req.params.id}`;
+  appointmentsRouter(req, res, next);
+});
+app.post('/api/cita/:id/confirm', (req, res, next) => {
+  req.url = `/public/${req.params.id}/confirm`;
+  appointmentsRouter(req, res, next);
+});
 app.use('/api/surveys', surveysRouter);
 
 // Global Error handler

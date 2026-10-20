@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Button, Input } from '../../../components/ui';
-import { Calendar, Clock, User, Car, Wrench, FileText, Info, AlertTriangle } from 'lucide-react';
+import { Calendar, Clock, User, Car, Wrench, FileText, Info, AlertTriangle, MessageCircle } from 'lucide-react';
 import { usePersonnelStore } from '../../../store/usePersonnelStore';
 import { useClientStore, Client } from '../../../store/useClientStore';
 import { useVehicleStore, Vehicle } from '../../../store/useVehicleStore';
 import { capitalizeWords } from '../../../lib/stringUtils';
+import { safeDate, formatLocalDateStr } from '../../../lib/dateUtils';
 import { ClientModal } from '../../workOrders/components/ClientModal';
 import { VehicleModal } from '../../workOrders/components/VehicleModal';
 import './AppointmentModal.css';
@@ -12,7 +13,7 @@ import './AppointmentModal.css';
 interface AppointmentModalProps {
   selectedDate: Date;
   onClose: () => void;
-  onSave: (apt: any) => void;
+  onSave: (apt: any, sendWhatsApp?: boolean) => void;
   editData?: any;
 }
 
@@ -47,12 +48,12 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({ selectedDate
   const [mechanic, setMechanic] = useState(editData?.mechanic || '');
   const [modality, setModality] = useState(editData?.modality || 'TALLER');
   
-  const defaultStartDate = editData?.startAt ? new Date(editData.startAt) : selectedDate;
-  const [startDate, setStartDate] = useState(defaultStartDate.toISOString().split('T')[0]);
+  const defaultStartDate = safeDate(editData?.startAt || editData?.date, selectedDate);
+  const [startDate, setStartDate] = useState(formatLocalDateStr(defaultStartDate));
   const [startTime, setStartTime] = useState(editData?.startTime || '10:00');
   
-  const defaultEndDate = editData?.endAt ? new Date(editData.endAt) : selectedDate;
-  const [endDate, setEndDate] = useState(defaultEndDate.toISOString().split('T')[0]);
+  const defaultEndDate = safeDate(editData?.endAt || editData?.date, selectedDate);
+  const [endDate, setEndDate] = useState(formatLocalDateStr(defaultEndDate));
   const [endTime, setEndTime] = useState(editData?.endTime || '11:00');
   
   const [notes, setNotes] = useState(editData?.internalNotes || '');
@@ -126,13 +127,16 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({ selectedDate
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSave = () => {
+  const handleSave = (sendWhatsApp: boolean = false) => {
     if (!validate()) {
        return;
     }
 
     onSave({
       id: editData?.id || Math.random().toString(),
+      clientId: selectedClient?.id || editData?.clientId,
+      clientPhone: selectedClient?.telefono || editData?.clientPhone,
+      vehicleId: selectedVehicle?.id || editData?.vehicleId,
       startAt: `${startDate}T${startTime}:00Z`,
       endAt: `${endDate}T${endTime}:00Z`,
       startTime,
@@ -145,19 +149,42 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({ selectedDate
       modality,
       internalNotes: notes,
       status: editData?.status || 'PENDING'
-    });
+    }, sendWhatsApp);
   };
 
   return (
     <Modal isOpen={true} title={editData ? "EDITAR CITA" : "NUEVA CITA"} onClose={handleClose} size="lg" footer={
-      <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', gap: '0.5rem', flexWrap: 'wrap' }}>
         <Button variant="danger" onClick={handleClose}>Cerrar</Button>
-        <Button 
-          style={{ backgroundColor: '#1E3A8A', color: 'white', borderColor: '#1E3A8A' }} 
-          onClick={handleSave}
-        >
-          {editData ? "Guardar cambios" : "Enviar Cita"}
-        </Button>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button
+            type="button"
+            onClick={() => handleSave(true)}
+            style={{
+              backgroundColor: '#25D366',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '0.65rem 1rem',
+              fontWeight: 700,
+              fontSize: '0.88rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.45rem',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(37, 211, 102, 0.25)',
+            }}
+          >
+            <MessageCircle size={16} />
+            Guardar y Enviar WhatsApp
+          </button>
+          <Button 
+            style={{ backgroundColor: '#1E3A8A', color: 'white', borderColor: '#1E3A8A' }} 
+            onClick={() => handleSave(false)}
+          >
+            {editData ? "Guardar cambios" : "Guardar Cita"}
+          </Button>
+        </div>
       </div>
     }>
       <div className="apt-modal-form">
