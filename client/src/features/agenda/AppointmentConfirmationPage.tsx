@@ -304,7 +304,7 @@ export const AppointmentConfirmationPage: React.FC = () => {
         {/* Vehicle Data Form */}
         <form onSubmit={handleConfirm} className="apt-card">
           <h3 className="apt-card-title"><Car size={18} /> Datos de tu Vehículo</h3>
-          <p style={{ fontSize: '0.84rem', color: '#9ca3af', marginTop: '-0.5rem', marginBottom: '1.1rem' }}>
+          <p className="apt-card-subtitle">
             Completa o verifica la placa y modelo para tener tu orden de trabajo lista apenas llegues.
           </p>
 
