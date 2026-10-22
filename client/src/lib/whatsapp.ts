@@ -68,12 +68,16 @@ export function normalizePhoneNumber(raw: string | undefined | null): PhoneValid
 }
 
 /**
- * Genera la URL de WhatsApp lista para abrir
+ * Genera la URL de WhatsApp lista para abrir (resiliente ante nulos/vacíos)
  */
-export function generateWhatsAppUrl(phone: string, message: string, preferWeb: boolean = false): string {
+export function generateWhatsAppUrl(phone: string | undefined | null, message: string, preferWeb: boolean = false): string {
   const norm = normalizePhoneNumber(phone);
-  const targetPhone = norm.valid ? norm.e164 : phone.replace(/[^0-9]/g, '');
-  const encodedText = encodeURIComponent(message);
+  const targetPhone = norm.valid ? norm.e164 : (typeof phone === 'string' ? phone.replace(/[^0-9]/g, '') : '');
+  const encodedText = encodeURIComponent(message || '');
+
+  if (!targetPhone) {
+    return '';
+  }
 
   if (preferWeb) {
     return `https://web.whatsapp.com/send?phone=${targetPhone}&text=${encodedText}`;
@@ -82,11 +86,15 @@ export function generateWhatsAppUrl(phone: string, message: string, preferWeb: b
 }
 
 /**
- * Abre WhatsApp de manera segura
+ * Abre WhatsApp de manera segura con validación previa
  */
-export function openWhatsApp(phone: string, message: string, preferWeb: boolean = false): boolean {
+export function openWhatsApp(phone: string | undefined | null, message: string, preferWeb: boolean = false): boolean {
   const url = generateWhatsAppUrl(phone, message, preferWeb);
-  const win = window.open(url, '_blank');
+  if (!url) {
+    console.warn('No se puede abrir WhatsApp: teléfono ausente o inválido');
+    return false;
+  }
+  const win = window.open(url, '_blank', 'noopener,noreferrer');
   return !!win;
 }
 
@@ -178,14 +186,41 @@ export const DEFAULT_PAGO_MOVIL = {
 };
 
 /**
+ * Helper para formatear la descripción de un vehículo sin valores rotos como (Placa: *N/A*) o (Placa: *S/P*)
+ */
+export function formatVehicleDescription(vehicle?: WhatsAppContextData['vehicle']): string {
+  if (!vehicle) return 'su vehículo';
+
+  const make = (vehicle.marca || '').trim();
+  const model = (vehicle.modelo || '').trim();
+  const nameParts = [make, model].filter(Boolean);
+  const fullName = nameParts.length > 0 ? nameParts.join(' ') : '';
+
+  const plateRaw = (vehicle.placa || '').trim();
+  const hasValidPlate = plateRaw && !['N/A', 'S/P', 'SIN PLACA', 'SP', 'NA'].includes(plateRaw.toUpperCase());
+
+  if (fullName && hasValidPlate) {
+    return `${fullName} (Placa: *${plateRaw}*)`;
+  }
+  if (fullName) {
+    return fullName;
+  }
+  if (hasValidPlate) {
+    return `vehículo con Placa: *${plateRaw}*`;
+  }
+  return 'su vehículo';
+}
+
+/**
  * Construye mensajes enriquecidos con emojis, formato legible y variables dinámicas
  */
 export function buildWhatsAppMessage(type: WhatsAppTemplateType, ctx: WhatsAppContextData): string {
-  const workshop = ctx.workshopName || 'Rumilcar Taller Mecánico';
-  const client = ctx.clientName ? ctx.clientName.trim() : 'Estimado cliente';
-  const vehDesc = ctx.vehicle
-    ? `${ctx.vehicle.marca || ''} ${ctx.vehicle.modelo || ''} (Placa: *${ctx.vehicle.placa || 'N/A'}*)`.trim()
-    : 'su vehículo';
+  const workshop = (ctx.workshopName || 'Rumilcar Taller Mecánico').trim();
+  const rawClient = (ctx.clientName || '').trim();
+  const isGenericClient = !rawClient || ['CLIENTE GENERAL', 'CLIENTE', 'ESTIMADO CLIENTE', 'S/N'].includes(rawClient.toUpperCase());
+  const clientGreeting = isGenericClient ? '¡Hola! 👋🚗' : `¡Hola, *${rawClient}*! 👋🚗`;
+  const formalGreeting = isGenericClient ? 'Estimado cliente, un cordial saludo' : `Estimado(a) *${rawClient}*, un cordial saludo`;
+  const vehDesc = formatVehicleDescription(ctx.vehicle);
   const orderTag = ctx.orderId ? ` *[Orden #${ctx.orderId}]*` : '';
   const rate = ctx.exchangeRateVES || 0;
   const pm = ctx.pagoMovil || DEFAULT_PAGO_MOVIL;
@@ -202,7 +237,7 @@ export function buildWhatsAppMessage(type: WhatsAppTemplateType, ctx: WhatsAppCo
         ? ctx.balancePendingUSD
         : Math.max(0, (ctx.totalUSD || 0) - (ctx.paidUSD || 0));
 
-      let msg = `¡Hola, *${client}*! 👋🚗\n\n` +
+      let msg = `${clientGreeting}\n\n` +
         `Te saludamos de *${workshop}*. Nos alegra informarte que los trabajos en tu *${vehDesc}*${orderTag} han concluido exitosamente y tu auto ya se encuentra *LISTO PARA RETIRO*. ✅\n\n`;
 
       if (pending > 0) {
@@ -227,7 +262,7 @@ export function buildWhatsAppMessage(type: WhatsAppTemplateType, ctx: WhatsAppCo
     }
 
     case 'PRESUPUESTO': {
-      let msg = `Estimado(a) *${client}*, un cordial saludo de *${workshop}* 🔧\n\n` +
+      let msg = `${formalGreeting} de *${workshop}* 🔧\n\n` +
         `Compartimos contigo la propuesta de servicio y cotización para tu *${vehDesc}*${orderTag}:\n\n`;
 
       if (ctx.services && ctx.services.length > 0) {
@@ -267,7 +302,7 @@ export function buildWhatsAppMessage(type: WhatsAppTemplateType, ctx: WhatsAppCo
     case 'PRESUPUESTO_TALLER': {
       let msg = `📋 *PRESUPUESTO DE SERVICIO - ${workshop.toUpperCase()}*\n` +
         `_Copia para Taller / Registro interno de cotización_${orderTag}\n\n` +
-        `👤 *Cliente:* ${client}\n` +
+        `👤 *Cliente:* ${rawClient || 'Cliente General'}\n` +
         `📞 *Teléfono Cliente:* ${ctx.clientPhone || 'No registrado'}\n` +
         `🚗 *Vehículo:* ${vehDesc}\n\n`;
 
@@ -308,7 +343,7 @@ export function buildWhatsAppMessage(type: WhatsAppTemplateType, ctx: WhatsAppCo
         ? ctx.balancePendingUSD
         : Math.max(0, (ctx.totalUSD || 0) - (ctx.paidUSD || 0));
 
-      let msg = `Hola, *${client}*, esperamos te encuentres muy bien. Te contactamos del equipo de *${workshop}* 🚗\n\n` +
+      let msg = `${clientGreeting} Esperamos te encuentres muy bien. Te contactamos del equipo de *${workshop}* 🚗\n\n` +
         `Te compartimos el balance actualizado correspondiente a los servicios realizados a tu *${vehDesc}*${orderTag}:\n\n` +
         `💰 *Monto pendiente:* *$${pending.toFixed(2)} USD*${formatVES(pending)}\n\n` +
         `📲 *DATOS PARA PAGO MÓVIL:*\n` +
@@ -322,7 +357,7 @@ export function buildWhatsAppMessage(type: WhatsAppTemplateType, ctx: WhatsAppCo
     }
 
     case 'AVANCE': {
-      let msg = `¡Hola, *${client}*! 🛠️ Te saludamos de *${workshop}*.\n\n` +
+      let msg = `${clientGreeting} Te saludamos de *${workshop}*.\n\n` +
         `Queremos ponerte al día sobre los avances de tu *${vehDesc}*${orderTag}:\n\n` +
         `🔄 *Estado actual:* *${ctx.status || 'En Reparación'}*\n\n`;
 
@@ -341,7 +376,7 @@ export function buildWhatsAppMessage(type: WhatsAppTemplateType, ctx: WhatsAppCo
     }
 
     case 'POST_VENTA': {
-      let msg = `¡Hola, *${client}*! Esperamos que estés teniendo un excelente día. 👋\n\n` +
+      let msg = `${clientGreeting} Esperamos que estés teniendo un excelente día.\n\n` +
         `Te escribimos de *${workshop}* para saber cómo ha respondido tu *${vehDesc}* tras el servicio realizado recientemente.\n\n` +
         `Tu tranquilidad y seguridad en la vía son nuestra máxima prioridad. Recuerda que cuentas con nuestra garantía de servicio; si necesitas cualquier ajuste o chequeo preventivo, ¡las puertas de nuestro taller están abiertas para ti! 🚘\n\n`;
 
@@ -361,7 +396,7 @@ export function buildWhatsAppMessage(type: WhatsAppTemplateType, ctx: WhatsAppCo
       const service = ctx.appointment?.service || 'Revisión técnica';
       const confUrl = ctx.appointment?.confirmationUrl || (typeof window !== 'undefined' ? `${window.location.origin}/cita/${ctx.appointment?.id || ''}` : '');
 
-      let msg = `¡Hola, *${client}*! 👋🚗\n\n` +
+      let msg = `${clientGreeting}\n\n` +
         `Te saludamos de *${workshop}*. Hemos reservado tu turno para el día *${aptDate}*` +
         (aptTime ? ` a las *${aptTime}*` : '') + `.\n\n` +
         `🛠️ *Servicio programado:* ${service}\n` +
@@ -377,7 +412,7 @@ export function buildWhatsAppMessage(type: WhatsAppTemplateType, ctx: WhatsAppCo
 
     case 'LIBRE':
     default: {
-      return `¡Hola, *${client}*! Te saludamos de *${workshop}* referente a tu vehículo *${vehDesc}*${orderTag}.\n\n${ctx.customNote || '¿En qué podemos ayudarte el día de hoy? Estamos a tu orden.'}`;
+      return `${clientGreeting} Te saludamos de *${workshop}* referente a tu vehículo *${vehDesc}*${orderTag}.\n\n${ctx.customNote || '¿En qué podemos ayudarte el día de hoy? Estamos a tu orden.'}`;
     }
   }
 }

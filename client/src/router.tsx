@@ -1,39 +1,48 @@
 import React from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { AppLayout } from './components/layout';
-import { LoginPage } from './features/auth/LoginPage';
-import { ResetPasswordPage } from './features/auth/ResetPasswordPage';
-import { DashboardPage } from './features/dashboard/DashboardPage';
-import { ProfilePage } from './features/profile/ProfilePage';
-import { InventoryPage } from './features/inventory/InventoryPage';
-import { POSPage } from './features/pos/POSPage';
-import { CashRegisterPage } from './features/caja/CashRegisterPage';
-import { ClientsPage } from './features/clients/ClientsPage';
-import { ClientDetailPage } from './features/clients/ClientDetailPage';
-import { VehiclesPage } from './features/vehicles/VehiclesPage';
-import { VehicleDetailPage } from './features/vehicles/VehicleDetailPage';
-import { DiagnosticsPage } from './features/diagnostics/DiagnosticsPage';
-import { InspectionsPage } from './features/inspections/InspectionsPage';
-import { WorkOrdersPage } from './features/workOrders/WorkOrdersPage';
-import { CreateWorkOrderPage } from './features/workOrders/CreateWorkOrderPage';
-import { PreCompraPage } from './features/pre-compra/PreCompraPage';
-import { CobranzaPage } from './features/cobranza/CobranzaPage';
-import { ComprasPage } from './features/compras/ComprasPage';
-import { ReportesPage } from './features/reportes/ReportesPage';
-import { CRMPage } from './features/crm/CRMPage';
-import { AgendaPage } from './features/agenda/AgendaPage';
-import { AppointmentConfirmationPage } from './features/agenda/AppointmentConfirmationPage';
-import { BudgetsPage } from './features/budgets/BudgetsPage';
-import { UsersPage } from './features/users/UsersPage';
-import { TrackingPage } from './features/tracking/TrackingPage';
-import { SubscriptionPage } from './features/subscription/SubscriptionPage';
-import { SuperAdminSubscriptionsPage } from './features/admin/SuperAdminSubscriptionsPage';
-import { SuperAdminWorkshopsPage } from './features/admin/SuperAdminWorkshopsPage';
-import { SuperAdminSupportHubPage } from './features/admin/SuperAdminSupportHubPage';
-import { SuperAdminFeedbackPage } from './features/admin/SuperAdminFeedbackPage';
-import { SuperAdminConfigPage } from './features/admin/SuperAdminConfigPage';
+import { LoadingFallback } from './components/ui';
 import { PermissionGuard } from './components/shared/PermissionGuard';
 import { useAuthStore } from './stores/authStore';
+
+// Code-split dynamic routes for ultra-fast initial load (Standard Appli-Car / TuulApp)
+const LoginPage = React.lazy(() => import('./features/auth/LoginPage').then(m => ({ default: m.LoginPage })));
+const ResetPasswordPage = React.lazy(() => import('./features/auth/ResetPasswordPage').then(m => ({ default: m.ResetPasswordPage })));
+const DashboardPage = React.lazy(() => import('./features/dashboard/DashboardPage').then(m => ({ default: m.DashboardPage })));
+const ProfilePage = React.lazy(() => import('./features/profile/ProfilePage').then(m => ({ default: m.ProfilePage })));
+const InventoryPage = React.lazy(() => import('./features/inventory/InventoryPage').then(m => ({ default: m.InventoryPage })));
+const POSPage = React.lazy(() => import('./features/pos/POSPage').then(m => ({ default: m.POSPage })));
+const CashRegisterPage = React.lazy(() => import('./features/caja/CashRegisterPage').then(m => ({ default: m.CashRegisterPage })));
+const ClientsPage = React.lazy(() => import('./features/clients/ClientsPage').then(m => ({ default: m.ClientsPage })));
+const ClientDetailPage = React.lazy(() => import('./features/clients/ClientDetailPage').then(m => ({ default: m.ClientDetailPage })));
+const VehiclesPage = React.lazy(() => import('./features/vehicles/VehiclesPage').then(m => ({ default: m.VehiclesPage })));
+const VehicleDetailPage = React.lazy(() => import('./features/vehicles/VehicleDetailPage').then(m => ({ default: m.VehicleDetailPage })));
+const DiagnosticsPage = React.lazy(() => import('./features/diagnostics/DiagnosticsPage').then(m => ({ default: m.DiagnosticsPage })));
+const InspectionsPage = React.lazy(() => import('./features/inspections/InspectionsPage').then(m => ({ default: m.InspectionsPage })));
+const WorkOrdersPage = React.lazy(() => import('./features/workOrders/WorkOrdersPage').then(m => ({ default: m.WorkOrdersPage })));
+const CreateWorkOrderPage = React.lazy(() => import('./features/workOrders/CreateWorkOrderPage').then(m => ({ default: m.CreateWorkOrderPage })));
+const PreCompraPage = React.lazy(() => import('./features/pre-compra/PreCompraPage').then(m => ({ default: m.PreCompraPage })));
+const CobranzaPage = React.lazy(() => import('./features/cobranza/CobranzaPage').then(m => ({ default: m.CobranzaPage })));
+const ComprasPage = React.lazy(() => import('./features/compras/ComprasPage').then(m => ({ default: m.ComprasPage })));
+const ReportesPage = React.lazy(() => import('./features/reportes/ReportesPage').then(m => ({ default: m.ReportesPage })));
+const CRMPage = React.lazy(() => import('./features/crm/CRMPage').then(m => ({ default: m.CRMPage })));
+const AgendaPage = React.lazy(() => import('./features/agenda/AgendaPage').then(m => ({ default: m.AgendaPage })));
+const AppointmentConfirmationPage = React.lazy(() => import('./features/agenda/AppointmentConfirmationPage').then(m => ({ default: m.AppointmentConfirmationPage })));
+const BudgetsPage = React.lazy(() => import('./features/budgets/BudgetsPage').then(m => ({ default: m.BudgetsPage })));
+const UsersPage = React.lazy(() => import('./features/users/UsersPage').then(m => ({ default: m.UsersPage })));
+const TrackingPage = React.lazy(() => import('./features/tracking/TrackingPage').then(m => ({ default: m.TrackingPage })));
+const SubscriptionPage = React.lazy(() => import('./features/subscription/SubscriptionPage').then(m => ({ default: m.SubscriptionPage })));
+const SuperAdminSubscriptionsPage = React.lazy(() => import('./features/admin/SuperAdminSubscriptionsPage').then(m => ({ default: m.SuperAdminSubscriptionsPage })));
+const SuperAdminWorkshopsPage = React.lazy(() => import('./features/admin/SuperAdminWorkshopsPage').then(m => ({ default: m.SuperAdminWorkshopsPage })));
+const SuperAdminSupportHubPage = React.lazy(() => import('./features/admin/SuperAdminSupportHubPage').then(m => ({ default: m.SuperAdminSupportHubPage })));
+const SuperAdminFeedbackPage = React.lazy(() => import('./features/admin/SuperAdminFeedbackPage').then(m => ({ default: m.SuperAdminFeedbackPage })));
+const SuperAdminConfigPage = React.lazy(() => import('./features/admin/SuperAdminConfigPage').then(m => ({ default: m.SuperAdminConfigPage })));
+
+const lazyWrap = (element: React.ReactNode, message?: string) => (
+  <React.Suspense fallback={<LoadingFallback message={message} />}>
+    {element}
+  </React.Suspense>
+);
 
 // Auth guard
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -137,35 +146,35 @@ const RouteErrorBoundary: React.FC = () => {
 export const router = createBrowserRouter([
   {
     path: '/login',
-    element: <LoginPage />,
+    element: lazyWrap(<LoginPage />, 'Cargando acceso al taller...'),
     errorElement: <RouteErrorBoundary />,
   },
   {
     path: '/restablecer-contrasena',
-    element: <ResetPasswordPage />,
+    element: lazyWrap(<ResetPasswordPage />, 'Cargando restablecimiento de contraseña...'),
   },
   {
     path: '/reset-password',
-    element: <ResetPasswordPage />,
+    element: lazyWrap(<ResetPasswordPage />, 'Cargando restablecimiento de contraseña...'),
   },
   {
     path: '/rastreo/:id',
-    element: <TrackingPage />,
+    element: lazyWrap(<TrackingPage />, 'Consultando estado del vehículo en taller...'),
     errorElement: <RouteErrorBoundary />,
   },
   {
     path: '/tracking/:id',
-    element: <TrackingPage />,
+    element: lazyWrap(<TrackingPage />, 'Consultando estado del vehículo en taller...'),
     errorElement: <RouteErrorBoundary />,
   },
   {
     path: '/cita/:id',
-    element: <AppointmentConfirmationPage />,
+    element: lazyWrap(<AppointmentConfirmationPage />, 'Cargando reserva de cita...'),
     errorElement: <RouteErrorBoundary />,
   },
   {
     path: '/confirmar-cita/:id',
-    element: <AppointmentConfirmationPage />,
+    element: lazyWrap(<AppointmentConfirmationPage />, 'Cargando confirmación de cita...'),
     errorElement: <RouteErrorBoundary />,
   },
   {

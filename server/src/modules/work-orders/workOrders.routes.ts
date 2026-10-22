@@ -18,15 +18,21 @@ workOrdersRouter.get('/tracking/:id', async (req: Request, res: Response): Promi
       return;
     }
 
-    const isNumeric = /^\d+$/.test(rawId);
+    // Clean tracking identifiers: remove leading #, OT-, ORD-, RMC-
+    const cleanId = rawId.replace(/^[#]/, '').replace(/^(?:OT|ORD|RMC)-?/i, '').trim();
+    const isNumeric = /^\d+$/.test(cleanId);
+    const parsedOrderNumber = isNumeric ? parseInt(cleanId, 10) : null;
 
     const order = await prisma.workOrder.findFirst({
       where: {
         OR: [
           { id: rawId },
+          { id: cleanId },
           { id: { startsWith: rawId, mode: 'insensitive' } },
+          { id: { startsWith: cleanId, mode: 'insensitive' } },
           { vehicle: { licensePlate: { equals: rawId, mode: 'insensitive' } } },
-          ...(isNumeric ? [{ orderNumber: parseInt(rawId, 10) }] : []),
+          { vehicle: { licensePlate: { equals: cleanId, mode: 'insensitive' } } },
+          ...(parsedOrderNumber !== null ? [{ orderNumber: parsedOrderNumber }] : []),
         ],
       },
       include: {
@@ -461,50 +467,115 @@ workOrdersRouter.post('/', async (req: AuthRequest, res: Response): Promise<void
       });
     }
 
-    // Atomic transaction: Compute workshop-scoped order number and persist order with items
-    const order = await prisma.$transaction(async (tx) => {
-      const lastOrder = await tx.workOrder.findFirst({
-        where: { workshopId },
-        orderBy: { orderNumber: 'desc' },
-        select: { orderNumber: true },
-      });
+    // Atomic transaction with retry loop: Guarantees zero race conditions on orderNumber
+    let order: any = null;
+    let attempts = 0;
+    const maxAttempts = 5;
 
-      const itemsSum = (items || []).reduce((acc, it) => acc + (parseFloat(String(it.unitPriceAnchor || 0)) * parseFloat(String(it.quantity || 1))), 0);
-      const parsedTotal = parseFloat(String(totalAnchor || 0));
-      const finalTotalAnchor = (itemsSum > 0 && (parsedTotal <= 0 || (parsedTotal < 1 && itemsSum >= 1)))
-        ? itemsSum
-        : (parsedTotal > 0 ? parsedTotal : itemsSum);
+    while (attempts < maxAttempts) {
+      attempts++;
+      try {
+        order = await prisma.$transaction(async (tx) => {
+          const lastOrder = await tx.workOrder.findFirst({
+            where: { workshopId },
+            orderBy: { orderNumber: 'desc' },
+            select: { orderNumber: true },
+          });
 
-      const orderNumber = (lastOrder?.orderNumber || 1000) + 1;
+          const itemsSum = (items || []).reduce((acc, it) => acc + (parseFloat(String(it.unitPriceAnchor || 0)) * parseFloat(String(it.quantity || 1))), 0);
+          const parsedTotal = parseFloat(String(totalAnchor || 0));
+          const finalTotalAnchor = (itemsSum > 0 && (parsedTotal <= 0 || (parsedTotal < 1 && itemsSum >= 1)))
+            ? itemsSum
+            : (parsedTotal > 0 ? parsedTotal : itemsSum);
 
-      return tx.workOrder.create({
-        data: {
-          workshopId,
-          clientId: client.id,
-          vehicleId: vehicle.id,
-          createdById: userId,
-          orderNumber,
-          status,
-          totalAnchor: finalTotalAnchor,
-          notes: notes ? notes.trim() : null,
-          inspectionNotes: inspectionNotes ? inspectionNotes.trim() : null,
-          items: items && items.length > 0 ? {
-            create: items.map((item) => ({
-              type: item.type,
-              description: item.description.trim(),
-              quantity: parseFloat(String(item.quantity)),
-              unitPriceAnchor: parseFloat(String(item.unitPriceAnchor)),
-              inventoryItemId: item.inventoryItemId || null,
-            })),
-          } : undefined,
-        },
-        include: {
-          client: true,
-          vehicle: true,
-          items: true,
-        },
-      });
-    });
+          const orderNumber = (lastOrder?.orderNumber || 1000) + 1;
+
+          const createdOrder = await tx.workOrder.create({
+            data: {
+              workshopId,
+              clientId: client.id,
+              vehicleId: vehicle.id,
+              createdById: userId,
+              orderNumber,
+              status,
+              totalAnchor: finalTotalAnchor,
+              notes: notes ? notes.trim() : null,
+              inspectionNotes: inspectionNotes ? inspectionNotes.trim() : null,
+              items: items && items.length > 0 ? {
+                create: items.map((item) => ({
+                  type: item.type,
+                  description: item.description.trim(),
+                  quantity: parseFloat(String(item.quantity)),
+                  unitPriceAnchor: parseFloat(String(item.unitPriceAnchor)),
+                  inventoryItemId: item.inventoryItemId || null,
+                })),
+              } : undefined,
+            },
+            include: {
+              client: true,
+              vehicle: true,
+              items: true,
+            },
+          });
+
+          // If created directly in READY or DELIVERED, automatically deduct parts from inventory & log Kardex
+          if (['READY', 'DELIVERED'].includes(status) && items && items.length > 0) {
+            for (const it of items) {
+              if (it.type === 'PART' || it.inventoryItemId) {
+                let invItem = null;
+                if (it.inventoryItemId) {
+                  invItem = await tx.inventoryItem.findFirst({
+                    where: { id: it.inventoryItemId, workshopId },
+                  });
+                }
+                if (!invItem && it.description) {
+                  invItem = await tx.inventoryItem.findFirst({
+                    where: { workshopId, name: { equals: it.description.trim(), mode: 'insensitive' } },
+                  });
+                }
+
+                if (invItem) {
+                  const qty = parseFloat(String(it.quantity || 1));
+                  const prevStock = invItem.currentStock;
+                  const newStock = prevStock - qty;
+
+                  await tx.inventoryItem.update({
+                    where: { id: invItem.id },
+                    data: { currentStock: newStock },
+                  });
+
+                  await tx.inventoryMovement.create({
+                    data: {
+                      workshopId,
+                      itemId: invItem.id,
+                      type: 'OUT_ORDER',
+                      quantity: qty,
+                      previousStock: prevStock,
+                      newStock: newStock,
+                      costPriceUSD: invItem.costPriceAnchor,
+                      workOrderId: createdOrder.id,
+                      reason: `Deducción por orden de trabajo #${orderNumber}`,
+                      registeredById: userId,
+                    },
+                  });
+                }
+              }
+            }
+          }
+
+          return createdOrder;
+        });
+
+        // Succeeded
+        break;
+      } catch (err: any) {
+        if (err?.code === 'P2002' && attempts < maxAttempts) {
+          console.warn(`Conflicto de concurrencia en orderNumber para taller ${workshopId}, reintentando intento ${attempts}...`);
+          continue;
+        }
+        throw err;
+      }
+    }
 
     logSecurityEvent({
       action: 'CREATE_WORK_ORDER',
@@ -564,6 +635,58 @@ workOrdersRouter.put('/:id', async (req: AuthRequest, res: Response): Promise<vo
           finalTotalAnchor = itemsSum;
         } else {
           finalTotalAnchor = parsed;
+        }
+      }
+
+      // Check if transitioning to READY or DELIVERED and stock has not been deducted yet
+      const nextStatus = status || existing.status;
+      if (['READY', 'DELIVERED'].includes(nextStatus)) {
+        const existingMovements = await tx.inventoryMovement.findFirst({
+          where: { workOrderId: existing.id, type: 'OUT_ORDER' },
+        });
+
+        if (!existingMovements && existing.items && existing.items.length > 0) {
+          for (const it of existing.items) {
+            if (it.type === 'PART' || it.inventoryItemId) {
+              let invItem = null;
+              if (it.inventoryItemId) {
+                invItem = await tx.inventoryItem.findFirst({
+                  where: { id: it.inventoryItemId, workshopId },
+                });
+              }
+              if (!invItem && it.description) {
+                invItem = await tx.inventoryItem.findFirst({
+                  where: { workshopId, name: { equals: it.description.trim(), mode: 'insensitive' } },
+                });
+              }
+
+              if (invItem) {
+                const qty = it.quantity;
+                const prevStock = invItem.currentStock;
+                const newStock = prevStock - qty;
+
+                await tx.inventoryItem.update({
+                  where: { id: invItem.id },
+                  data: { currentStock: newStock },
+                });
+
+                await tx.inventoryMovement.create({
+                  data: {
+                    workshopId,
+                    itemId: invItem.id,
+                    type: 'OUT_ORDER',
+                    quantity: qty,
+                    previousStock: prevStock,
+                    newStock: newStock,
+                    costPriceUSD: invItem.costPriceAnchor,
+                    workOrderId: existing.id,
+                    reason: `Consumo automático por orden de trabajo #${existing.orderNumber}`,
+                    registeredById: req.userId,
+                  },
+                });
+              }
+            }
+          }
         }
       }
 

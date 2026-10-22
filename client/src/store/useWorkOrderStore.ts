@@ -47,6 +47,7 @@ export interface WorkOrder {
 
 interface WorkOrderState {
   workOrders: WorkOrder[];
+  isLoading: boolean;
   fetchWorkOrders: () => Promise<void>;
   addWorkOrder: (order: WorkOrder) => Promise<any>;
   updateWorkOrder: (id: string, order: Partial<WorkOrder>) => void;
@@ -77,7 +78,9 @@ export const useWorkOrderStore = create<WorkOrderState>()(
   persist(
     (set, get) => ({
       workOrders: [],
+      isLoading: false,
       fetchWorkOrders: async () => {
+        set({ isLoading: true });
         try {
           const data = await api.get('/work-orders');
           if (Array.isArray(data)) {
@@ -147,6 +150,8 @@ export const useWorkOrderStore = create<WorkOrderState>()(
           }
         } catch {
           // Keep local state if offline
+        } finally {
+          set({ isLoading: false });
         }
       },
       addWorkOrder: async (order) => {

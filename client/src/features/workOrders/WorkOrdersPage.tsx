@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, EmptyState } from '../../components/ui';
+import { Button, EmptyState, LoadingFallback } from '../../components/ui';
 import { FileText, Plus, List, KanbanSquare } from 'lucide-react';
 import { useWorkOrderStore, OrderStatus, WorkOrder } from '../../store/useWorkOrderStore';
 import { WorkOrderListCard } from './components/WorkOrderListCard';
@@ -16,7 +16,7 @@ type FilterTab = 'Todas' | OrderStatus;
 
 export const WorkOrdersPage: React.FC = () => {
   const navigate = useNavigate();
-  const { workOrders, fetchWorkOrders, updateOrderStatus, deleteWorkOrder } = useWorkOrderStore();
+  const { workOrders, isLoading, fetchWorkOrders, updateOrderStatus, deleteWorkOrder } = useWorkOrderStore();
 
   useEffect(() => {
     fetchWorkOrders().catch(() => {});
@@ -74,11 +74,13 @@ export const WorkOrdersPage: React.FC = () => {
       </div>
 
       <div className="page-content" style={{ marginTop: '16px' }}>
-        {workOrders.length === 0 ? (
+        {isLoading && workOrders.length === 0 ? (
+          <LoadingFallback message="Consultando órdenes de trabajo activas..." />
+        ) : workOrders.length === 0 ? (
           <EmptyState
             icon={<FileText size={48} />}
-            title="Aun no tienes trabajos activos en el taller."
-            description="Las ordenes de trabajo te permiten llevar el control de los servicios, repuestos y la inspeccion visual del vehiculo."
+            title="Aún no tienes trabajos activos en el taller."
+            description="Las órdenes de trabajo te permiten llevar el control de los servicios, repuestos y la inspección visual del vehículo."
             action={{
               label: "Crear tu primera orden de trabajo",
               onClick: () => navigate('/trabajos/nueva'),

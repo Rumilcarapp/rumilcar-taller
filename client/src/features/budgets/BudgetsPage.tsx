@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, EmptyState } from '../../components/ui';
+import { Button, EmptyState, LoadingFallback } from '../../components/ui';
 import { FileText, Plus, Search } from 'lucide-react';
 import { WorkOrder, useWorkOrderStore } from '../../store/useWorkOrderStore';
 import { WorkOrderListCard } from '../workOrders/components/WorkOrderListCard';
@@ -9,7 +9,7 @@ import { getOrderWhatsAppContext } from '../../lib/orderActions';
 
 export const BudgetsPage: React.FC = () => {
   const navigate = useNavigate();
-  const { workOrders, fetchWorkOrders, updateOrderStatus, deleteWorkOrder, convertToWorkOrder } = useWorkOrderStore();
+  const { workOrders, isLoading, fetchWorkOrders, updateOrderStatus, deleteWorkOrder, convertToWorkOrder } = useWorkOrderStore();
 
   useEffect(() => {
     fetchWorkOrders().catch(() => {});
@@ -51,11 +51,13 @@ export const BudgetsPage: React.FC = () => {
       </div>
 
       <div className="page-content" style={{ marginTop: '16px' }}>
-        {budgetOrders.length === 0 ? (
+        {isLoading && budgetOrders.length === 0 ? (
+          <LoadingFallback message="Consultando presupuestos del taller..." />
+        ) : budgetOrders.length === 0 ? (
           <EmptyState
             icon={<FileText size={48} />}
-            title="Aun no tienes presupuestos creados."
-            description="Genera cotizaciones para tus clientes y conviertelas a ordenes de trabajo con un clic al ser aprobadas."
+            title="Aún no tienes presupuestos creados."
+            description="Genera cotizaciones para tus clientes y conviértelas a órdenes de trabajo con un clic al ser aprobadas."
             action={{
               label: "Crear tu primer presupuesto",
               onClick: () => navigate('/presupuestos/nuevo'),

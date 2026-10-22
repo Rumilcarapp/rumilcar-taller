@@ -4,3 +4,4 @@ export { Card, StatsCard } from './Card';
 export { Badge } from './Badge';
 export { Modal } from './Modal';
 export { EmptyState } from './EmptyState';
+export { LoadingFallback } from './LoadingFallback';

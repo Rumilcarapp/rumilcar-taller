@@ -10,6 +10,7 @@ import { BroadcastBanner } from '../shared/BroadcastBanner';
 import { useCashStore } from '../../store/useCashStore';
 import { useWorkshopStore } from '../../store/useWorkshopStore';
 import { getAuthToken } from '../../services/api';
+import { LoadingFallback } from '../ui';
 import './AppLayout.css';
 
 export const AppLayout: React.FC = () => {
@@ -102,7 +103,9 @@ export const AppLayout: React.FC = () => {
         <main className="app-content">
           <BroadcastBanner />
           <SubscriptionBanner />
-          <Outlet />
+          <React.Suspense fallback={<LoadingFallback message="Cargando módulo de taller..." />}>
+            <Outlet />
+          </React.Suspense>
         </main>
       </div>
 

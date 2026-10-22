@@ -73,6 +73,8 @@ export const WhatsAppModal: React.FC<WhatsAppModalProps> = ({
   const [copied, setCopied] = useState<boolean>(false);
   const [preferWeb, setPreferWeb] = useState<boolean>(false);
 
+  const [sendError, setSendError] = useState<string | null>(null);
+
   // Sync state whenever modal opens or context changes
   useEffect(() => {
     if (isOpen) {
@@ -84,6 +86,7 @@ export const WhatsAppModal: React.FC<WhatsAppModalProps> = ({
       const initialText = buildWhatsAppMessage(tpl, contextData);
       setMessage(initialText);
       setCopied(false);
+      setSendError(null);
     }
   }, [isOpen, contextData, initialTemplate, initialRecipient]);
 
@@ -92,6 +95,7 @@ export const WhatsAppModal: React.FC<WhatsAppModalProps> = ({
     setRecipient(target);
     const targetPhone = target === 'workshop' ? (contextData.workshopPhone || '') : (contextData.clientPhone || '');
     setPhoneNumber(targetPhone);
+    setSendError(null);
 
     let nextTemplate = activeTemplate;
     if (target === 'workshop' && activeTemplate === 'PRESUPUESTO') {
@@ -124,10 +128,14 @@ export const WhatsAppModal: React.FC<WhatsAppModalProps> = ({
 
   const handleSend = () => {
     if (!phoneValidation.valid) {
-      alert(`Por favor verifica el número de teléfono: ${phoneValidation.reason || 'inválido'}`);
+      setSendError(`Número de teléfono requerido o inválido (${phoneValidation.reason || 'formato incorrecto'}). Por favor completa o corrige el número para enviar.`);
       return;
     }
-    openWhatsApp(phoneValidation.e164, message, preferWeb);
+    setSendError(null);
+    const success = openWhatsApp(phoneValidation.e164, message, preferWeb);
+    if (!success) {
+      setSendError('El navegador bloqueó la apertura de la ventana de WhatsApp. Por favor permite ventanas emergentes o usa el botón "Copiar Mensaje".');
+    }
   };
 
   return (
@@ -268,6 +276,25 @@ export const WhatsAppModal: React.FC<WhatsAppModalProps> = ({
             <span>{message.length} caracteres</span>
           </div>
         </div>
+
+        {/* Error message banner */}
+        {sendError && (
+          <div style={{
+            background: 'rgba(239, 68, 68, 0.12)',
+            border: '1px solid rgba(239, 68, 68, 0.35)',
+            borderRadius: '8px',
+            padding: '10px 14px',
+            color: '#ef4444',
+            fontSize: '13px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            lineHeight: 1.4,
+          }}>
+            <AlertCircle size={18} style={{ flexShrink: 0 }} />
+            <span>{sendError}</span>
+          </div>
+        )}
 
         {/* Options and Action buttons */}
         <div className="wa-footer-actions">
