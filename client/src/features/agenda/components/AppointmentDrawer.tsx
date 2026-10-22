@@ -69,11 +69,12 @@ export const AppointmentDrawer: React.FC<AppointmentDrawerProps> = ({ appointmen
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'PENDING': return <Badge variant="default">Pendiente</Badge>;
-      case 'CONFIRMED': return <Badge variant="success">Confirmada</Badge>;
-      case 'IN_PROGRESS': return <Badge variant="info">En Proceso</Badge>;
-      case 'COMPLETED': return <Badge variant="primary">Completada</Badge>;
-      case 'CANCELLED': return <Badge variant="error" outline>Cancelada</Badge>;
+      case 'PENDING': return <Badge variant="default">🟡 Pendiente de confirmar</Badge>;
+      case 'CONFIRMED': return <Badge variant="success">🟢 Confirmada</Badge>;
+      case 'RECEIVED':
+      case 'IN_PROGRESS':
+      case 'COMPLETED': return <Badge variant="primary">🚗 En Taller (Atendida)</Badge>;
+      case 'CANCELLED': return <Badge variant="error" outline>🔴 Cancelada</Badge>;
       default: return null;
     }
   };
@@ -219,7 +220,7 @@ export const AppointmentDrawer: React.FC<AppointmentDrawerProps> = ({ appointmen
           </div>
 
           <Button variant="primary" style={{ width: '100%' }} onClick={onConvertToWO} disabled={appointment.status === 'CANCELLED'}>
-            CONVERTIR A ORDEN DE TRABAJO
+            RECEPCIONAR VEHÍCULO (CREAR OT)
           </Button>
         </div>
       </div>

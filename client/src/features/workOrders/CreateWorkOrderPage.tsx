@@ -91,8 +91,8 @@ export const CreateWorkOrderPage: React.FC = () => {
           id: fromApt.clientId || 'cli-apt',
           nombre: fromApt.clientName.split(' ')[0] || fromApt.clientName,
           apellido: fromApt.clientName.split(' ').slice(1).join(' ') || '',
-          documento: '',
-          telefono: '',
+          documento: fromApt.clientDocumento || '',
+          telefono: fromApt.clientPhone || '',
         });
       }
       if (fromApt.vehicleDesc) {

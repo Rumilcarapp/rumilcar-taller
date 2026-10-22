@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Badge, EmptyState } from '../../../components/ui';
-import { Clock, Eye, Edit, X, User, MessageCircle } from 'lucide-react';
+import { Clock, Eye, Edit, X, User, MessageCircle, Wrench } from 'lucide-react';
 import { AppointmentDrawer } from './AppointmentDrawer';
 import { buildWhatsAppMessage, openWhatsApp, copyToClipboard } from '../../../lib/whatsapp';
 import { useWorkshopStore } from '../../../store/useWorkshopStore';
@@ -72,12 +72,19 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
 
   const handleConvertToWorkOrder = (apt: any) => {
     if (!apt) return;
+    const matchedClient = apt.clientId 
+      ? clients.find(c => c.id === apt.clientId) 
+      : clients.find(c => `${c.nombre} ${c.apellido || ''}`.trim().toLowerCase() === (apt.clientName || '').trim().toLowerCase());
+
     setViewingApt(null);
-    navigate('/ordenes/nueva', {
+    onUpdateStatus(apt.id, 'RECEIVED');
+    navigate('/trabajos/nueva', {
       state: {
         fromAppointment: {
-          clientId: apt.clientId,
-          clientName: apt.clientName,
+          clientId: apt.clientId || matchedClient?.id,
+          clientName: apt.clientName || (matchedClient ? `${matchedClient.nombre} ${matchedClient.apellido || ''}`.trim() : ''),
+          clientPhone: apt.clientPhone || matchedClient?.telefono,
+          clientDocumento: matchedClient?.documento,
           vehicleId: apt.vehicleId,
           vehicleDesc: apt.vehicleDesc,
           serviceMotif: apt.service,
@@ -95,34 +102,76 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
 
   const title = formatAgendaTitle(selectedDate);
 
-  const getStatusBadge = (status: string, aptId: string) => {
-    const isDropdownOpen = statusDropdownAptId === aptId;
+  const getStatusBadge = (apt: any) => {
+    const isDropdownOpen = statusDropdownAptId === apt.id;
+    const status = apt.status;
     
     let badgeNode;
     switch (status) {
-      case 'PENDING': badgeNode = <Badge variant="default" className="clickable-badge">Pendiente ▼</Badge>; break;
-      case 'CONFIRMED': badgeNode = <Badge variant="success" className="clickable-badge">Confirmada ▼</Badge>; break;
-      case 'IN_PROGRESS': badgeNode = <Badge variant="info" className="clickable-badge">En Proceso ▼</Badge>; break;
-      case 'COMPLETED': badgeNode = <Badge variant="primary" className="clickable-badge">Completada ▼</Badge>; break;
-      case 'CANCELLED': badgeNode = <Badge variant="error" outline>Cancelada</Badge>; break; // Not clickable
-      default: return null;
+      case 'PENDING': 
+        badgeNode = <Badge variant="default" className="clickable-badge">🟡 Pendiente ▼</Badge>; 
+        break;
+      case 'CONFIRMED': 
+        badgeNode = <Badge variant="success" className="clickable-badge">🟢 Confirmada ▼</Badge>; 
+        break;
+      case 'RECEIVED': 
+      case 'IN_PROGRESS':
+      case 'COMPLETED':
+        badgeNode = <Badge variant="primary" className="clickable-badge">🚗 En Taller ▼</Badge>; 
+        break;
+      case 'CANCELLED': 
+        badgeNode = <Badge variant="error" outline>🔴 Cancelada</Badge>; 
+        break;
+      default: 
+        badgeNode = <Badge variant="default" className="clickable-badge">🟡 Pendiente ▼</Badge>; 
+        break;
     }
 
     if (status === 'CANCELLED') return badgeNode;
 
     return (
       <div className="status-dropdown-container">
-        <div onClick={() => setStatusDropdownAptId(isDropdownOpen ? null : aptId)}>
+        <div onClick={() => setStatusDropdownAptId(isDropdownOpen ? null : apt.id)}>
           {badgeNode}
         </div>
         {isDropdownOpen && (
-          <div className="status-dropdown-menu">
-            <div className="status-item" onClick={() => { onUpdateStatus(aptId, 'PENDING'); setStatusDropdownAptId(null); }}>Pendiente</div>
-            <div className="status-item" onClick={() => { onUpdateStatus(aptId, 'CONFIRMED'); setStatusDropdownAptId(null); }}>Confirmada</div>
-            <div className="status-item" onClick={() => { onUpdateStatus(aptId, 'IN_PROGRESS'); setStatusDropdownAptId(null); }}>En proceso</div>
-            <div className="status-item" onClick={() => { onUpdateStatus(aptId, 'COMPLETED'); setStatusDropdownAptId(null); }}>Completada</div>
-            <div className="status-item text-danger" onClick={() => { onUpdateStatus(aptId, 'CANCELLED'); setStatusDropdownAptId(null); }}>Cancelar cita</div>
-          </div>
+          <>
+            <div className="status-dropdown-backdrop" onClick={() => setStatusDropdownAptId(null)} />
+            <div className="status-dropdown-menu">
+              <div 
+                className={`status-item ${status === 'PENDING' ? 'active' : ''}`} 
+                onClick={() => { onUpdateStatus(apt.id, 'PENDING'); setStatusDropdownAptId(null); }}
+              >
+                <span>🟡</span>
+                <span>Pendiente de confirmar</span>
+              </div>
+              <div 
+                className={`status-item ${status === 'CONFIRMED' ? 'active' : ''}`} 
+                onClick={() => { onUpdateStatus(apt.id, 'CONFIRMED'); setStatusDropdownAptId(null); }}
+              >
+                <span>🟢</span>
+                <span>Confirmada</span>
+              </div>
+              <div 
+                className={`status-item status-item-received ${status === 'RECEIVED' ? 'active' : ''}`} 
+                onClick={() => { 
+                  setStatusDropdownAptId(null); 
+                  handleConvertToWorkOrder(apt); 
+                }}
+                title="El auto llegó: actualiza estado a En Taller y abre la Orden de Trabajo"
+              >
+                <span>🚗</span>
+                <span><strong>Llegó al taller (Crear OT)</strong></span>
+              </div>
+              <div 
+                className="status-item text-danger" 
+                onClick={() => { onUpdateStatus(apt.id, 'CANCELLED'); setStatusDropdownAptId(null); }}
+              >
+                <span>🔴</span>
+                <span>Cancelar / No asistió</span>
+              </div>
+            </div>
+          </>
         )}
       </div>
     );
@@ -174,16 +223,27 @@ export const AppointmentsList: React.FC<AppointmentsListProps> = ({
                   
                   <div className="apt-actions-col">
                     <div className="apt-status">
-                      {getStatusBadge(apt.status, apt.id)}
+                      {getStatusBadge(apt)}
                     </div>
                     {!isCancelled && (
                       <div className="apt-actions">
-                        <button className="apt-action-btn apt-action-wa" title="Enviar WhatsApp de confirmación" onClick={() => handleQuickWhatsApp(apt)}>
+                        {apt.status !== 'RECEIVED' && (
+                          <button
+                            type="button"
+                            className="btn-recepcionar-ot"
+                            title="Recepcionar auto y generar Orden de Trabajo"
+                            onClick={() => handleConvertToWorkOrder(apt)}
+                          >
+                            <Wrench size={13} />
+                            <span>Recepcionar (Crear OT)</span>
+                          </button>
+                        )}
+                        <button type="button" className="apt-action-btn apt-action-wa" title="Enviar WhatsApp de confirmación" onClick={() => handleQuickWhatsApp(apt)}>
                           <MessageCircle size={16} />
                         </button>
-                        <button className="apt-action-btn" title="Ver detalle" onClick={() => setViewingApt(apt)}><Eye size={16} /></button>
-                        <button className="apt-action-btn" title="Editar" onClick={() => onEditClick(apt)}><Edit size={16} /></button>
-                        <button className="apt-action-btn apt-action-danger" title="Cancelar" onClick={() => setCancelingAptId(apt.id)}><X size={16} /></button>
+                        <button type="button" className="apt-action-btn" title="Ver detalle" onClick={() => setViewingApt(apt)}><Eye size={16} /></button>
+                        <button type="button" className="apt-action-btn" title="Editar" onClick={() => onEditClick(apt)}><Edit size={16} /></button>
+                        <button type="button" className="apt-action-btn apt-action-danger" title="Cancelar" onClick={() => setCancelingAptId(apt.id)}><X size={16} /></button>
                       </div>
                     )}
                   </div>

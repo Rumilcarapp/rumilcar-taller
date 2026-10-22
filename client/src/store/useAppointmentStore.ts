@@ -22,7 +22,7 @@ export interface AppointmentItem {
   startTime: string;
   endTime: string;
   internalNotes?: string;
-  status: 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED';
+  status: 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | 'RECEIVED';
 }
 
 interface AppointmentState {
