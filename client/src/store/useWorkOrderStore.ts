@@ -114,6 +114,11 @@ export const useWorkOrderStore = create<WorkOrderState>()(
                 ? itemsTotalUSD
                 : (o.totalAnchor || itemsTotalUSD || 0);
 
+              // Smart fallback in client store if order has 1 service with price 0 but safeTotalUSD > 0
+              if (services.length === 1 && parts.length === 0 && (!services[0].price || services[0].price === 0) && safeTotalUSD > 0) {
+                services[0].price = safeTotalUSD;
+              }
+
               return {
                 id: o.id,
                 client: o.client
@@ -246,12 +251,30 @@ export const useWorkOrderStore = create<WorkOrderState>()(
         const normalizedOrder = safeTotalUSD !== undefined ? { ...order, totalUSD: safeTotalUSD } : order;
         set((state) => ({ workOrders: state.workOrders.map(wo => wo.id === id ? { ...wo, ...normalizedOrder } : wo) }));
 
+        const items = (order.services !== undefined || order.parts !== undefined)
+          ? [
+              ...(mergedServices || []).map((s: any) => ({
+                type: 'SERVICE' as const,
+                description: s.name || s.description || 'Servicio',
+                quantity: s.quantity || 1,
+                unitPriceAnchor: s.price || 0,
+              })),
+              ...(mergedParts || []).map((p: any) => ({
+                type: 'PART' as const,
+                description: p.name || p.description || 'Repuesto',
+                quantity: p.quantity || 1,
+                unitPriceAnchor: p.price || 0,
+              })),
+            ]
+          : undefined;
+
         api.put(`/work-orders/${id}`, {
           ...(order.status !== undefined && { status: order.status }),
           ...(order.notes !== undefined && { notes: order.notes }),
           ...(order.inspectionNotes !== undefined && { inspectionNotes: order.inspectionNotes }),
           ...(safeTotalUSD !== undefined && { totalAnchor: safeTotalUSD }),
           ...(order.deliveredAt !== undefined && { deliveredAt: order.deliveredAt }),
+          ...(items !== undefined && { items }),
         }).catch(() => {});
       },
       

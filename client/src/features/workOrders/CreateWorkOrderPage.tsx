@@ -14,6 +14,7 @@ import { handlePrintOrder, handleWhatsAppShare, handleWhatsAppShareToWorkshop } 
 import { useWorkOrderStore } from '../../store/useWorkOrderStore';
 import { useClientStore } from '../../store/useClientStore';
 import { useVehicleStore } from '../../store/useVehicleStore';
+import { useInventoryStore } from '../../store/useInventoryStore';
 import { capitalizeWords } from '../../lib/stringUtils';
 import './CreateWorkOrderPage.css';
 
@@ -107,13 +108,23 @@ export const CreateWorkOrderPage: React.FC = () => {
         });
       }
       if (fromApt.serviceMotif) {
+        const inventory = useInventoryStore.getState().items || [];
+        const cleanMotif = fromApt.serviceMotif.trim().toLowerCase();
+        const matchedItem = inventory.find(
+          (it) => it.isActive && it.tipo === 'SERVICIO' && (
+            it.nombre.toLowerCase().includes(cleanMotif) || cleanMotif.includes(it.nombre.toLowerCase())
+          )
+        );
+        const autoPrice = matchedItem ? (matchedItem.precio || 0) : 0;
+        const autoCurrency = matchedItem?.currency === 'VES' ? 'VES' : 'USD';
+
         setServices([
           {
             id: 'svc-' + Date.now(),
-            name: fromApt.serviceMotif,
-            description: 'Servicio programado desde la agenda',
-            price: 0,
-            currency: 'USD',
+            name: matchedItem ? matchedItem.nombre : fromApt.serviceMotif,
+            description: matchedItem?.descripcion || 'Servicio programado desde la agenda',
+            price: autoPrice,
+            currency: autoCurrency,
           },
         ]);
       }

@@ -143,6 +143,11 @@ workOrdersRouter.get('/tracking/:id', async (req: Request, res: Response): Promi
       ? itemsTotal
       : (order.totalAnchor || itemsTotal || 0);
 
+    // Smart fallback: If single service has price 0 but total > 0, attribute order total to that service
+    if (services.length === 1 && parts.length === 0 && (!services[0].price || services[0].price === 0) && effectiveTotalUSD > 0) {
+      services[0].price = effectiveTotalUSD;
+    }
+
     const formattedOrder = {
       id: order.id,
       orderNumber: order.orderNumber,
@@ -262,6 +267,7 @@ const updateWorkOrderSchema = z.object({
   totalAnchor: z.union([z.number(), z.string()]).optional(),
   deliveredAt: z.string().optional().nullable(),
   completedAt: z.string().optional().nullable(),
+  items: z.array(workOrderItemSchema).optional(),
 });
 
 // GET /api/work-orders - Get all work orders belonging strictly to authenticated workshop
@@ -613,9 +619,29 @@ workOrdersRouter.put('/:id', async (req: AuthRequest, res: Response): Promise<vo
       return;
     }
 
-    const { status, notes, inspectionNotes, totalAnchor, deliveredAt, completedAt } = parseResult.data;
+    const { status, notes, inspectionNotes, totalAnchor, deliveredAt, completedAt, items } = parseResult.data;
 
     const updated = await prisma.$transaction(async (tx) => {
+      // If items provided, synchronize items in DB
+      if (items !== undefined) {
+        await tx.workOrderItem.deleteMany({
+          where: { workOrderId: existing.id },
+        });
+
+        if (items.length > 0) {
+          await tx.workOrderItem.createMany({
+            data: items.map((item) => ({
+              workOrderId: existing.id,
+              type: item.type,
+              description: item.description.trim(),
+              quantity: parseFloat(String(item.quantity)),
+              unitPriceAnchor: parseFloat(String(item.unitPriceAnchor)),
+              inventoryItemId: item.inventoryItemId || null,
+            })),
+          });
+        }
+      }
+
       // If transitioning to DELIVERED and wasn't delivered before, automatically set deliveredAt
       let autoDeliveredAt: Date | undefined = undefined;
       if (status === 'DELIVERED' && !existing.deliveredAt) {
@@ -627,15 +653,19 @@ workOrdersRouter.put('/:id', async (req: AuthRequest, res: Response): Promise<vo
         autoCompletedAt = completedAt ? new Date(completedAt) : new Date();
       }
 
+      const currentItems = items !== undefined ? items : (existing.items || []);
+      const itemsSum = currentItems.reduce((acc, it) => acc + (parseFloat(String(it.unitPriceAnchor || 0)) * parseFloat(String(it.quantity || 1))), 0);
+
       let finalTotalAnchor: number | undefined = undefined;
       if (totalAnchor !== undefined) {
         const parsed = parseFloat(String(totalAnchor));
-        const itemsSum = (existing.items || []).reduce((acc, it) => acc + (it.unitPriceAnchor * it.quantity), 0);
         if (itemsSum > 0 && (parsed <= 0 || (parsed < 1 && itemsSum >= 1))) {
           finalTotalAnchor = itemsSum;
         } else {
           finalTotalAnchor = parsed;
         }
+      } else if (items !== undefined && itemsSum > 0) {
+        finalTotalAnchor = itemsSum;
       }
 
       // Check if transitioning to READY or DELIVERED and stock has not been deducted yet
@@ -645,8 +675,8 @@ workOrdersRouter.put('/:id', async (req: AuthRequest, res: Response): Promise<vo
           where: { workOrderId: existing.id, type: 'OUT_ORDER' },
         });
 
-        if (!existingMovements && existing.items && existing.items.length > 0) {
-          for (const it of existing.items) {
+        if (!existingMovements && currentItems && currentItems.length > 0) {
+          for (const it of currentItems) {
             if (it.type === 'PART' || it.inventoryItemId) {
               let invItem = null;
               if (it.inventoryItemId) {

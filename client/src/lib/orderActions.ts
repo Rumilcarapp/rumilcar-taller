@@ -220,7 +220,14 @@ export const handlePrintOrder = (order: WorkOrder) => {
         <h3>Servicios Realizados</h3>
         <table>
           <tr><th>Descripción</th><th style="text-align: right; width: 120px;">Precio</th></tr>
-          ${(order.services && order.services.length > 0) ? order.services.map(s => `<tr><td>${s.name || 'Servicio'}</td><td style="text-align: right">$${(s.price || 0).toFixed(2)}</td></tr>`).join('') : '<tr><td colspan="2" style="color: #9ca3af; text-align: center;">Sin servicios especificados</td></tr>'}
+          ${(order.services && order.services.length > 0) ? order.services.map(s => {
+            const rawP = s.price !== undefined ? s.price : s.precio;
+            const hasValidP = typeof rawP === 'number' && rawP > 0;
+            const displayP = (!hasValidP && order.services.length === 1 && (!order.parts || order.parts.length === 0) && finalTotalUSD > 0)
+              ? finalTotalUSD
+              : (rawP || 0);
+            return `<tr><td>${s.name || 'Servicio'}</td><td style="text-align: right">$${Number(displayP).toFixed(2)}</td></tr>`;
+          }).join('') : '<tr><td colspan="2" style="color: #9ca3af; text-align: center;">Sin servicios especificados</td></tr>'}
         </table>
 
         <h3>Repuestos e Insumos</h3>

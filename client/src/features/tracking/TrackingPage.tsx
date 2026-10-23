@@ -358,12 +358,20 @@ export const TrackingPage: React.FC = () => {
               Servicios y Repuestos de la Orden
             </h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px' }}>
-              {(order.services || []).map((s: any, idx: number) => (
-                <div key={'s-' + idx} style={{ display: 'flex', justifyContent: 'space-between', color: '#334155' }}>
-                  <span>🔧 {s.name || s.nombre}</span>
-                  <strong>${(s.price || s.precio || 0).toFixed(2)} USD</strong>
-                </div>
-              ))}
+              {(order.services || []).map((s: any, idx: number) => {
+                const rawPrice = s.price !== undefined ? s.price : s.precio;
+                const hasValidPrice = typeof rawPrice === 'number' && rawPrice > 0;
+                const fallbackPrice = (!hasValidPrice && (order.services.length === 1 && (!order.parts || order.parts.length === 0)) && totalUSD > 0)
+                  ? totalUSD
+                  : (rawPrice || 0);
+
+                return (
+                  <div key={'s-' + idx} style={{ display: 'flex', justifyContent: 'space-between', color: '#334155' }}>
+                    <span>🔧 {s.name || s.nombre}</span>
+                    <strong>${Number(fallbackPrice).toFixed(2)} USD</strong>
+                  </div>
+                );
+              })}
               {(order.parts || []).map((p: any, idx: number) => (
                 <div key={'p-' + idx} style={{ display: 'flex', justifyContent: 'space-between', color: '#334155' }}>
                   <span>📦 {p.quantity || 1}x {p.name || p.nombre}</span>
